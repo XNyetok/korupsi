@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id" data-build="__BUILD__">
+<html lang="id" data-build="dev">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -1207,8 +1207,7 @@
   }
 
   function buildLabel() {
-    const raw = document.documentElement.dataset.build || '';
-    return raw && !raw.includes('__BUILD__') ? raw : 'dev';
+    return document.documentElement.dataset.build || 'dev';
   }
 
   function showReady() {
