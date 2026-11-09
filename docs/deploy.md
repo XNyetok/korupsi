@@ -96,8 +96,14 @@ and serves a read-only panel.
 - A unit file change needs one manual `systemctl daemon-reload`; code changes deploy normally.
 
 What is stored: event type, build revision, run outcome (cause, money, height, duration,
-weight), and the first line of JavaScript errors. No address, no cookie, no identifier.
-Rows older than 90 days are pruned every six hours.
+weight), and the first line of JavaScript errors. Error messages are redacted twice, in the
+page (`src/redact.ts`) and again on arrival (`server/redact.mjs`): URLs, inline URIs, email
+addresses and host-and-path strings become `<url>` or `<email>`. Rows stored before the
+redaction existed are cleaned when the collector starts. No address, no cookie, no
+identifier. Rows older than 90 days are pruned every six hours.
+
+`/api/health` is not public: nginx answers 404 for every `/api/` path except the beacon and
+the authenticated stats. The deploy checks health over SSH on `127.0.0.1`.
 
 ## Rollback
 
