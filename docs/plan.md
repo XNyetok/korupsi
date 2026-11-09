@@ -90,7 +90,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     removed button-key guard.
   - Needs the maintainer, after merge: add "Browser smoke tests" to the required checks
     of `main`.
-- [~] **S2 — Split the source by layer** (branch `refactor/split-layers`). `src/core/` (no DOM: rng, params, types, level,
+- [~] **S2 — Split the source by layer** (#11). `src/core/` (no DOM: rng, params, types, level,
   physics, rules, game), `src/platform/` (input, loop, viewport, storage, audio, telemetry,
   share), `src/view/` (renderer, camera, sprites, fx), `src/ui/`. Behaviour must not change:
   the existing tests pass untouched apart from import paths.
