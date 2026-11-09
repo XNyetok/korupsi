@@ -99,6 +99,13 @@ Simulated runs, 40 per policy, with the current numbers:
 The honest run is the control: a player who refuses the mechanic survives longer and
 scores nothing. That is the joke, and it needs a playtest to confirm it reads as a choice.
 
+## Playtest log
+
+| Date | Build | What was tried | What came out of it |
+| --- | --- | --- | --- |
+| 2026-11-09 | `20261109135951` | First hands-on run on a phone, at `korupsi.web.id` | The jump arc reads well at first contact. Real bug found: the ledge under the player was dropped from the render list on every landing, so the character stood in the air and the ledge seemed to vanish. Fixed, then verified by tracing every frame: 29 disappearing ledges in 30 jumps before, 0 after. |
+| 2026-11-09 | `20261109140812` | Re-test after the fix | The ledge stays visible, the path behind dims with distance instead of vanishing, and the pair above reads as a left/right choice. Weight and the cost of greed are still unjudged. |
+
 ## Tuning
 
 Numbers live in the prototype so they stay in one place:
