@@ -12,6 +12,7 @@
 - [ ] No personal data or screenshots containing other people's information
 - [ ] New assets are licensed and recorded in `docs/design/assets.md`
 - [ ] `gitleaks git --staged` passes
+- [ ] `docs/plan.md` updated: the item this PR starts or finishes, with the PR number
 - [ ] Design changes have a note in `docs/design/`
 
 <!-- Keep the description plain. No generated-by footers, no emoji. -->
