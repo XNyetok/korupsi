@@ -51,7 +51,7 @@ export const PALETTE = {
 
 export type PlatformType = 'solid' | 'krat' | 'fiktif';
 export type Phase = 'ready' | 'playing' | 'over';
-export type Cause = 'auditor' | 'band' | 'fall' | '';
+export type Cause = 'auditor' | 'band' | 'fall' | 'abandoned' | '';
 
 export interface Platform {
   id: number;

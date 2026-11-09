@@ -94,7 +94,13 @@ export class Ui {
   showResult(game: Game): void {
     const cause = game.cause;
     const eyebrow =
-      cause === 'auditor' ? 'tertangkap' : cause === 'fall' ? 'terjatuh' : 'ketinggalan';
+      cause === 'auditor'
+        ? 'tertangkap'
+        : cause === 'fall'
+          ? 'terjatuh'
+          : cause === 'abandoned'
+            ? 'ditinggal'
+            : 'ketinggalan';
 
     let line: string;
     if (cause === 'auditor') {
@@ -105,6 +111,10 @@ export class Ui {
       line = game.weight
         ? `Jatuh, ${game.weight} amplop ikut berhamburan.`
         : 'Jatuh dari pijakan yang belum diresmikan.';
+    } else if (cause === 'abandoned') {
+      line = game.weight
+        ? `Kamu pergi. ${game.weight} amplop, berkasnya tetap diproses.`
+        : 'Kamu pergi. Berkasnya diproses tanpa kamu.';
     } else {
       line = game.weight
         ? `${game.weight} amplop, semuanya tercatat di berkas.`
@@ -127,7 +137,15 @@ export class Ui {
 
     const share = this.overlay.querySelector<HTMLButtonElement>('.share');
     if (share) {
-      const text = `${eyebrow === 'tertangkap' ? 'Ditangkap' : eyebrow === 'terjatuh' ? 'Terjatuh' : 'Ketinggalan'}: ${game.weight} amplop, ${rupiah(game.money)}, ${game.heightMetres} m.`;
+      const label =
+        eyebrow === 'tertangkap'
+          ? 'Ditangkap'
+          : eyebrow === 'terjatuh'
+            ? 'Terjatuh'
+            : eyebrow === 'ditinggal'
+              ? 'Ditinggal'
+              : 'Ketinggalan';
+      const text = `${label}: ${game.weight} amplop, ${rupiah(game.money)}, ${game.heightMetres} m.`;
       share.addEventListener('click', async (event) => {
         event.stopPropagation();
         const outcome = await shareResult(text);

@@ -52,6 +52,9 @@ function resize(): void {
 // ---------- input ----------
 
 function tap(clientX: number): void {
+  // A tap that wakes the phone should not turn into a jump.
+  if (performance.now() < ignoreTapUntil) return;
+
   if (game.phase !== 'playing') {
     audio.unlock();
     audio.play('start');
@@ -134,8 +137,30 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
+let hiddenAt = 0;
+let ignoreTapUntil = 0;
+
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) lastFrame = performance.now();
+  if (document.hidden) {
+    hiddenAt = performance.now();
+    audio.suspend();
+    return;
+  }
+
+  const awayMs = hiddenAt ? performance.now() - hiddenAt : 0;
+  hiddenAt = 0;
+  lastFrame = performance.now();
+  acc = 0;
+
+  if (game.phase === 'playing') {
+    ignoreTapUntil = performance.now() + 350;
+    game.handleAway(awayMs);
+  }
+});
+
+window.addEventListener('pagehide', () => audio.suspend());
+window.addEventListener('pageshow', () => {
+  lastFrame = performance.now();
 });
 
 resize();

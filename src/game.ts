@@ -16,6 +16,9 @@ const BEST_KEY = 'korupsi.best';
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
+/** Away longer than this and the run is over: the audit does not wait. */
+export const AWAY_LIMIT_MS = 60_000;
+
 export interface GameEvents {
   onEnd(): void;
   onJump?(): void;
@@ -321,6 +324,15 @@ export class Game {
       writeBest(this.best);
     }
     this.events.onEnd();
+  }
+
+  /**
+   * Called when the player comes back. A glance at a notification should not
+   * cost the run; leaving for a minute should, or the pause becomes a save.
+   */
+  handleAway(awayMs: number): void {
+    if (this.phase !== 'playing') return;
+    if (awayMs >= AWAY_LIMIT_MS) this.endRun('abandoned');
   }
 
   jump(dir: number): void {

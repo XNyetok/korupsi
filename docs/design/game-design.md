@@ -29,6 +29,18 @@ kamu bawa sebelum tim audit menyusul.
    screen shows the money carried, the height reached, and one dry sentence about how it
    ended.
 
+## Sessions
+
+The game is played in gaps between other things, so leaving is normal, not an edge case.
+
+- **Switching apps pauses the run.** Coming back within a minute resumes it exactly where it
+  stopped, including mid-jump. A tap that only wakes the phone does not become a jump.
+- **Staying away longer than a minute ends the run** and banks the score. The audit does not
+  pause for anyone; a pause that lasts forever would quietly become a save button.
+- **Closing the tab loses the run.** A minute-long game can afford an arcade contract, and it
+  keeps the best score honest: only runs that actually ended are recorded.
+- **System gestures are not fought.** The edge-swipe is the operating system's, not ours.
+
 ## Player fantasy
 
 The small, clever one, not the kingpin. Someone who knows exactly how much a chair costs
@@ -88,6 +100,7 @@ bureaucratic absurdity, never from a real person or a real institution.
 | 2026-11-09 | Plays offline, installs to the home screen | The game is meant for a spare minute, which is often a spare minute without signal |
 | 2026-11-09 | Sound is synthesised, not sampled | Keeps binary assets out of the repository and the download under 10 KB gzipped |
 | 2026-11-09 | The share text never names the run | The joke is the choice; the next player should walk into it cold |
+| 2026-11-09 | A run survives a glance, not a departure | 60 s of absence ends it; anything shorter resumes. Otherwise pausing is saving |
 
 ## What the prototype measures
 

@@ -38,6 +38,11 @@ class AudioEngine {
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
 
+  /** Stop the clock while the page is hidden; unlock() resumes it. */
+  suspend(): void {
+    if (this.ctx && this.ctx.state === 'running') void this.ctx.suspend();
+  }
+
   setMuted(muted: boolean): void {
     this.muted = muted;
     try {
