@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" data-build="__BUILD__">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -238,6 +238,15 @@
   }
 
   .stats b { color: var(--paper); font-weight: 600; font-size: 13px; }
+
+  .rev {
+    margin: 10px 0 0;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #5b6472;
+    font-variant-numeric: tabular-nums;
+  }
 
   .record {
     margin: 0 0 22px;
@@ -599,7 +608,9 @@
   function rebuildAhead() {
     const anchor = player.onGround;
     if (!anchor) return;
-    platforms = platforms.filter((p) => p !== anchor && p.y >= anchor.y);
+    // Keep the ledge underfoot: the filter used to drop it, so the player was
+    // left standing on a platform that no longer existed on screen.
+    platforms = platforms.filter((p) => p === anchor || p.y >= anchor.y);
     auditors = [];
     generateChoices(player.x, anchor.y);
   }
@@ -1195,6 +1206,11 @@
       weight >= 8 ? C.red : weight >= 5 ? C.gold : 'rgba(227, 176, 75, 0.65)';
   }
 
+  function buildLabel() {
+    const raw = document.documentElement.dataset.build || '';
+    return raw && !raw.includes('__BUILD__') ? raw : 'dev';
+  }
+
   function showReady() {
     overlay.innerHTML = `
       <div class="card ready">
@@ -1209,7 +1225,10 @@
             <span><i class="dot" style="background:#D9483B"></i>auditor</span>
           </div>
         </div>
-        <p class="cta">Tap untuk mulai</p>
+        <div>
+          <p class="cta">Tap untuk mulai</p>
+          <p class="rev">rev ${buildLabel()}</p>
+        </div>
       </div>`;
     overlay.classList.add('is-visible');
     document.body.classList.remove('is-playing');
