@@ -5,6 +5,7 @@ import { mountDebug } from './debug.ts';
 import { Game } from './game.ts';
 import { Controls, keyAction } from './input.ts';
 import { draw } from './render.ts';
+import { parseSeed } from './rng.ts';
 import { track, trackErrors } from './telemetry.ts';
 import { Ui } from './ui.ts';
 
@@ -22,6 +23,9 @@ const ui = new Ui();
 const RESULT_LOCK_MS = 700;
 /** A tap that wakes the phone should not count. */
 const WAKE_LOCK_MS = 350;
+
+// `?seed=` replays one layout on every run: for bug reports and playtests.
+const fixedSeed = parseSeed(new URLSearchParams(location.search).get('seed'));
 
 const game = new Game({
   onEnd() {
@@ -45,7 +49,7 @@ const game = new Game({
   onCollect() {
     audio.play('collect');
   },
-});
+}, { seed: fixedSeed });
 
 const controls = new Controls(game, {
   start() {
@@ -181,7 +185,7 @@ window.addEventListener('pageshow', () => {
 
 resize();
 game.reset();
-ui.showReady();
+ui.showReady(fixedSeed);
 requestAnimationFrame(frame);
 
 trackErrors();

@@ -11,11 +11,13 @@ import {
   type PlatformType,
   type Player,
 } from './config.ts';
+import { mulberry32, randomSeed, type Rng } from './rng.ts';
 
 const BEST_KEY = 'korupsi.best';
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
-const rand = (a: number, b: number) => a + Math.random() * (b - a);
+/** Mixed into the seed for the cosmetic stream, so dust never shifts the level stream. */
+const FX_SALT = 0x9e3779b9;
 
 /** Away longer than this and the run is over: the audit does not wait. */
 export const AWAY_LIMIT_MS = 60_000;
@@ -30,6 +32,11 @@ const LEDGE_GAP = 12;
 const HOLD = 6;
 /** Half the width in which an auditor touching the player catches them. */
 const AUDITOR_REACH = 24;
+
+export interface GameOptions {
+  /** Play every run with this seed instead of a fresh one: `?seed=` in the page. */
+  seed?: number | null;
+}
 
 export interface GameEvents {
   onEnd(): void;
@@ -113,14 +120,30 @@ export class Game {
   level = 0;
   /** Seconds of actual play, pauses excluded. */
   elapsed = 0;
+  /** Decides every level of this run, together with the player's choices. */
+  seed = 0;
 
   private nextId = 1;
   /** The last ledge the player stood on. */
   private footing: Platform | null = null;
   private readonly events: GameEvents;
+  private readonly fixedSeed: number | null;
+  /** Level layout, ledge types, auditors: everything that decides the run. */
+  private rng: Rng = mulberry32(0);
+  /** Dust only. Its own stream, so how many particles fly never changes a level. */
+  private fx: Rng = mulberry32(FX_SALT);
 
-  constructor(events: GameEvents) {
+  constructor(events: GameEvents, options: GameOptions = {}) {
     this.events = events;
+    this.fixedSeed = options.seed ?? null;
+  }
+
+  private rand(a: number, b: number): number {
+    return a + this.rng() * (b - a);
+  }
+
+  private fxRand(a: number, b: number): number {
+    return a + this.fx() * (b - a);
   }
 
   /** The visible height in world units. The width never changes. */
@@ -144,7 +167,7 @@ export class Game {
   // ---------- world ----------
 
   private riskyType(): PlatformType {
-    const r = Math.random();
+    const r = this.rng();
     if (r < 0.66) return 'solid';
     if (r < 0.88) return 'krat';
     return 'fiktif';
@@ -168,13 +191,13 @@ export class Game {
     edge: number,
     gold: boolean,
   ): Platform {
-    const w = gold ? rand(60, 74) : rand(84, 108);
+    const w = gold ? this.rand(60, 74) : this.rand(84, 108);
 
     // Sit around the landing spot. The minimum offset keeps the pair reading
     // as left/right instead of bunched under the player; against a wall the
     // landing spot is the wall, so the ledge goes there.
     const pinned = landing !== anchorX + dir * travel;
-    const jitter = rand(-w * 0.28, w * 0.28);
+    const jitter = this.rand(-w * 0.28, w * 0.28);
     let centre = pinned ? landing : anchorX + dir * Math.max(PARAMS.minLedgeOffset, travel + jitter);
     centre = clamp(centre, WALL_PAD + w / 2, this.width - WALL_PAD - w / 2);
 
@@ -195,7 +218,7 @@ export class Game {
       y,
       w: x1 - x0,
       gold,
-      type: gold ? this.riskyType() : Math.random() < 0.35 ? 'krat' : 'solid',
+      type: gold ? this.riskyType() : this.rng() < 0.35 ? 'krat' : 'solid',
       crumble: 0,
       alive: true,
       taken: false,
@@ -204,14 +227,14 @@ export class Game {
 
   private generateChoices(anchorX: number, anchorY: number): void {
     const env = envelope(this.jumpFactor());
-    const dy = rand(env.h * PARAMS.gapMin, env.h * PARAMS.gapMax);
+    const dy = this.rand(env.h * PARAMS.gapMin, env.h * PARAMS.gapMax);
     const travel = env.dxAt(dy);
 
-    const roll = Math.random();
+    const roll = this.rng();
     let goldLeft = false;
     let goldRight = false;
     if (roll < PARAMS.goldChance) {
-      if (Math.random() < 0.5) goldLeft = true;
+      if (this.rng() < 0.5) goldLeft = true;
       else goldRight = true;
     } else if (roll < PARAMS.goldChance + PARAMS.doubleGoldChance) {
       goldLeft = true;
@@ -221,7 +244,7 @@ export class Game {
     // The first level always shows the choice, so the mechanic is visible
     // before the player has to guess at it.
     if (this.level < 1) {
-      goldLeft = Math.random() < 0.5;
+      goldLeft = this.rng() < 0.5;
       goldRight = !goldLeft;
     }
 
@@ -251,7 +274,7 @@ export class Game {
   ): void {
     if (this.level < 5) return;
     if (left.gold === right.gold) return;
-    if (Math.random() > 0.5) return;
+    if (this.rng() > 0.5) return;
 
     const gold = left.gold ? left : right;
     const goldOnLeft = gold === left;
@@ -274,8 +297,8 @@ export class Game {
       upper: gold,
       x: clamp(gold.x, minX, maxX),
       y: gold.y - 11,
-      dir: Math.random() < 0.5 ? -1 : 1,
-      speed: rand(34, 62),
+      dir: this.rng() < 0.5 ? -1 : 1,
+      speed: this.rand(34, 62),
       w: 30,
       h: 26,
       minX,
@@ -296,7 +319,15 @@ export class Game {
 
   // ---------- flow ----------
 
-  reset(): void {
+  /**
+   * A new run. Without a seed it uses the fixed one from the options, or a
+   * fresh random one.
+   */
+  reset(seed: number | null = this.fixedSeed): void {
+    this.seed = (seed ?? randomSeed()) >>> 0;
+    this.rng = mulberry32(this.seed);
+    this.fx = mulberry32(this.seed ^ FX_SALT);
+
     this.platforms = [];
     this.auditors = [];
     this.floaters = [];
@@ -390,13 +421,13 @@ export class Game {
   private puff(count: number, drift: number): void {
     for (let i = 0; i < count; i++) {
       this.dust.push({
-        x: this.player.x + rand(-9, 9),
+        x: this.player.x + this.fxRand(-9, 9),
         y: this.player.y - 1,
-        vx: rand(-30, 30) + drift,
-        vy: rand(-52, -8),
-        life: rand(0.22, 0.5),
+        vx: this.fxRand(-30, 30) + drift,
+        vy: this.fxRand(-52, -8),
+        life: this.fxRand(0.22, 0.5),
         t: 0,
-        r: rand(1.1, 2.4),
+        r: this.fxRand(1.1, 2.4),
       });
     }
   }
@@ -488,13 +519,13 @@ export class Game {
         // Show the thing breaking, so a vanishing ledge never reads as a bug.
         for (let i = 0; i < 10; i++) {
           this.dust.push({
-            x: plat.x + rand(-plat.w / 2, plat.w / 2),
-            y: plat.y + rand(0, 6),
-            vx: rand(-46, 46),
-            vy: rand(-34, 18),
-            life: rand(0.3, 0.65),
+            x: plat.x + this.fxRand(-plat.w / 2, plat.w / 2),
+            y: plat.y + this.fxRand(0, 6),
+            vx: this.fxRand(-46, 46),
+            vy: this.fxRand(-34, 18),
+            life: this.fxRand(0.3, 0.65),
             t: 0,
-            r: rand(1, 2.6),
+            r: this.fxRand(1, 2.6),
           });
         }
       }

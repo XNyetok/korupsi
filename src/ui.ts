@@ -1,6 +1,7 @@
 import { audio } from './audio.ts';
 import { PALETTE as C } from './config.ts';
 import { rupiah, type Game } from './game.ts';
+import { formatSeed } from './rng.ts';
 import { shareResult } from './share.ts';
 import { track } from './telemetry.ts';
 
@@ -72,7 +73,10 @@ export class Ui {
     }, 1900);
   }
 
-  showReady(): void {
+  /** `fixedSeed` is set when the page was opened with `?seed=`. */
+  showReady(fixedSeed: number | null = null): void {
+    const replay =
+      fixedSeed === null ? '' : `<p class="seed">Seed tetap <b>${formatSeed(fixedSeed)}</b></p>`;
     this.overlay.innerHTML = `
       <div class="card ready">
         <div>
@@ -88,6 +92,7 @@ export class Ui {
         </div>
         <div>
           <p class="cta">Tap untuk mulai</p>
+          ${replay}
           <p class="rev">build ${buildLabel()}</p>
         </div>
       </div>`;
@@ -149,6 +154,7 @@ export class Ui {
         <p class="record">Rekor ${rupiah(game.best.money)}</p>
         <button class="share" type="button">Bagikan hasil</button>
         <p class="cta">Tap untuk ulang</p>
+        <p class="seed">Seed <b>${formatSeed(game.seed)}</b></p>
       </div>`;
 
     const share = this.overlay.querySelector<HTMLButtonElement>('.share');
