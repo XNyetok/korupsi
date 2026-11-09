@@ -102,6 +102,10 @@ bureaucratic absurdity, never from a real person or a real institution.
 | 2026-11-09 | Sound is synthesised, not sampled | Keeps binary assets out of the repository and the download under 10 KB gzipped |
 | 2026-11-09 | The share text never names the run | The joke is the choice; the next player should walk into it cold |
 | 2026-11-09 | A run survives a glance, not a departure | 60 s of absence ends it; anything shorter resumes. Otherwise pausing is saving |
+| 2026-11-09 | Every level has two ledges, even against a wall (v0.3.0) | 43% of levels used to show a single ledge, because the ledge on the wall side was dropped. A jump into a wall ends at the wall, so that side's ledge now sits there; the choice never disappears |
+| 2026-11-09 | The world is 360 units wide on every screen (v0.3.0) | The renderer scales it. Rotating or resizing no longer strands ledges, and phones and desktops play the same geometry |
+| 2026-11-09 | The run ends at the top of the audit band, not the bottom of the screen (v0.3.0) | What is drawn is what kills. The band shrank from 68 to 40 px so the room to recover barely changed |
+| 2026-11-09 | Coming back shows a pause card (v0.3.0) | The band no longer starts moving the moment the tab is visible; a tap resumes, and the first 350 ms are ignored |
 
 ## What the prototype measures
 
@@ -122,6 +126,7 @@ scores nothing. That is the joke, and it needs a playtest to confirm it reads as
 | --- | --- | --- | --- |
 | 2026-11-09 | `20261109135951` | First hands-on run on a phone, at `korupsi.web.id` | The jump arc reads well at first contact. Real bug found: the ledge under the player was dropped from the render list on every landing, so the character stood in the air and the ledge seemed to vanish. Fixed, then verified by tracing every frame: 29 disappearing ledges in 30 jumps before, 0 after. |
 | 2026-11-09 | `20261109140812` | Re-test after the fix | The ledge stays visible, the path behind dims with distance instead of vanishing, and the pair above reads as a left/right choice. Weight and the cost of greed are still unjudged. |
+| 2026-11-09 | v0.3.0 branch | Simulated 500 runs per play style (always safe, half greedy, always greedy) before and after the bug fixes, with a 0.25 s reaction delay | Single-ledge levels: 43–45% → 0%. Median height 738 → 716 m (safe), 279 → 237 m (half greedy), 161 → 134 m (greedy); median money 2 → 2.5 and 3 jt. Slightly harder, because the band line sits higher and greed has more chances. Worth a hands-on check before retuning |
 
 ## Tuning
 
@@ -135,6 +140,7 @@ Numbers live in the prototype so they stay in one place:
 | Weight penalty | 3% per envelope | Noticeable after five, fatal after fifteen |
 | Minimum jump factor | 0.45 | A heavy player is slow, never stuck |
 | Audit band | 26 px/s, +1.3 px/s² | Catches a resting player quickly, a climbing one in about a minute |
+| Audit band height | 40 px | Its top edge is the line the feet must not cross |
 | Crumble delay | 0.45 s | Enough to react, not enough to relax |
 | Gold chance | 45% of levels | Roughly one decision every two jumps |
 | Envelope value | Rp 500.000 | Score is money, so nothing else needs to be scored |
