@@ -66,7 +66,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   ready screen shows `v0.3.0`. Until then the live build says `v0.2.0` while running
   v0.3.0 code. `release-please-config.json` pins `release-as: 0.3.0`, because the commits
   since v0.2.0 alone would only make 0.2.1; remove that line once the tag exists.
-- [~] **D2 — Server config from the repository** (branch `ci/apply-server-config`). Apply
+- [~] **D2 — Server config from the repository** (#8). Apply
   `deploy/nginx` and `deploy/systemd` from CI (with `nginx -t` and automatic restore),
   instead of by hand.
   - Code: `deploy/apply-config.sh`, tested in `tests/apply-config.test.mjs`; CI runs
