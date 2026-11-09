@@ -55,6 +55,7 @@ npm install
 npm run dev      # dev server with hot reload
 npm run check    # types only
 npm test         # simulation tests, no browser needed
+npm run test:e2e # browser smoke tests (once: npx playwright install chromium)
 npm run build    # production build in dist/
 ```
 

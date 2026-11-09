@@ -82,9 +82,14 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   `?seed=` and show the seed on the result screen, so a bug report can be replayed exactly.
   Before B1, so playtest runs can be replayed. Code: `src/rng.ts` (mulberry32, base-36
   seeds), `tests/rng.test.ts`; the bug report form asks for the seed.
-- [ ] **S3 — Browser tests.** Playwright smoke run for input, pause and result screens,
+- [~] **S3 — Browser tests** (#10). Playwright smoke run for input, pause and result screens,
   replacing the ad hoc headless checks used in #3. Before S2: the split moves input,
   viewport and UI code that no test covers yet.
+  - Code: `e2e/smoke.spec.ts`, desktop and phone (Chromium), against the production
+    build; CI job "Browser smoke tests". Checked to catch a removed wake lock and a
+    removed button-key guard.
+  - Needs the maintainer, after merge: add "Browser smoke tests" to the required checks
+    of `main`.
 - [ ] **S2 — Split the source by layer.** `src/core/` (no DOM: rng, params, types, level,
   physics, rules, game), `src/platform/` (input, loop, viewport, storage, audio, telemetry,
   share), `src/view/` (renderer, camera, sprites, fx), `src/ui/`. Behaviour must not change:

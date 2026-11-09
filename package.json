@@ -13,9 +13,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
-    "test": "node --test tests/game.test.ts tests/rng.test.ts tests/input.test.ts tests/stats.test.mjs tests/sw.test.mjs tests/redact.test.ts tests/remote.test.mjs tests/apply-config.test.mjs"
+    "test": "node --test tests/game.test.ts tests/rng.test.ts tests/input.test.ts tests/stats.test.mjs tests/sw.test.mjs tests/redact.test.ts tests/remote.test.mjs tests/apply-config.test.mjs",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/node": "^26.6.6",
     "typescript": "^7.0.2",
     "vite": "^8.3.7"
