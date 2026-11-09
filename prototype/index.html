@@ -54,6 +54,18 @@
 
   /* ---------- HUD ---------- */
 
+  #scrim {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 150px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(7, 10, 14, 0.92), rgba(7, 10, 14, 0));
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  body.is-playing #scrim { opacity: 1; }
+
   #hud {
     position: absolute;
     inset: 0 0 auto 0;
@@ -130,7 +142,7 @@
     justify-content: center;
     padding: 24px;
     pointer-events: none;
-    background: radial-gradient(120% 80% at 50% 45%, rgba(10, 13, 18, 0.72), rgba(10, 13, 18, 0.94));
+    background: linear-gradient(180deg, rgba(8, 11, 15, 0.93) 0%, rgba(8, 11, 15, 0.78) 45%, rgba(8, 11, 15, 0.93) 100%);
     opacity: 0;
     visibility: hidden;
     transition: opacity 180ms ease, visibility 180ms;
@@ -227,6 +239,22 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .stamp {
+    display: inline-block;
+    margin: 0 0 14px;
+    padding: 5px 13px;
+    border: 2px solid rgba(217, 72, 59, 0.75);
+    border-radius: 3px;
+    color: #e8695c;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    transform: rotate(-2.5deg);
+  }
+
+  .card h1 { text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55); }
+
   .cta {
     align-self: center;
     display: inline-block;
@@ -268,6 +296,8 @@
 <body>
 <div id="stage">
   <canvas id="game" tabindex="0" role="application" aria-label="Korupsi: ketuk kiri atau kanan layar untuk melompat"></canvas>
+
+  <div id="scrim" aria-hidden="true"></div>
 
   <div id="hud" aria-hidden="true">
     <div class="row">
@@ -325,6 +355,24 @@
   let W = 360;
   let H = 640;
 
+  // Ink on paper: the world is an archive, the money is a ledger entry.
+  const C = {
+    ink: '#0A0E14',
+    inkDeep: '#070A0E',
+    paper: '#F0E9DB',
+    paperMid: '#C9C0AF',
+    paperDark: '#8F8674',
+    crate: '#8A6A4B',
+    crateDark: '#664C33',
+    gold: '#E3B04B',
+    goldLight: '#F4D58D',
+    goldDark: '#986D1D',
+    red: '#D9483B',
+    slate: '#7C8896',
+    suit: '#1F2A37',
+    skin: '#E8D3B8',
+  };
+
   // ---------- state ----------
 
   let phase = 'ready'; // ready | playing | over
@@ -337,6 +385,8 @@
   let camSpeed = 0;
   let maxClimb = 0;
   let lastFooting = 0;
+  let squash = 1;
+  let dust = [];
   let shake = 0;
   let cause = '';
   let nextId = 1;
@@ -552,6 +602,8 @@
     weight = 0;
     maxClimb = 0;
     lastFooting = 0;
+    squash = 1;
+    dust = [];
     shake = 0;
     cause = '';
     nextId = 1;
@@ -615,7 +667,24 @@
     player.dir = dir;
     player.onGround = null;
 
+    squash = 0.86;
+    puff(6, 0);
+
     if (plat.type === 'fiktif' && plat.crumble === 0) plat.crumble = 0.0001;
+  }
+
+  function puff(count, drift) {
+    for (let i = 0; i < count; i++) {
+      dust.push({
+        x: player.x + rand(-9, 9),
+        y: player.y - 1,
+        vx: rand(-30, 30) + drift,
+        vy: rand(-52, -8),
+        life: rand(0.22, 0.5),
+        t: 0,
+        r: rand(1.1, 2.4),
+      });
+    }
   }
 
   function land(plat) {
@@ -624,6 +693,8 @@
     player.vx = 0;
     player.onGround = plat;
     lastFooting = plat.y;
+    squash = 1.18;
+    puff(9, 0);
 
     if (plat.type === 'fiktif' && plat.crumble === 0) plat.crumble = 0.0001;
 
@@ -728,6 +799,15 @@
     floaters = floaters.filter((f) => f.t < 1.2);
 
     shake = Math.max(0, shake - dt * 2.5);
+    squash += (1 - squash) * Math.min(1, dt * 16);
+
+    for (const d of dust) {
+      d.t += dt;
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.vy += 190 * dt;
+    }
+    dust = dust.filter((d) => d.t < d.life);
 
     if (p.y > camY + H) {
       // Well below the last ledge means a missed jump; otherwise the audit
@@ -767,157 +847,241 @@
       if (plat.crumble <= 0) return;
       const fade = clamp(1 - (plat.crumble - params.crumbleDelay) / 0.3, 0, 1);
       if (fade <= 0) return;
-      ctx.globalAlpha = fade * 0.5;
-      ctx.fillStyle = '#8b95a3';
-      roundRect(x, top + (1 - fade) * 14, plat.w, 8, 2);
+      ctx.globalAlpha = fade * 0.45;
+      ctx.fillStyle = C.paperDark;
+      roundRect(x, top + (1 - fade) * 16, plat.w, 6, 2);
       ctx.fill();
       ctx.globalAlpha = 1;
       return;
     }
 
     const wobble = plat.crumble > 0 ? Math.sin(plat.crumble * 70) * 2.2 : 0;
+    const bodyH = plat.type === 'krat' ? 13 : 11;
 
-    if (plat.type === 'solid') {
-      ctx.fillStyle = plat.gold ? '#e9b949' : '#d8d2c3';
-      roundRect(x + wobble, top, plat.w, 12, 3);
+    // the shadow the ledge throws on the wall behind it
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    roundRect(x + wobble + 5, top + bodyH + 2, plat.w - 10, 4, 2);
+    ctx.fill();
+
+    if (plat.type === 'fiktif') {
+      ctx.fillStyle = plat.gold ? 'rgba(227, 176, 75, 0.12)' : 'rgba(143, 134, 116, 0.1)';
+      roundRect(x + wobble, top, plat.w, bodyH, 3);
       ctx.fill();
-      ctx.fillStyle = plat.gold ? 'rgba(255, 240, 200, 0.55)' : 'rgba(255, 255, 255, 0.4)';
-      ctx.fillRect(x + wobble + 4, top + 1.5, plat.w - 8, 1.5);
-    } else if (plat.type === 'krat') {
-      ctx.fillStyle = plat.gold ? '#c08f2f' : '#8a6a4b';
-      roundRect(x + wobble, top, plat.w, 14, 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.28)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x + wobble + plat.w / 2, top + 1);
-      ctx.lineTo(x + wobble + plat.w / 2, top + 13);
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
-      ctx.fillRect(x + wobble + 3, top + 1.5, plat.w - 6, 1.5);
-    } else {
-      ctx.fillStyle = plat.gold ? 'rgba(233, 185, 73, 0.14)' : 'rgba(140, 152, 166, 0.1)';
-      roundRect(x + wobble, top, plat.w, 11, 3);
-      ctx.fill();
-      ctx.setLineDash([6, 5]);
-      ctx.strokeStyle = plat.gold
-        ? 'rgba(233, 185, 73, 0.85)'
-        : plat.crumble > 0
-          ? 'rgba(233, 185, 73, 0.6)'
-          : 'rgba(140, 152, 166, 0.5)';
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = plat.gold ? 'rgba(227, 176, 75, 0.9)' : 'rgba(143, 134, 116, 0.7)';
       ctx.lineWidth = 1.4;
-      roundRect(x + wobble, top, plat.w, 11, 3);
+      roundRect(x + wobble, top, plat.w, bodyH, 3);
       ctx.stroke();
       ctx.setLineDash([]);
+    } else {
+      const g = ctx.createLinearGradient(0, top, 0, top + bodyH);
+      if (plat.gold) {
+        g.addColorStop(0, C.goldLight);
+        g.addColorStop(1, C.goldDark);
+      } else if (plat.type === 'krat') {
+        g.addColorStop(0, '#A07C57');
+        g.addColorStop(1, C.crateDark);
+      } else {
+        g.addColorStop(0, C.paper);
+        g.addColorStop(1, C.paperMid);
+      }
+      ctx.fillStyle = g;
+      roundRect(x + wobble, top, plat.w, bodyH, 3);
+      ctx.fill();
+
+      // the top edge is the part that catches the light
+      ctx.fillStyle = plat.gold ? 'rgba(255, 246, 224, 0.7)' : 'rgba(255, 255, 255, 0.45)';
+      ctx.fillRect(x + wobble + 4, top + 1.2, plat.w - 8, 1.3);
+
+      if (plat.type === 'krat') {
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 3; i++) {
+          const lx = x + wobble + (plat.w * i) / 3;
+          ctx.beginPath();
+          ctx.moveTo(lx, top + 2);
+          ctx.lineTo(lx, top + bodyH - 2);
+          ctx.stroke();
+        }
+      }
     }
 
-    if (plat.gold && !plat.taken) drawMoney(plat.x + wobble, top - 16);
+    if (plat.gold && !plat.taken) drawMoney(plat.x + wobble, top - 18);
   }
 
   function drawMoney(x, y) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.fillStyle = '#f4cf74';
-    roundRect(-10, -6.5, 20, 13, 2);
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    roundRect(-10, -5.5, 21, 14, 2);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(120, 84, 12, 0.6)';
+
+    ctx.fillStyle = '#F6E3B4';
+    roundRect(-11, -8, 22, 14, 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(152, 109, 29, 0.6)';
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(-9, -5.5);
-    ctx.lineTo(0, 1);
-    ctx.lineTo(9, -5.5);
+    roundRect(-11, -8, 22, 14, 2);
     ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-10, -7);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(10, -7);
+    ctx.stroke();
+
+    // wax seal: the envelope is official, that is the whole joke
+    ctx.fillStyle = C.red;
+    ctx.beginPath();
+    ctx.arc(0, 1.5, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.restore();
   }
 
   function drawAuditor(a) {
     const y = a.y - camY;
     if (y < -40 || y > H + 40) return;
-    ctx.fillStyle = '#e5524a';
+
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = C.red;
+    roundRect(a.x - a.dir * 8 - a.w / 2, y - a.h / 2, a.w, a.h, 4);
+    ctx.fill();
+    roundRect(a.x - a.dir * 15 - a.w / 2, y - a.h / 2, a.w, a.h, 4);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = C.red;
     roundRect(a.x - a.w / 2, y - a.h / 2, a.w, a.h, 4);
     ctx.fill();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.fillRect(a.x - a.w / 2 + 5, y - 4, a.w - 10, 5);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fillRect(a.x - a.w / 2 + 5, y - 3, a.w - 10, 4);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
     ctx.fillRect(a.x - a.w / 2 + 5, y - a.h / 2 + 3, a.w - 10, 2);
   }
 
   function drawPlayer() {
     const x = player.x;
     const y = player.y - camY;
+    const sx = squash;
+    const sy = 2 - squash;
 
     if (player.onGround) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.34)';
       ctx.beginPath();
-      ctx.ellipse(x, y, 11, 3.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, y, 12, 3.6, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    const lean = player.onGround ? 0 : clamp(player.vx / 400, -0.12, 0.12);
+    const lean = player.onGround ? 0 : clamp(player.vx / 420, -0.14, 0.14);
 
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(lean);
+    ctx.scale(sx, sy);
 
-    ctx.fillStyle = '#232e3b';
-    roundRect(-9, -27, 18, 27, 4);
+    ctx.fillStyle = '#161F29';
+    roundRect(-7, -8, 14, 8, 2);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(231, 226, 214, 0.22)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
 
-    ctx.fillStyle = '#e9b949';
+    ctx.fillStyle = C.suit;
+    roundRect(-9, -27, 18, 20, 4);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(240, 233, 219, 0.9)';
     ctx.beginPath();
-    ctx.moveTo(0, -25);
-    ctx.lineTo(3.4, -21);
-    ctx.lineTo(0, -11);
-    ctx.lineTo(-3.4, -21);
+    ctx.moveTo(-4, -27);
+    ctx.lineTo(0, -22);
+    ctx.lineTo(4, -27);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#e8d7c0';
+    ctx.fillStyle = C.gold;
+    ctx.beginPath();
+    ctx.moveTo(0, -23);
+    ctx.lineTo(3, -20);
+    ctx.lineTo(0, -11);
+    ctx.lineTo(-3, -20);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = C.skin;
     ctx.beginPath();
     ctx.arc(0, -33, 7, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fillRect(-7.5, -36.5, 15, 3);
+
+    ctx.strokeStyle = 'rgba(240, 233, 219, 0.16)';
+    ctx.lineWidth = 1;
+    roundRect(-9, -27, 18, 20, 4);
+    ctx.stroke();
 
     ctx.restore();
   }
 
   function drawBand() {
-    const bandH = 64;
+    const bandH = 68;
     const y = H - bandH;
+
     const grad = ctx.createLinearGradient(0, y, 0, H);
-    grad.addColorStop(0, 'rgba(229, 82, 74, 0)');
-    grad.addColorStop(1, 'rgba(229, 82, 74, 0.34)');
+    grad.addColorStop(0, 'rgba(217, 72, 59, 0)');
+    grad.addColorStop(1, 'rgba(217, 72, 59, 0.4)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, y, W, bandH);
 
-    ctx.fillStyle = 'rgba(229, 82, 74, 0.75)';
-    ctx.fillRect(0, H - 2, W, 2);
+    // hazard tape: the audit is a place you can fall into
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, y, W, bandH);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(217, 72, 59, 0.16)';
+    ctx.lineWidth = 7;
+    for (let i = -bandH; i < W + bandH; i += 26) {
+      ctx.beginPath();
+      ctx.moveTo(i, H + 6);
+      ctx.lineTo(i + bandH, y - 6);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.setLineDash([9, 7]);
+    ctx.strokeStyle = 'rgba(217, 72, 59, 0.85)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = 'rgba(217, 72, 59, 0.9)';
+    ctx.font = '700 9px ui-sans-serif, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('TIM AUDIT', 12, H - 10);
 
     const closeness = clamp(1 - (camY + H - player.y) / 240, 0, 1);
     if (closeness > 0) {
-      ctx.fillStyle = `rgba(229, 82, 74, ${0.06 + closeness * 0.16})`;
+      ctx.fillStyle = `rgba(217, 72, 59, ${0.05 + closeness * 0.15})`;
       ctx.fillRect(0, 0, W, H);
     }
-
-    ctx.fillStyle = 'rgba(229, 82, 74, 0.62)';
-    ctx.font = '600 9px ui-sans-serif, system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('TIM AUDIT', 12, H - 14);
   }
 
   function draw() {
     ctx.clearRect(0, 0, W, H);
 
-    const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, '#090c11');
-    bg.addColorStop(0.6, '#0d1218');
-    bg.addColorStop(1, '#131a22');
-    ctx.fillStyle = bg;
+    ctx.fillStyle = C.inkDeep;
+    ctx.fillRect(0, 0, W, H);
+
+    const glow = ctx.createRadialGradient(W / 2, H * 0.04, 20, W / 2, H * 0.2, H * 0.85);
+    glow.addColorStop(0, 'rgba(227, 176, 75, 0.09)');
+    glow.addColorStop(0.5, 'rgba(227, 176, 75, 0.025)');
+    glow.addColorStop(1, 'rgba(227, 176, 75, 0)');
+    ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
 
     if (shake > 0) {
@@ -925,17 +1089,20 @@
       ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
     }
 
-    const gap = 76;
-    ctx.strokeStyle = 'rgba(130, 150, 170, 0.055)';
-    ctx.lineWidth = 1;
+    // shelf lines: the only thing telling you how far you have climbed
+    const gap = 88;
     const first = Math.ceil(camY / gap) * gap;
     for (let wy = first; wy < camY + H + gap; wy += gap) {
       const sy = wy - camY;
-      ctx.beginPath();
-      ctx.moveTo(0, sy);
-      ctx.lineTo(W, sy);
-      ctx.stroke();
+      ctx.fillStyle = 'rgba(240, 233, 219, 0.035)';
+      ctx.fillRect(0, sy, W, 1);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      ctx.fillRect(0, sy + 1, W, 6);
     }
+
+    ctx.fillStyle = 'rgba(240, 233, 219, 0.03)';
+    ctx.fillRect(0, 0, 3, H);
+    ctx.fillRect(W - 3, 0, 3, H);
 
     for (const plat of platforms) {
       const top = plat.y - camY;
@@ -943,22 +1110,41 @@
       // Only the pair ahead stays lit; the path already taken recedes so the
       // current choice is the only bright thing on screen.
       const behind = plat !== player.onGround && plat.y >= player.y - 4;
-      ctx.globalAlpha = behind ? 0.22 : 1;
+      ctx.globalAlpha = behind ? 0.2 : 1;
       drawPlatform(plat);
       ctx.globalAlpha = 1;
     }
 
     for (const a of auditors) drawAuditor(a);
 
+    for (const d of dust) {
+      const a = clamp(1 - d.t / d.life, 0, 1);
+      ctx.fillStyle = `rgba(201, 192, 175, ${a * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y - camY, d.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     if (phase !== 'over') drawPlayer();
 
     ctx.textAlign = 'center';
-    ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
     for (const f of floaters) {
-      const a = clamp(1 - f.t / 1.2, 0, 1);
-      ctx.fillStyle = `rgba(233, 185, 73, ${a})`;
-      ctx.fillText(f.text, f.x, f.y - camY);
+      const life = clamp(1 - f.t / 1.2, 0, 1);
+      const pop = 1 + Math.max(0, 0.22 - f.t) * 1.6;
+      ctx.save();
+      ctx.translate(f.x, f.y - camY);
+      ctx.scale(pop, pop);
+      ctx.font = '700 10px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = `rgba(227, 176, 75, ${life})`;
+      ctx.fillText(f.text, 0, 0);
+      ctx.restore();
     }
+
+    const vig = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.22, W / 2, H * 0.55, H * 0.85);
+    vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vig.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
 
     drawBand();
   }
@@ -979,7 +1165,7 @@
     const pct = clamp((weight / 12) * 100, 0, 100);
     hudBar.style.width = pct + '%';
     hudBar.style.background =
-      weight >= 8 ? '#e5524a' : weight >= 5 ? '#e9b949' : 'rgba(233, 185, 73, 0.7)';
+      weight >= 8 ? C.red : weight >= 5 ? C.gold : 'rgba(227, 176, 75, 0.65)';
   }
 
   function showReady() {
@@ -991,9 +1177,9 @@
           <p class="lede">Dua pijakan tiap jenjang. Ambil yang bergaris emas untuk skor,
             tapi makin berat, makin pendek lompatanmu.</p>
           <div class="legend">
-            <span><i class="dot" style="background:#d8d2c3"></i>aman</span>
-            <span><i class="dot" style="background:#e9b949"></i>amplop</span>
-            <span><i class="dot" style="background:#e5524a"></i>auditor</span>
+            <span><i class="dot" style="background:#C9C0AF"></i>aman</span>
+            <span><i class="dot" style="background:#E3B04B"></i>amplop</span>
+            <span><i class="dot" style="background:#D9483B"></i>auditor</span>
           </div>
         </div>
         <p class="cta">Tap untuk mulai</p>
@@ -1023,7 +1209,7 @@
 
     overlay.innerHTML = `
       <div class="card">
-        <p class="eyebrow">${eyebrow}</p>
+        <p class="stamp">${eyebrow}</p>
         <h1 class="money">${rupiah(money)}</h1>
         <p class="lede">${line}</p>
         <div class="stats">
