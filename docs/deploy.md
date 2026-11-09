@@ -50,8 +50,11 @@ Three files on the server come from this repository and are installed by the dep
 | `DEPLOY_PATH` | variable | site root, for example `/www/wwwroot/korupsi.web.id` |
 | `DEPLOY_ENABLED` | variable | `true`, or `false` to pause deploys |
 
-The deploy job runs in the GitHub environment `production`. Its protection rules (who may
-approve, which tags may deploy) live in the repository settings, not in this file.
+The deploy job runs in the GitHub environment `production`, which allows deploys from
+protected branches only. The job runs on `main` (the release workflow is started by the
+push that merges the release PR), so do not limit the environment to tags: the tag is an
+input of the job, not its ref. A required reviewer can be added there to approve each
+deploy.
 
 A variable missing from GitHub is an empty string in the workflow, not an error. The first
 step of the deploy job ("Check deploy settings") fails the run when any of them is empty or
