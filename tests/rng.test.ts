@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { Game } from '../src/game.ts';
-import { formatSeed, mulberry32, parseSeed, randomSeed } from '../src/rng.ts';
+import { Game } from '../src/core/game.ts';
+import { formatSeed, mulberry32, parseSeed, randomSeed } from '../src/core/rng.ts';
 
 const STEP = 1 / 120;
 

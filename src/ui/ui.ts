@@ -1,9 +1,10 @@
-import { audio } from './audio.ts';
-import { PALETTE as C } from './config.ts';
-import { rupiah, type Game } from './game.ts';
-import { formatSeed } from './rng.ts';
-import { shareResult } from './share.ts';
-import { track } from './telemetry.ts';
+import type { Game } from '../core/game.ts';
+import { formatSeed } from '../core/rng.ts';
+import { rupiah } from '../core/rules.ts';
+import { audio } from '../platform/audio.ts';
+import { shareResult } from '../platform/share.ts';
+import { track } from '../platform/telemetry.ts';
+import { PALETTE as C } from '../view/palette.ts';
 
 declare const __BUILD_LABEL__: string;
 

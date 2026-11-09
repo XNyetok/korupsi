@@ -12,8 +12,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "tsc --noEmit",
-    "test": "node --test tests/game.test.ts tests/rng.test.ts tests/input.test.ts tests/stats.test.mjs tests/sw.test.mjs tests/redact.test.ts tests/remote.test.mjs tests/apply-config.test.mjs",
+    "check": "tsc --noEmit && tsc -p src/core --noEmit",
+    "test": "node --test tests/game.test.ts tests/rng.test.ts tests/layers.test.ts tests/input.test.ts tests/stats.test.mjs tests/sw.test.mjs tests/redact.test.ts tests/remote.test.mjs tests/apply-config.test.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

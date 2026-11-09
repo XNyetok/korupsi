@@ -80,7 +80,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 - [~] **S1 — Seeded runs** (#9). Replace `Math.random` in the simulation with a seeded RNG; accept
   `?seed=` and show the seed on the result screen, so a bug report can be replayed exactly.
-  Before B1, so playtest runs can be replayed. Code: `src/rng.ts` (mulberry32, base-36
+  Before B1, so playtest runs can be replayed. Code: `src/core/rng.ts` (mulberry32, base-36
   seeds), `tests/rng.test.ts`; the bug report form asks for the seed.
 - [~] **S3 — Browser tests** (#10). Playwright smoke run for input, pause and result screens,
   replacing the ad hoc headless checks used in #3. Before S2: the split moves input,
@@ -90,10 +90,17 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     removed button-key guard.
   - Needs the maintainer, after merge: add "Browser smoke tests" to the required checks
     of `main`.
-- [ ] **S2 — Split the source by layer.** `src/core/` (no DOM: rng, params, types, level,
+- [~] **S2 — Split the source by layer** (branch `refactor/split-layers`). `src/core/` (no DOM: rng, params, types, level,
   physics, rules, game), `src/platform/` (input, loop, viewport, storage, audio, telemetry,
   share), `src/view/` (renderer, camera, sprites, fx), `src/ui/`. Behaviour must not change:
   the existing tests pass untouched apart from import paths.
+  - Done as listed, plus `core/types.ts` and `view/palette.ts` (the colours are shared by
+    the canvas and the DOM). The best score reaches the core through a `BestStore`, so
+    the core never touches `localStorage`.
+  - Kept honest by two checks: `src/core/tsconfig.json` compiles the core without the DOM
+    library, and `tests/layers.test.ts` fails on an import that points up a layer.
+  - Checked: a frame-by-frame trace of four seeded runs is byte-identical before and after;
+    unit and browser tests pass with only import paths changed.
 - [ ] **H2 — Repository settings.** Enable Dependabot security updates; add lint and format
   checks to CI.
 

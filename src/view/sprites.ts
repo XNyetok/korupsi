@@ -1,9 +1,15 @@
-import { PARAMS, PALETTE as C, type Auditor, type Platform } from './config.ts';
-import type { Game } from './game.ts';
+/**
+ * The things in the world: ledges, envelopes, auditors, the player and the
+ * audit band. Shapes drawn in code; no image files.
+ */
 
-const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
+import { PARAMS } from '../core/params.ts';
+import type { Game } from '../core/game.ts';
+import { clamp } from '../core/physics.ts';
+import type { Auditor, Platform } from '../core/types.ts';
+import { PALETTE as C } from './palette.ts';
 
-function roundRect(
+export function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -21,7 +27,7 @@ function roundRect(
   ctx.closePath();
 }
 
-function drawPlatform(ctx: CanvasRenderingContext2D, plat: Platform, camY: number): void {
+export function drawPlatform(ctx: CanvasRenderingContext2D, plat: Platform, camY: number): void {
   const top = plat.y - camY;
   const x = plat.x - plat.w / 2;
 
@@ -123,7 +129,7 @@ function drawMoney(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   ctx.restore();
 }
 
-function drawAuditor(ctx: CanvasRenderingContext2D, a: Auditor, camY: number): void {
+export function drawAuditor(ctx: CanvasRenderingContext2D, a: Auditor, camY: number): void {
   const y = a.y - camY;
   ctx.globalAlpha = 0.12;
   ctx.fillStyle = C.red;
@@ -144,7 +150,7 @@ function drawAuditor(ctx: CanvasRenderingContext2D, a: Auditor, camY: number): v
   ctx.fillRect(a.x - a.w / 2 + 5, y - a.h / 2 + 3, a.w - 10, 2);
 }
 
-function drawPlayer(ctx: CanvasRenderingContext2D, game: Game): void {
+export function drawPlayer(ctx: CanvasRenderingContext2D, game: Game): void {
   const { player, squash } = game;
   const x = player.x;
   const y = player.y - game.camY;
@@ -206,7 +212,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, game: Game): void {
   ctx.restore();
 }
 
-function drawBand(ctx: CanvasRenderingContext2D, game: Game): void {
+export function drawBand(ctx: CanvasRenderingContext2D, game: Game): void {
   const { width: W, height: H } = game;
   const bandH = PARAMS.bandHeight;
   const y = game.auditLine;
@@ -251,97 +257,4 @@ function drawBand(ctx: CanvasRenderingContext2D, game: Game): void {
     ctx.fillStyle = `rgba(217, 72, 59, ${0.05 + closeness * 0.15})`;
     ctx.fillRect(0, 0, W, H);
   }
-}
-
-export function draw(
-  ctx: CanvasRenderingContext2D,
-  game: Game,
-  reducedMotion: boolean,
-): void {
-  const { width: W, height: H } = game;
-
-  // Everything below may translate (screen shake); without save/restore the
-  // offset from one frame carried into the next and the scene drifted.
-  ctx.save();
-  ctx.clearRect(0, 0, W, H);
-
-  ctx.fillStyle = C.inkDeep;
-  ctx.fillRect(0, 0, W, H);
-
-  const glow = ctx.createRadialGradient(W / 2, H * 0.04, 20, W / 2, H * 0.2, H * 0.85);
-  glow.addColorStop(0, 'rgba(227, 176, 75, 0.09)');
-  glow.addColorStop(0.5, 'rgba(227, 176, 75, 0.025)');
-  glow.addColorStop(1, 'rgba(227, 176, 75, 0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-
-  if (game.shake > 0 && !reducedMotion) {
-    const s = game.shake * 7;
-    ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
-  }
-
-  // shelf lines: the only thing telling you how far you have climbed
-  const gap = 88;
-  const first = Math.ceil(game.camY / gap) * gap;
-  for (let wy = first; wy < game.camY + H + gap; wy += gap) {
-    const sy = wy - game.camY;
-    ctx.fillStyle = 'rgba(240, 233, 219, 0.035)';
-    ctx.fillRect(0, sy, W, 1);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
-    ctx.fillRect(0, sy + 1, W, 6);
-  }
-
-  ctx.fillStyle = 'rgba(240, 233, 219, 0.03)';
-  ctx.fillRect(0, 0, 3, H);
-  ctx.fillRect(W - 3, 0, 3, H);
-
-  for (const plat of game.platforms) {
-    const top = plat.y - game.camY;
-    if (top < -60 || top > H + 60) continue;
-
-    // Ledges behind the player stay visible, just dimmer with distance: the
-    // route taken is part of the scenery, not something that vanished.
-    let alpha = 1;
-    if (plat !== game.player.onGround && plat.y > game.player.y) {
-      alpha = clamp(1 - (plat.y - game.player.y) / (H * 0.95), 0.34, 1);
-    }
-    ctx.globalAlpha = alpha;
-    drawPlatform(ctx, plat, game.camY);
-    ctx.globalAlpha = 1;
-  }
-
-  for (const a of game.auditors) drawAuditor(ctx, a, game.camY);
-
-  for (const d of game.dust) {
-    const a = clamp(1 - d.t / d.life, 0, 1);
-    ctx.fillStyle = `rgba(201, 192, 175, ${a * 0.5})`;
-    ctx.beginPath();
-    ctx.arc(d.x, d.y - game.camY, d.r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  if (game.phase !== 'over') drawPlayer(ctx, game);
-
-  ctx.textAlign = 'center';
-  for (const f of game.floaters) {
-    const life = clamp(1 - f.t / 1.2, 0, 1);
-    const pop = 1 + Math.max(0, 0.22 - f.t) * 1.6;
-    ctx.save();
-    // Keep the text on screen when the ledge it belongs to is against a wall.
-    ctx.translate(clamp(f.x, 44, W - 44), f.y - game.camY);
-    ctx.scale(pop, pop);
-    ctx.font = '700 10px ui-sans-serif, system-ui, sans-serif';
-    ctx.fillStyle = `rgba(227, 176, 75, ${life})`;
-    ctx.fillText(f.text, 0, 0);
-    ctx.restore();
-  }
-
-  const vig = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.22, W / 2, H * 0.55, H * 0.85);
-  vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  vig.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
-  ctx.fillStyle = vig;
-  ctx.fillRect(0, 0, W, H);
-
-  drawBand(ctx, game);
-  ctx.restore();
 }

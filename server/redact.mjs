@@ -1,5 +1,5 @@
 /**
- * Server-side copy of src/redact.ts. The client already redacts, but anything
+ * Server-side copy of src/platform/redact.ts. The client already redacts, but anything
  * can post to the beacon, so the collector applies the same rules before a
  * message is stored. Keep the two in step: tests/redact.test.ts runs the same
  * cases against both.
