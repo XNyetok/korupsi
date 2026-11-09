@@ -14,6 +14,14 @@ const MAX_BODY = 2048;
 const PANEL_DIR = resolve(fileURLToPath(new URL('./panel/', import.meta.url)));
 const store = openStore(DB_PATH);
 
+/**
+ * The deploy writes the release folder name into RELEASE, and checks it in the
+ * health answer: a restart that left the old code running must not pass.
+ */
+const RELEASE = await readFile(new URL('./RELEASE', import.meta.url), 'utf8')
+  .then((text) => text.trim() || 'dev')
+  .catch(() => 'dev');
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -121,7 +129,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      json(res, 200, { ok: true, uptime: Math.round(process.uptime()) });
+      json(res, 200, { ok: true, release: RELEASE, uptime: Math.round(process.uptime()) });
       return;
     }
 

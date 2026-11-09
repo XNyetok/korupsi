@@ -7,11 +7,13 @@ After=network.target
 Type=simple
 User=korupsi
 Group=korupsi
-WorkingDirectory=/opt/korupsi-stats
+# "current" is a symlink the deploy switches, like the site's. systemd resolves
+# it when the service starts, so a restart picks up the new release.
+WorkingDirectory=/opt/korupsi-stats/current
 Environment=PORT=8787
 Environment=HOST=127.0.0.1
 Environment=DB_PATH=/var/lib/korupsi-stats/stats.db
-ExecStart=/usr/bin/node /opt/korupsi-stats/index.mjs
+ExecStart=/usr/bin/node /opt/korupsi-stats/current/index.mjs
 Restart=on-failure
 RestartSec=3
 

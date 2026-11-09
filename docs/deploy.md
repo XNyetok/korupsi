@@ -7,8 +7,9 @@ and the certificate, and this repository owns what nginx actually serves.
 /www/wwwroot/korupsi.web.id/
   .well-known/                 Let's Encrypt checks, managed by the panel
   releases/
-    20261109194500-a1b2c3d/    one upload per deploy, kept for rollback
-  current -> releases/...      switched atomically on deploy
+    v0.3.0-a1b2c3d/            one folder per release, the newest five kept
+  current -> releases/...      what is live, switched atomically on deploy
+  previous -> releases/...     what a rollback goes back to
 ```
 
 `deploy/nginx/korupsi-rewrite.conf` is copied into
@@ -47,6 +48,9 @@ and the certificate, and this repository owns what nginx actually serves.
 | `DEPLOY_PATH` | variable | site root, for example `/www/wwwroot/korupsi.web.id` |
 | `DEPLOY_ENABLED` | variable | `true`, or `false` to pause deploys |
 
+The deploy job runs in the GitHub environment `production`. Its protection rules (who may
+approve, which tags may deploy) live in the repository settings, not in this file.
+
 A variable missing from GitHub is an empty string in the workflow, not an error. The first
 step of the deploy job ("Check deploy settings") fails the run when any of them is empty or
 malformed, and `DEPLOY_PATH` must be an absolute path at least two levels deep. The
@@ -55,25 +59,63 @@ remote script also refuses to switch `current` unless the new release directory 
 The actual values live only in the repository settings and in the operator's notes, not
 in this public file.
 
+## Releases
+
+Production only ever runs a tagged release.
+
+- `.github/workflows/ci.yml` runs on every push and pull request: secret scan, file checks,
+  type-check, tests, build. It never deploys.
+- `.github/workflows/release.yml` runs release-please on every push to `main`. It keeps a
+  release PR open that bumps `package.json` and writes `CHANGELOG.md` from the
+  Conventional Commits since the last tag. Merging that PR creates the tag and the GitHub
+  Release, and the same run deploys it through `deploy.yml`.
+- `.github/workflows/deploy.yml` can also be started by hand with a tag, to redeploy it or
+  to roll back through CI. Use v0.3.0 or later: older tags predate the collector's release
+  folders and still install the old service worker.
+
+Before merging a release PR, edit its `CHANGELOG.md` entry into player language: what
+changed in the game, not how. Operational notes (a migration, a config to reinstall) go
+in this file instead.
+
+GitHub starts no workflows for anything created with `GITHUB_TOKEN`. That is why the
+deploy runs inside the release workflow instead of listening for the release event, and
+why the release workflow starts CI on the release PR branch itself: the PR needs its
+required checks to be mergeable.
+
+One version identity, everywhere:
+
+| Where | Format | Example |
+| --- | --- | --- |
+| Ready screen and telemetry, release build | `X.Y.Z+<sha7>` | `0.3.0+a1b2c3d` |
+| Ready screen and telemetry, any other CI build | `X.Y.Z-dev+<sha7>` | `0.3.0-dev+9f8e7d6` |
+| Local build or dev server | `X.Y.Z-dev` | `0.3.0-dev` |
+| Release folders on the server | `vX.Y.Z-<sha7>` | `v0.3.0-a1b2c3d` |
+
+`package.json` declares the Node versions it supports in `engines` (22.13 or newer, for
+`node:sqlite`); CI builds with the version in `.nvmrc`.
+
 ## What a deploy does
 
-`.github/workflows/ci.yml` does this:
+`deploy.yml`, given a tag:
 
-1. Scan the full git history for secrets, and check tracked files. A finding fails the run.
-2. Type-check and build, then upload the artifact.
-3. `rsync` the build into `releases/<UTC timestamp>-<sha>/`, leaving the live site alone
-   while the upload runs.
-4. Point `current.next` at the new directory, then `mv -Tf current.next current` in one
-   step, so no request ever sees a half-written release.
-5. Keep the five newest releases, delete the rest.
-6. Smoke test: `/`, `/og.png` and `/sw.js` answer 200, the live page loads the script
-   this run built, and `/sw.js` is the kill switch.
+1. Check the tag looks like `vX.Y.Z`, then run the whole of `ci.yml` on it as a release
+   build, and check the tag matches the version in `package.json`.
+2. `rsync` the site into `releases/<release>/` under the site root and the collector into
+   `releases/<release>/` under `/opt/korupsi-stats`. Nothing live changes during the upload.
+3. Run `deploy/remote.sh activate` over SSH. It refuses to continue unless the server's
+   Node is 22.13 or newer with `node:sqlite`, and the unit runs the collector through
+   `current`. Then:
+   - switch the collector's `current`, restart it, and wait until `/api/health` on
+     `127.0.0.1` reports this release. If it does not, put the old collector back and stop,
+     with the site untouched;
+   - switch the site's `current` with `mv -Tf`, so no request sees a half switch;
+   - record both old targets as `previous`, and keep the five newest releases plus
+     whatever `current` and `previous` point at.
+4. Smoke test: `/`, `/og.png` and `/sw.js` answer 200, the live page loads the script this
+   run built, and `/sw.js` is the kill switch. If the smoke test fails, the job runs
+   `deploy/remote.sh rollback` and fails.
 
-The deploy only runs on `main`, and only while the repository variable `DEPLOY_ENABLED` is
-`true`. Pull requests get the secret scan, the file checks, and the build, but no deploy.
-
-The build stamps the revision into the ready screen (`rev r12-2a7e3d3`), so it is obvious
-which build a bug report came from.
+The deploy only runs while the repository variable `DEPLOY_ENABLED` is `true`.
 
 ## Telemetry collector
 
@@ -81,7 +123,10 @@ The game posts anonymous events to `/api/beacon`. A small Node service keeps the
 and serves a read-only panel.
 
 ```
-/opt/korupsi-stats/            code, deployed by CI, owned by deploy
+/opt/korupsi-stats/            owned by deploy
+  releases/v0.3.0-a1b2c3d/     collector code for one release, with a RELEASE file
+  current -> releases/...      what the unit runs
+  previous -> releases/...     what a rollback goes back to
 /var/lib/korupsi-stats/        stats.db, owned by the korupsi service user
 /www/server/nginx/conf/.htpasswd-korupsi   panel credentials
 /www/server/panel/vhost/nginx/0.korupsi-limits.conf   rate limit zone
@@ -95,6 +140,24 @@ and serves a read-only panel.
 - The deploy user may restart only this unit, through a single sudoers rule.
 - A unit file change needs one manual `systemctl daemon-reload`; code changes deploy normally.
 
+### One-time migration to collector release folders
+
+Before the first deploy of v0.3.0, move the running code into a folder of its own and
+install the unit that runs `current` (as root, on the server):
+
+```sh
+cd /opt/korupsi-stats
+sudo -u deploy mkdir -p releases/legacy
+sudo -u deploy mv index.mjs store.mjs panel releases/legacy/
+sudo -u deploy ln -sfn releases/legacy current
+sudo install -m 644 korupsi-stats.service /etc/systemd/system/korupsi-stats.service   # from deploy/systemd
+sudo systemctl daemon-reload && sudo systemctl restart korupsi-stats
+curl -fsS http://127.0.0.1:8787/api/health
+```
+
+The deploy refuses to run until the unit points at `current`, so forgetting this step
+fails the deploy before anything moves.
+
 What is stored: event type, build revision, run outcome (cause, money, height, duration,
 weight), and the first line of JavaScript errors. Error messages are redacted twice, in the
 page (`src/redact.ts`) and again on arrival (`server/redact.mjs`): URLs, inline URIs, email
@@ -107,13 +170,16 @@ the authenticated stats. The deploy checks health over SSH on `127.0.0.1`.
 
 ## Rollback
 
+The site and the collector roll back together. On the server, as the deploy user, from a
+checkout of this repository or with the script copied over:
+
 ```sh
-cd /www/wwwroot/korupsi.web.id
-ln -sfn releases/<previous> current.next && mv -Tf current.next current
+bash deploy/remote.sh rollback /www/wwwroot/korupsi.web.id /opt/korupsi-stats
 ```
 
-No rebuild, no downtime, instant. This rolls back the site only: the collector has no
-release folders yet, so it stays on the latest code (see `docs/plan.md`, D1).
+It swaps `current` and `previous` in both roots and restarts the collector, so running it
+a second time undoes it. No rebuild, no downtime. Through CI instead: run the Deploy
+workflow by hand with the older tag, which rebuilds it and deploys it like any release.
 
 ## Notes
 

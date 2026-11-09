@@ -38,7 +38,8 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   addresses". Done when merged and the nginx config is reinstalled on the server.
 - [ ] **H1 — Harden the server.** Restrict the deploy key to what the deploy needs, review
   SSH settings. Operator work outside the repository. Record only "done" and the date here.
-- [ ] **R1 — Release process.** Adopt release-please (the commits already follow
+- [~] **R1 — Release process** (branch `ci/release-please`, with D1 and D3). Adopt
+  release-please (the commits already follow
   Conventional Commits): it opens a release PR that bumps `package.json` and writes
   `CHANGELOG.md`; merging it creates the tag and the GitHub Release.
   - Production deploy runs on a published release, behind a GitHub `production`
@@ -48,14 +49,21 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   - Release notes are player-facing; operational notes go to `docs/deploy.md`.
   - Done when: a release PR exists, and the deploy job is gated on the release event.
   - Done together with D1 and D3: all three rewrite the same deploy job.
-- [ ] **D1 — Deploy order and rollback for the collector.** Restart and check the collector
-  before switching the site; give it release folders so it rolls back with the site.
-- [ ] **D3 — Pin Node.** `engines` in `package.json`, and check the server's Node version in
-  the deploy (the collector needs `node:sqlite`, Node 22.13 or newer).
+  - Code: `release.yml` (release-please, then deploy), `deploy.yml` (one tag to
+    production, also runnable by hand), `ci.yml` builds and tests only.
+  - Needs the maintainer, after merge: allow GitHub Actions to create pull requests, and
+    give the `production` environment its protection rules. Both are repository settings.
+- [~] **D1 — Deploy order and rollback for the collector** (with R1). Restart and check the
+  collector before switching the site; give it release folders so it rolls back with the
+  site. Code: `deploy/remote.sh` with `tests/remote.test.mjs`. Needs a one-time migration
+  on the server before the first release deploy (`docs/deploy.md`).
+- [~] **D3 — Pin Node** (with R1). `engines` in `package.json`, and check the server's Node
+  version in the deploy (the collector needs `node:sqlite`, Node 22.13 or newer).
 - [ ] **R2 — Cut v0.3.0** through R1. Contents: service worker removed (#2), deploy guard
   (#2), gameplay fixes (#3), telemetry redaction (H3). Done when the tag exists and the
   ready screen shows `v0.3.0`. Until then the live build says `v0.2.0` while running
-  v0.3.0 code.
+  v0.3.0 code. `release-please-config.json` pins `release-as: 0.3.0`, because the commits
+  since v0.2.0 alone would only make 0.2.1; remove that line once the tag exists.
 - [ ] **D2 — Server config from the repository.** Apply `deploy/nginx` and `deploy/systemd`
   from CI (with `nginx -t` and automatic restore), instead of by hand.
 
