@@ -1,5 +1,5 @@
-import { PARAMS, PALETTE as C, type Auditor, type Platform } from './config';
-import type { Game } from './game';
+import { PARAMS, PALETTE as C, type Auditor, type Platform } from './config.ts';
+import type { Game } from './game.ts';
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 

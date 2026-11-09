@@ -9,7 +9,7 @@ import {
   type Platform,
   type PlatformType,
   type Player,
-} from './config';
+} from './config.ts';
 
 const BEST_KEY = 'korupsi.best';
 

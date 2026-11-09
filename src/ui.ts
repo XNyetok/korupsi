@@ -1,7 +1,7 @@
-import { audio } from './audio';
-import { PALETTE as C } from './config';
-import { rupiah, type Game } from './game';
-import { shareResult } from './share';
+import { audio } from './audio.ts';
+import { PALETTE as C } from './config.ts';
+import { rupiah, type Game } from './game.ts';
+import { shareResult } from './share.ts';
 
 declare const __BUILD_LABEL__: string;
 
@@ -72,7 +72,7 @@ export class Ui {
     this.overlay.innerHTML = `
       <div class="card ready">
         <div>
-          <p class="eyebrow">prototipe</p>
+          <p class="eyebrow">v${__VERSION__}</p>
           <h1>Korupsi</h1>
           <p class="lede">Dua pijakan tiap jenjang. Ambil yang bergaris emas untuk skor,
             tapi makin berat, makin pendek lompatanmu.</p>

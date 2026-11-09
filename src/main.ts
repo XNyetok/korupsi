@@ -1,10 +1,10 @@
 import './style.css';
-import { audio } from './audio';
-import { PARAMS } from './config';
-import { mountDebug } from './debug';
-import { Game } from './game';
-import { draw } from './render';
-import { Ui } from './ui';
+import { audio } from './audio.ts';
+import { PARAMS } from './config.ts';
+import { mountDebug } from './debug.ts';
+import { Game } from './game.ts';
+import { draw } from './render.ts';
+import { Ui } from './ui.ts';
 
 const found = document.getElementById('game');
 if (!(found instanceof HTMLCanvasElement)) throw new Error('missing canvas');

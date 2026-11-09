@@ -97,6 +97,9 @@ jobs:
       - name: Type-check
         run: npm run check
 
+      - name: Test the simulation
+        run: npm test
+
       - name: Build
         run: |
           set -euo pipefail
