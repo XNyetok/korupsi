@@ -41,7 +41,7 @@ and the certificate, and this repository owns what nginx actually serves.
 | --- | --- | --- |
 | `DEPLOY_SSH_KEY` | secret | private key of the deploy keypair |
 | `DEPLOY_KNOWN_HOSTS` | secret | output of `ssh-keyscan <server>` |
-| `DEPLOY_HOST` | variable | server address |
+| `DEPLOY_HOST` | secret | server address; a secret so Actions masks it in logs |
 | `DEPLOY_USER` | variable | the unprivileged deploy user |
 | `DEPLOY_PORT` | variable | SSH port |
 | `DEPLOY_PATH` | variable | site root, for example `/www/wwwroot/korupsi.web.id` |
