@@ -38,7 +38,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   addresses". Done when merged and the nginx config is reinstalled on the server.
 - [ ] **H1 — Harden the server.** Restrict the deploy key to what the deploy needs, review
   SSH settings. Operator work outside the repository. Record only "done" and the date here.
-- [~] **R1 — Release process** (branch `ci/release-please`, with D1 and D3). Adopt
+- [~] **R1 — Release process** (#7, with D1 and D3). Adopt
   release-please (the commits already follow
   Conventional Commits): it opens a release PR that bumps `package.json` and writes
   `CHANGELOG.md`; merging it creates the tag and the GitHub Release.
@@ -53,11 +53,11 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     production, also runnable by hand), `ci.yml` builds and tests only.
   - Needs the maintainer, after merge: allow GitHub Actions to create pull requests, and
     give the `production` environment its protection rules. Both are repository settings.
-- [~] **D1 — Deploy order and rollback for the collector** (with R1). Restart and check the
+- [~] **D1 — Deploy order and rollback for the collector** (#7). Restart and check the
   collector before switching the site; give it release folders so it rolls back with the
   site. Code: `deploy/remote.sh` with `tests/remote.test.mjs`. Needs a one-time migration
   on the server before the first release deploy (`docs/deploy.md`).
-- [~] **D3 — Pin Node** (with R1). `engines` in `package.json`, and check the server's Node
+- [~] **D3 — Pin Node** (#7). `engines` in `package.json`, and check the server's Node
   version in the deploy (the collector needs `node:sqlite`, Node 22.13 or newer).
 - [ ] **R2 — Cut v0.3.0** through R1. Contents: service worker removed (#2), deploy guard
   (#2), gameplay fixes (#3), telemetry redaction (H3). Done when the tag exists and the
