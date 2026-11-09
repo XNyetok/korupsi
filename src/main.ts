@@ -188,13 +188,21 @@ requestAnimationFrame(frame);
 
 trackErrors();
 track('visit');
-window.addEventListener('appinstalled', () => track('installed'));
 
-// Offline play: the shell and the hashed assets are cached by the worker.
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js');
-  });
+// The game used to install a service worker that cached the build. Remove any
+// registration and cache it left behind, so every visit loads the live build.
+// public/sw.js does the same for browsers that never run this script.
+if ('serviceWorker' in navigator) {
+  void navigator.serviceWorker
+    .getRegistrations()
+    .then((registrations) => Promise.all(registrations.map((r) => r.unregister())))
+    .catch(() => {});
+}
+if ('caches' in window) {
+  void caches
+    .keys()
+    .then((keys) => Promise.all(keys.filter((k) => k.startsWith('korupsi-')).map((k) => caches.delete(k))))
+    .catch(() => {});
 }
 
 // Keep the parameter object reachable from the console during tuning.
