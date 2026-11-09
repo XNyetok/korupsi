@@ -1,4 +1,4 @@
-import type { Phase } from './config.ts';
+import type { Phase } from '../core/types.ts';
 
 export type Dir = -1 | 1;
 
@@ -16,9 +16,9 @@ export interface ControlHooks {
 }
 
 /**
- * Turns presses into game actions. No DOM in here: the page maps pointer and
- * keyboard events to `press`, `repeat` and `pointer`, so the rules about what
- * a press means can be tested without a browser.
+ * Turns presses into game actions. No DOM in this class: `bindInput` below
+ * maps pointer and keyboard events to `press`, `repeat` and `pointer`, so the
+ * rules about what a press means can be tested without a browser.
  */
 export class Controls {
   private readonly target: ControlTarget;
@@ -74,4 +74,39 @@ export function keyAction(key: string): KeyAction | null {
     default:
       return null;
   }
+}
+
+export interface InputHooks {
+  /** Called on every press, before it is handled: audio may only start from a gesture. */
+  gesture(): void;
+}
+
+/** Wires the canvas and the keyboard to the controls. */
+export function bindInput(canvas: HTMLCanvasElement, controls: Controls, hooks: InputHooks): void {
+  canvas.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    canvas.focus({ preventScroll: true });
+    hooks.gesture();
+    const rect = canvas.getBoundingClientRect();
+    controls.pointer(event.clientX, rect.left, rect.width);
+  });
+
+  canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
+  window.addEventListener('keydown', (event) => {
+    if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+
+    // Enter and Space on a button belong to the button, not to the game.
+    const target = event.target;
+    if (target instanceof Element && target.closest('button, a, input, select, textarea')) return;
+
+    const action = keyAction(event.key);
+    if (!action) return;
+
+    event.preventDefault();
+    hooks.gesture();
+    if (action === 'left') controls.press(-1);
+    else if (action === 'right') controls.press(1);
+    else controls.repeat();
+  });
 }

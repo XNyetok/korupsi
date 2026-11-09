@@ -32,6 +32,20 @@ The repository is public and permissive, so a few rules are absolute.
 If a secret reaches a commit anyway, rotate it first, then rewrite history. Deleting the
 file in a later commit is not enough: it stays in the public history.
 
+## Where code goes
+
+`src/` is split by layer, and each layer only imports the ones before it:
+
+| Folder | What | May import |
+| --- | --- | --- |
+| `core/` | the simulation: rules, levels, physics, the seeded RNG. No DOM | `core` |
+| `platform/` | browser APIs: input, the frame loop, storage, audio, telemetry, sharing | `core`, `platform` |
+| `view/` | drawing the canvas | `core`, `view` |
+| `ui/` | the DOM around the canvas: HUD, cards, debug panel, styles | all of the above |
+
+`main.ts` wires them together. `npm run check` compiles `core/` without the DOM library, and
+`npm test` fails on an import that breaks the table.
+
 ## Commits
 
 Use a short conventional prefix, lowercase, imperative summary:

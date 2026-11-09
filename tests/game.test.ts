@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { PARAMS } from '../src/config.ts';
-import { AWAY_LIMIT_MS, Game, PLAYER_EDGE, envelope } from '../src/game.ts';
-import { WORLD_WIDTH } from '../src/config.ts';
+import { PARAMS } from '../src/core/params.ts';
+import { Game } from '../src/core/game.ts';
+import { AWAY_LIMIT_MS } from '../src/core/rules.ts';
+import { PLAYER_EDGE, envelope } from '../src/core/physics.ts';
+import { WORLD_WIDTH } from '../src/core/params.ts';
 
 const STEP = 1 / 120;
 

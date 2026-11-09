@@ -23,7 +23,9 @@ export function mulberry32(seed: number): Rng {
 
 /** A fresh seed for a run nobody asked to replay. */
 export function randomSeed(): number {
-  const crypto = globalThis.crypto;
+  // Typed by hand: core/ compiles without the DOM library, and Web Crypto is
+  // the one browser-and-Node API it uses.
+  const crypto = (globalThis as { crypto?: { getRandomValues(array: Uint32Array): Uint32Array } }).crypto;
   if (crypto?.getRandomValues) return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
   return Math.floor(Math.random() * 4294967296) >>> 0;
 }

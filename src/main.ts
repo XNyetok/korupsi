@@ -1,13 +1,22 @@
-import './style.css';
-import { audio } from './audio.ts';
-import { PARAMS, WORLD_WIDTH } from './config.ts';
-import { mountDebug } from './debug.ts';
-import { Game } from './game.ts';
-import { Controls, keyAction } from './input.ts';
-import { draw } from './render.ts';
-import { parseSeed } from './rng.ts';
-import { track, trackErrors } from './telemetry.ts';
-import { Ui } from './ui.ts';
+/**
+ * Composition root: builds the game and connects it to the page. The pieces
+ * live in core/ (the simulation, no DOM), platform/ (browser APIs), view/
+ * (the canvas) and ui/ (the DOM around it).
+ */
+
+import './ui/style.css';
+import { Game } from './core/game.ts';
+import { PARAMS } from './core/params.ts';
+import { parseSeed } from './core/rng.ts';
+import { audio } from './platform/audio.ts';
+import { bindInput, Controls } from './platform/input.ts';
+import { startLoop } from './platform/loop.ts';
+import { bestStore } from './platform/storage.ts';
+import { track, trackErrors } from './platform/telemetry.ts';
+import { fitCanvas } from './platform/viewport.ts';
+import { mountDebug } from './ui/debug.ts';
+import { Ui } from './ui/ui.ts';
+import { draw } from './view/renderer.ts';
 
 const found = document.getElementById('game');
 if (!(found instanceof HTMLCanvasElement)) throw new Error('missing canvas');
@@ -27,29 +36,32 @@ const WAKE_LOCK_MS = 350;
 // `?seed=` replays one layout on every run: for bug reports and playtests.
 const fixedSeed = parseSeed(new URLSearchParams(location.search).get('seed'));
 
-const game = new Game({
-  onEnd() {
-    controls.block(RESULT_LOCK_MS);
-    ui.showResult(game);
-    audio.play('caught');
-    track('run_ended', {
-      cause: game.cause,
-      money: game.money,
-      weight: game.weight,
-      height: game.heightMetres,
-      duration: Math.round(game.elapsed),
-    });
+const game = new Game(
+  {
+    onEnd() {
+      controls.block(RESULT_LOCK_MS);
+      ui.showResult(game);
+      audio.play('caught');
+      track('run_ended', {
+        cause: game.cause,
+        money: game.money,
+        weight: game.weight,
+        height: game.heightMetres,
+        duration: Math.round(game.elapsed),
+      });
+    },
+    onJump() {
+      audio.play('jump');
+    },
+    onLand() {
+      audio.play('land');
+    },
+    onCollect() {
+      audio.play('collect');
+    },
   },
-  onJump() {
-    audio.play('jump');
-  },
-  onLand() {
-    audio.play('land');
-  },
-  onCollect() {
-    audio.play('collect');
-  },
-}, { seed: fixedSeed });
+  { seed: fixedSeed, store: bestStore },
+);
 
 const controls = new Controls(game, {
   start() {
@@ -71,49 +83,14 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 let pixelScale = 1;
 
 function resize(): void {
-  const rect = canvas.getBoundingClientRect();
-  const cssWidth = Math.max(260, Math.round(rect.width));
-  const cssHeight = Math.max(320, Math.round(rect.height));
-
-  // The world is always WORLD_WIDTH wide; only how much of it is visible
-  // vertically depends on the screen.
-  const scale = cssWidth / WORLD_WIDTH;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  canvas.width = Math.round(cssWidth * dpr);
-  canvas.height = Math.round(cssHeight * dpr);
-  pixelScale = scale * dpr;
-
-  game.setViewport(cssHeight / scale);
+  const viewport = fitCanvas(canvas);
+  pixelScale = viewport.pixelScale;
+  game.setViewport(viewport.worldHeight);
 }
 
 // ---------- input ----------
 
-canvas.addEventListener('pointerdown', (event) => {
-  event.preventDefault();
-  canvas.focus({ preventScroll: true });
-  audio.unlock();
-  const rect = canvas.getBoundingClientRect();
-  controls.pointer(event.clientX, rect.left, rect.width);
-});
-
-canvas.addEventListener('contextmenu', (event) => event.preventDefault());
-
-window.addEventListener('keydown', (event) => {
-  if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-
-  // Enter and Space on a button belong to the button, not to the game.
-  const target = event.target;
-  if (target instanceof Element && target.closest('button, a, input, select, textarea')) return;
-
-  const action = keyAction(event.key);
-  if (!action) return;
-
-  event.preventDefault();
-  audio.unlock();
-  if (action === 'left') controls.press(-1);
-  else if (action === 'right') controls.press(1);
-  else controls.repeat();
-});
+bindInput(canvas, controls, { gesture: () => audio.unlock() });
 
 // Safari only starts audio from a gesture, and devices disagree about which
 // events count. Any of these is enough; unlock() is cheap once running.
@@ -125,34 +102,24 @@ window.addEventListener('resize', resize);
 
 // ---------- loop ----------
 
-let lastFrame = performance.now();
-let acc = 0;
-const STEP = 1 / 120;
-
 const debug = mountDebug(game);
 
-function frame(now: number): void {
-  const dt = Math.min(0.05, (now - lastFrame) / 1000);
-  lastFrame = now;
+resize();
+game.reset();
+ui.showReady(fixedSeed);
 
-  if (game.phase === 'playing') {
-    acc += dt;
-    let guard = 0;
-    while (acc >= STEP && guard++ < 8) {
-      game.step(STEP);
-      acc -= STEP;
-      if (game.phase !== 'playing') break;
-    }
-  } else {
-    acc = 0;
-  }
+const loop = startLoop({
+  running: () => game.phase === 'playing',
+  step: (dt) => game.step(dt),
+  draw() {
+    ctx.setTransform(pixelScale, 0, 0, pixelScale, 0, 0);
+    draw(ctx, game, reducedMotion);
+    ui.update(game);
+    debug?.tick();
+  },
+});
 
-  ctx.setTransform(pixelScale, 0, 0, pixelScale, 0, 0);
-  draw(ctx, game, reducedMotion);
-  ui.update(game);
-  debug?.tick();
-  requestAnimationFrame(frame);
-}
+// ---------- leaving and coming back ----------
 
 let hiddenAt = 0;
 
@@ -166,8 +133,7 @@ document.addEventListener('visibilitychange', () => {
 
   const awayMs = hiddenAt ? performance.now() - hiddenAt : 0;
   hiddenAt = 0;
-  lastFrame = performance.now();
-  acc = 0;
+  loop.resync();
 
   // Coming back never drops the player straight into a moving band: a short
   // absence waits on a pause card, a long one has already ended the run.
@@ -179,14 +145,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('pagehide', () => audio.suspend());
-window.addEventListener('pageshow', () => {
-  lastFrame = performance.now();
-});
-
-resize();
-game.reset();
-ui.showReady(fixedSeed);
-requestAnimationFrame(frame);
+window.addEventListener('pageshow', () => loop.resetClock());
 
 trackErrors();
 track('visit');

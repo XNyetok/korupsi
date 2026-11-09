@@ -1,6 +1,6 @@
-import { audio } from './audio.ts';
-import { PARAMS } from './config.ts';
-import type { Game } from './game.ts';
+import type { Game } from '../core/game.ts';
+import { PARAMS } from '../core/params.ts';
+import { audio } from '../platform/audio.ts';
 
 declare global {
   interface Window {

@@ -1,6 +1,6 @@
 # Korupsi — game design
 
-**Status:** playable. The loop lives in [`../../src/game.ts`](../../src/game.ts) and runs at
+**Status:** playable. The loop lives in [`../../src/core/game.ts`](../../src/core/game.ts) and runs at
 [korupsi.web.id](https://korupsi.web.id). Balance is still expected to move.
 
 ## One line
@@ -138,7 +138,7 @@ scores nothing. That is the joke, and it needs a playtest to confirm it reads as
 
 ## Tuning
 
-Numbers live in [`src/config.ts`](../../src/config.ts). Distances are world units: the
+Numbers live in [`src/core/params.ts`](../../src/core/params.ts). Distances are world units: the
 world is 360 units wide on every screen, so a unit is a CSS pixel on a 360 px phone.
 
 | Parameter | Value | Effect |

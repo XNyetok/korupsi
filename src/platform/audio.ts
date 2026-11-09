@@ -3,16 +3,14 @@
  * with no binary assets, and every cue is a couple of oscillator notes.
  */
 
+import { readItem, writeItem } from './storage.ts';
+
 const MUTE_KEY = 'korupsi.muted';
 
 export type Cue = 'jump' | 'land' | 'collect' | 'caught' | 'start';
 
 function readMuted(): boolean {
-  try {
-    return localStorage.getItem(MUTE_KEY) === '1';
-  } catch {
-    return false;
-  }
+  return readItem(MUTE_KEY) === '1';
 }
 
 class AudioEngine {
@@ -67,11 +65,7 @@ class AudioEngine {
 
   setMuted(muted: boolean): void {
     this.muted = muted;
-    try {
-      localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
-    } catch {
-      /* private mode, ignore */
-    }
+    writeItem(MUTE_KEY, muted ? '1' : '0');
   }
 
   play(cue: Cue): void {

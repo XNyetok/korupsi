@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type { Phase } from '../src/config.ts';
-import { Controls, keyAction } from '../src/input.ts';
+import type { Phase } from '../src/core/types.ts';
+import { Controls, keyAction } from '../src/platform/input.ts';
 
 function setup(phase: Phase = 'playing', dir = 1) {
   let clock = 0;

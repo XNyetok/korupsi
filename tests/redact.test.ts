@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { redactMessage as server } from '../server/redact.mjs';
-import { redactMessage as client } from '../src/redact.ts';
+import { redactMessage as client } from '../src/platform/redact.ts';
 
 const CASES: [string, unknown, string][] = [
   ['plain messages pass through', 'TypeError: x is not a function', 'TypeError: x is not a function'],

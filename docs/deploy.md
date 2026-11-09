@@ -177,7 +177,7 @@ Without the apply script, install `deploy/systemd/korupsi-stats.service` by hand
 
 What is stored: event type, build revision, run outcome (cause, money, height, duration,
 weight), and the first line of JavaScript errors. Error messages are redacted twice, in the
-page (`src/redact.ts`) and again on arrival (`server/redact.mjs`): URLs, inline URIs, email
+page (`src/platform/redact.ts`) and again on arrival (`server/redact.mjs`): URLs, inline URIs, email
 addresses and host-and-path strings become `<url>` or `<email>`. Rows stored before the
 redaction existed are cleaned when the collector starts. No address, no cookie, no
 identifier. Rows older than 90 days are pruned every six hours.

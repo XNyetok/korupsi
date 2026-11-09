@@ -1,0 +1,10 @@
+{
+  // The simulation must run without a browser: no DOM types here, so any use
+  // of window, document, localStorage or the like fails the type check.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2020"],
+    "types": []
+  },
+  "include": ["."]
+}
