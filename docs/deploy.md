@@ -12,8 +12,10 @@ and the certificate, and this repository owns what nginx actually serves.
   previous -> releases/...     what a rollback goes back to
 ```
 
-`deploy/nginx/korupsi-rewrite.conf` is copied into
-`/www/server/panel/vhost/rewrite/korupsi.web.id.conf`. Nothing else on the server changes.
+Three files on the server come from this repository and are installed by the deploy (see
+*Server config*): `deploy/nginx/korupsi-rewrite.conf` as the site's rewrite rules,
+`deploy/nginx/korupsi-limits.conf` as the rate limit zones, and
+`deploy/systemd/korupsi-stats.service` as the collector's unit.
 
 ## One-time setup
 
@@ -33,8 +35,8 @@ and the certificate, and this repository owns what nginx actually serves.
 5. **SSH key for CI** — generate a dedicated keypair, put the public half in
    `/home/deploy/.ssh/authorized_keys`, and store the private half as the repository secret
    `DEPLOY_SSH_KEY`. Never commit it.
-6. **Rewrite rules** — paste `deploy/nginx/korupsi-rewrite.conf` into the panel's URL
-   rewrite field for the site, then `sudo nginx -t && sudo nginx -s reload`.
+6. **Server config** — install the apply script and its sudoers rule (see *Server config*).
+   The first deploy then installs the nginx files and the unit.
 
 ## Repository secrets and variables
 
@@ -112,7 +114,10 @@ One version identity, everywhere:
    build, and check the tag matches the version in `package.json`.
 2. `rsync` the site into `releases/<release>/` under the site root and the collector into
    `releases/<release>/` under `/opt/korupsi-stats`. Nothing live changes during the upload.
-3. Run `deploy/remote.sh activate` over SSH. It refuses to continue unless the server's
+3. Run `korupsi-apply-config <tag>` over SSH, which brings the nginx files and the unit
+   to this release (see *Server config*). If it is not installed, the job warns and carries
+   on with the files the server has.
+4. Run `deploy/remote.sh activate` over SSH. It refuses to continue unless the server's
    Node is 22.13 or newer with `node:sqlite`, and the unit runs the collector through
    `current`. Then:
    - switch the collector's `current`, restart it, and wait until `/api/health` on
@@ -121,7 +126,7 @@ One version identity, everywhere:
    - switch the site's `current` with `mv -Tf`, so no request sees a half switch;
    - record both old targets as `previous`, and keep the five newest releases plus
      whatever `current` and `previous` point at.
-4. Smoke test: `/`, `/og.png` and `/sw.js` answer 200, the live page loads the script this
+5. Smoke test: `/`, `/og.png` and `/sw.js` answer 200, the live page loads the script this
    run built, and `/sw.js` is the kill switch. If the smoke test fails, the job runs
    `deploy/remote.sh rollback` and fails.
 
@@ -152,21 +157,22 @@ and serves a read-only panel.
 
 ### One-time migration to collector release folders
 
-Before the first deploy of v0.3.0, move the running code into a folder of its own and
-install the unit that runs `current` (as root, on the server):
+Before the first deploy of v0.3.0 the unit has to run the collector through `current`. The
+deploy refuses to switch anything until it does, so a forgotten step fails safely.
+
+With `korupsi-apply-config` installed (next section), the deploy installs the new unit
+itself. Optionally, move the running code into a folder of its own first, so the first
+release has something to roll back to:
 
 ```sh
 cd /opt/korupsi-stats
 sudo -u deploy mkdir -p releases/legacy
 sudo -u deploy mv index.mjs store.mjs panel releases/legacy/
 sudo -u deploy ln -sfn releases/legacy current
-sudo install -m 644 korupsi-stats.service /etc/systemd/system/korupsi-stats.service   # from deploy/systemd
-sudo systemctl daemon-reload && sudo systemctl restart korupsi-stats
-curl -fsS http://127.0.0.1:8787/api/health
 ```
 
-The deploy refuses to run until the unit points at `current`, so forgetting this step
-fails the deploy before anything moves.
+Without the apply script, install `deploy/systemd/korupsi-stats.service` by hand, then
+`systemctl daemon-reload`.
 
 What is stored: event type, build revision, run outcome (cause, money, height, duration,
 weight), and the first line of JavaScript errors. Error messages are redacted twice, in the
@@ -177,6 +183,39 @@ identifier. Rows older than 90 days are pruned every six hours.
 
 `/api/health` is not public: nginx answers 404 for every `/api/` path except the beacon and
 the authenticated stats. The deploy checks health over SSH on `127.0.0.1`.
+
+## Server config
+
+`deploy/apply-config.sh` brings the nginx files and the unit on the server to one release.
+It is installed once, as root, and is the only thing the deploy user may run as root
+besides restarting the collector:
+
+```sh
+sudo install -o root -g root -m 755 deploy/apply-config.sh /usr/local/sbin/korupsi-apply-config
+echo 'deploy ALL=(root) NOPASSWD: /usr/local/sbin/korupsi-apply-config' \
+  | sudo tee /etc/sudoers.d/korupsi-apply-config >/dev/null
+sudo chmod 440 /etc/sudoers.d/korupsi-apply-config && sudo visudo -c
+```
+
+Its only input is a release tag. It downloads the three files from this public repository
+at that tag over HTTPS, so the deploy key can choose a release but cannot supply a config
+of its own; a leaked key does not become root. Then it:
+
+1. does nothing if the server already has exactly those files;
+2. backs up the current set to `/var/backups/korupsi-config/` (the newest ten are kept);
+3. installs the files, runs `nginx -t`, and `systemd-analyze verify` when the unit changed;
+4. reloads nginx and, for a unit change, runs `systemctl daemon-reload`. The collector is
+   restarted afterwards by the deploy, on the new code.
+
+If a check or the reload fails, it puts the backed-up set back and fails the deploy before
+any release is switched. The script reads no environment variables, so `sudo` cannot be
+steered into installing something else.
+
+When `deploy/apply-config.sh` itself changes, reinstall it by hand with the first command
+above: the deploy never replaces the script that runs as root.
+
+A rollback switches code, not config: after rolling back past a config change, run
+`sudo korupsi-apply-config <older tag>` too.
 
 ## Rollback
 

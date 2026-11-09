@@ -101,6 +101,31 @@ jobs:
           done < <(git ls-files)
           exit "$failed"
 
+      - name: Check the nginx config
+        run: |
+          set -euo pipefail
+          # The two files are includes, so wrap them the way the panel does: the
+          # limits at http level, the rewrite rules inside the site's server block.
+          mkdir -p "$RUNNER_TEMP/nginx"
+          cat > "$RUNNER_TEMP/nginx/nginx.conf" <<'EOF'
+          events {}
+          http {
+            include /repo/deploy/nginx/korupsi-limits.conf;
+            server {
+              listen 8080;
+              server_name korupsi.web.id www.korupsi.web.id;
+              include /repo/deploy/nginx/korupsi-rewrite.conf;
+            }
+          }
+          EOF
+          docker run --rm --network none \
+            -v "$PWD:/repo:ro" -v "$RUNNER_TEMP/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            nginx:stable-alpine@sha256:583b7f2fce1cdb8da5ad5c39ebd3c33b98b87d493190e548bdee1fa8c619c311 \
+            nginx -t
+
+      - name: Lint the shell scripts
+        run: shellcheck deploy/*.sh .githooks/pre-commit scripts/*.sh
+
   build:
     name: Type-check & build
     needs: [secrets]
