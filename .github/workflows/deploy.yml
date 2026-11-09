@@ -159,6 +159,20 @@ jobs:
           rsync -rlptz --delete --mkpath dist/ "production:$DEPLOY_PATH/releases/$RELEASE/"
           rsync -rlptz --delete --mkpath server/ "production:$COLLECTOR_PATH/releases/$RELEASE/"
 
+      - name: Apply the server config of this release
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          # deploy/apply-config.sh, installed once as root. It downloads the
+          # nginx files and the unit from this tag itself and restores the old
+          # ones if nginx -t, systemd-analyze or the reload fails.
+          if ! ssh production test -x /usr/local/sbin/korupsi-apply-config; then
+            echo "::warning::korupsi-apply-config is not installed on the server; nginx and systemd config were not applied (docs/deploy.md)"
+            exit 0
+          fi
+          ssh production sudo -n /usr/local/sbin/korupsi-apply-config "$TAG"
+
       - name: Switch the collector, then the site
         env:
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
