@@ -54,6 +54,7 @@ is how balance changes get compared before they ship.
 npm install
 npm run dev      # dev server with hot reload
 npm run check    # types only
+npm test         # simulation tests, no browser needed
 npm run build    # production build in dist/
 ```
 

@@ -23,7 +23,8 @@ function serviceWorker(): Plugin {
     closeBundle() {
       const files = walk(OUT_DIR)
         .map((file) => '/' + relative(OUT_DIR, file).split('\\').join('/'))
-        .filter((file) => file !== '/sw.js')
+        // sw.js is the worker itself, og.png is only for social crawlers.
+        .filter((file) => file !== '/sw.js' && file !== '/og.png')
         .sort();
 
       const template = readFileSync(resolve('pwa/sw.js'), 'utf8');
@@ -37,10 +38,13 @@ function serviceWorker(): Plugin {
   };
 }
 
+const pkg = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { version: string };
+
 export default defineConfig({
   define: {
     // The deploy workflow passes the release id; local builds show "dev".
     __BUILD_LABEL__: JSON.stringify(process.env.BUILD_LABEL ?? 'dev'),
+    __VERSION__: JSON.stringify(pkg.version),
   },
   build: {
     target: 'es2020',
