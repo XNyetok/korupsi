@@ -9,7 +9,13 @@ const STEP = 1 / 120;
 /** Everything about the world that the seed and the choices decide. */
 function snapshot(game: Game): string {
   const ledges = game.platforms.map((p) => [p.id, p.x.toFixed(3), p.y.toFixed(3), p.w.toFixed(3), p.gold, p.type]);
-  const auditors = game.auditors.map((a) => [a.upper.id, a.minX.toFixed(3), a.maxX.toFixed(3), a.speed.toFixed(3), a.dir]);
+  const auditors = game.auditors.map((a) => [
+    a.upper.id,
+    a.minX.toFixed(3),
+    a.maxX.toFixed(3),
+    a.speed.toFixed(3),
+    a.dir,
+  ]);
   return JSON.stringify({ ledges, auditors, level: game.level, money: game.money });
 }
 

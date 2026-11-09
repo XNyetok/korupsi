@@ -9,14 +9,7 @@ import { clamp } from '../core/physics.ts';
 import type { Auditor, Platform } from '../core/types.ts';
 import { PALETTE as C } from './palette.ts';
 
-export function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
+export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   const rr = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
   ctx.moveTo(x + rr, y);

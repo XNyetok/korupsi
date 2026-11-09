@@ -8,3 +8,19 @@ updates:
       prefix: chore
     labels:
       - dependencies
+
+  # Development tools only: the game ships no runtime dependencies. One grouped
+  # PR a month for routine updates; security updates still arrive on their own.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+    labels:
+      - dependencies
+    open-pull-requests-limit: 5
+    groups:
+      dev-tools:
+        dependency-type: development
+        update-types: [minor, patch]

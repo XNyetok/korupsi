@@ -101,8 +101,15 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     library, and `tests/layers.test.ts` fails on an import that points up a layer.
   - Checked: a frame-by-frame trace of four seeded runs is byte-identical before and after;
     unit and browser tests pass with only import paths changed.
-- [ ] **H2 — Repository settings.** Enable Dependabot security updates; add lint and format
-  checks to CI.
+- [~] **H2 — Repository settings** (branch `ci/lint-format`). Enable Dependabot security
+  updates; add lint and format checks to CI.
+  - Code: Biome (`biome.json`, `npm run lint` in CI, `npm run format` to fix), and npm in
+    `.github/dependabot.yml` next to Actions. Lint found one dead function in the panel.
+  - Needs the maintainer: turn on Dependabot security updates (Settings, Advanced
+    Security), and add the lint step's job to the required checks if it moves out of
+    "Type-check & build".
+  - #1 (`actions/checkout` 4 → 7) was closed unmerged; `ci.yml` already pins v7.0.1, so
+    nothing is left of it.
 
 ## Later
 

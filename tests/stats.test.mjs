@@ -66,7 +66,10 @@ test('messages stored before redaction are cleaned when the store opens', () => 
     raw.close();
 
     const store = openStore(path);
-    const messages = store.stats(1).errors.map((row) => row.message).sort();
+    const messages = store
+      .stats(1)
+      .errors.map((row) => row.message)
+      .sort();
     assert.deepEqual(messages, ['<url>', 'boom at <url>', 'clean message']);
     store.close();
   } finally {
@@ -82,9 +85,18 @@ test('stats aggregate counts, causes and medians', () => {
   insert({ type: 'visit', rev: 'r1' }, now - 1000);
   insert({ type: 'visit', rev: 'r1' }, now - 900);
   insert({ type: 'run_started', rev: 'r1' }, now - 800);
-  insert({ type: 'run_ended', rev: 'r1', cause: 'band', money: 1_000_000, weight: 2, height: 100, duration: 30 }, now - 700);
-  insert({ type: 'run_ended', rev: 'r1', cause: 'band', money: 3_000_000, weight: 6, height: 300, duration: 60 }, now - 600);
-  insert({ type: 'run_ended', rev: 'r1', cause: 'auditor', money: 2_000_000, weight: 4, height: 200, duration: 45 }, now - 500);
+  insert(
+    { type: 'run_ended', rev: 'r1', cause: 'band', money: 1_000_000, weight: 2, height: 100, duration: 30 },
+    now - 700,
+  );
+  insert(
+    { type: 'run_ended', rev: 'r1', cause: 'band', money: 3_000_000, weight: 6, height: 300, duration: 60 },
+    now - 600,
+  );
+  insert(
+    { type: 'run_ended', rev: 'r1', cause: 'auditor', money: 2_000_000, weight: 4, height: 200, duration: 45 },
+    now - 500,
+  );
   insert({ type: 'shared', rev: 'r1' }, now - 400);
   insert({ type: 'error', rev: 'r1', message: 'boom' }, now - 300);
   insert({ type: 'error', rev: 'r1', message: 'boom' }, now - 200);

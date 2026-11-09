@@ -2,13 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { redactMessage } from './redact.mjs';
 
-export const EVENT_TYPES = new Set([
-  'visit',
-  'run_started',
-  'run_ended',
-  'shared',
-  'error',
-]);
+export const EVENT_TYPES = new Set(['visit', 'run_started', 'run_ended', 'shared', 'error']);
 
 const CAUSES = new Set(['auditor', 'band', 'fall', 'abandoned']);
 

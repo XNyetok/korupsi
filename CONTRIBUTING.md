@@ -46,6 +46,9 @@ file in a later commit is not enough: it stays in the public history.
 `main.ts` wires them together. `npm run check` compiles `core/` without the DOM library, and
 `npm test` fails on an import that breaks the table.
 
+Formatting and lint are Biome's (`biome.json`): `npm run format` fixes the format, and
+`npm run lint` is what CI runs. Markdown, HTML and CSS layout are left alone.
+
 ## Commits
 
 Use a short conventional prefix, lowercase, imperative summary:

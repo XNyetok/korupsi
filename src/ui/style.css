@@ -30,6 +30,7 @@
     width: 100%;
     max-width: 520px;
     height: 100%;
+    /* biome-ignore lint/suspicious/noDuplicateProperties: 100% is the fallback for browsers without dvh */
     height: 100dvh;
     overflow: hidden;
     background: var(--ink);

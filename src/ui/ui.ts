@@ -61,8 +61,7 @@ export class Ui {
 
     const pct = Math.max(0, Math.min(100, (game.weight / 12) * 100));
     this.bar.style.width = `${pct}%`;
-    this.bar.style.background =
-      game.weight >= 8 ? C.red : game.weight >= 5 ? C.gold : 'rgba(227, 176, 75, 0.65)';
+    this.bar.style.background = game.weight >= 8 ? C.red : game.weight >= 5 ? C.gold : 'rgba(227, 176, 75, 0.65)';
   }
 
   toast(message: string): void {
@@ -76,8 +75,7 @@ export class Ui {
 
   /** `fixedSeed` is set when the page was opened with `?seed=`. */
   showReady(fixedSeed: number | null = null): void {
-    const replay =
-      fixedSeed === null ? '' : `<p class="seed">Seed tetap <b>${formatSeed(fixedSeed)}</b></p>`;
+    const replay = fixedSeed === null ? '' : `<p class="seed">Seed tetap <b>${formatSeed(fixedSeed)}</b></p>`;
     this.overlay.innerHTML = `
       <div class="card ready">
         <div>
@@ -138,9 +136,7 @@ export class Ui {
         ? `Kamu pergi. ${game.weight} amplop, berkasnya tetap diproses.`
         : 'Kamu pergi. Berkasnya diproses tanpa kamu.';
     } else {
-      line = game.weight
-        ? `${game.weight} amplop, semuanya tercatat di berkas.`
-        : 'Tangan kosong, tetap dicurigai.';
+      line = game.weight ? `${game.weight} amplop, semuanya tercatat di berkas.` : 'Tangan kosong, tetap dicurigai.';
     }
 
     this.overlay.innerHTML = `
