@@ -1,9 +1,10 @@
+import { audio } from './audio';
 import { PARAMS } from './config';
 import type { Game } from './game';
 
 declare global {
   interface Window {
-    __korupsi?: Game & { params: typeof PARAMS };
+    __korupsi?: Game & { params: typeof PARAMS; audio: typeof audio };
   }
 }
 
@@ -26,7 +27,7 @@ export function mountDebug(game: Game): Debug | null {
 
   // Balance harness: drive the simulation without a browser and inspect what
   // the player can actually see.
-  window.__korupsi = Object.assign(game, { params: PARAMS });
+  window.__korupsi = Object.assign(game, { params: PARAMS, audio });
 
   const panel = document.getElementById('debug');
   if (!panel) return null;

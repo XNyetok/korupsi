@@ -21,21 +21,43 @@ class AudioEngine {
   private noiseBuffer: AudioBuffer | null = null;
   muted = readMuted();
 
+  get state(): AudioContextState | 'uninitialised' {
+    return this.ctx ? this.ctx.state : 'uninitialised';
+  }
+
   /** Must be called from a user gesture before anything can be heard. */
   unlock(): void {
-    if (!this.ctx) {
-      const Ctor =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctor) return;
+    const ctx = this.ensure();
+    if (!ctx) return;
 
-      this.ctx = new Ctor();
-      this.master = this.ctx.createGain();
-      this.master.gain.value = 0.3;
-      this.master.connect(this.ctx.destination);
-    }
+    // Safari on iOS reports "interrupted" after a call or Siri, which behaves
+    // like suspended but is not part of the spec's type. Resume unless running.
+    if (ctx.state !== 'running') void ctx.resume().catch(() => {});
+  }
 
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+  private ensure(): AudioContext | null {
+    if (this.ctx) return this.ctx;
+
+    const Ctor =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) return null;
+
+    const ctx = new Ctor();
+    this.ctx = ctx;
+    this.master = ctx.createGain();
+    this.master.gain.value = 0.3;
+    this.master.connect(ctx.destination);
+
+    // iOS keeps a context created in a gesture asleep until something is
+    // actually played from it. One sample of silence satisfies that.
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+
+    return ctx;
   }
 
   /** Stop the clock while the page is hidden; unlock() resumes it. */
@@ -54,9 +76,27 @@ class AudioEngine {
 
   play(cue: Cue): void {
     if (this.muted) return;
-    this.unlock();
-    if (!this.ctx || !this.master) return;
 
+    // No context yet means no gesture yet; creating one here would be asleep.
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+
+    if (ctx.state === 'running') {
+      this.schedule(cue);
+      return;
+    }
+
+    // Resuming is asynchronous on iOS. Scheduling into a suspended clock would
+    // swallow the cue, so wait for the context instead.
+    void ctx
+      .resume()
+      .then(() => {
+        if (ctx.state === 'running') this.schedule(cue);
+      })
+      .catch(() => {});
+  }
+
+  private schedule(cue: Cue): void {
     switch (cue) {
       case 'jump':
         this.tone({ freq: 470, to: 760, dur: 0.1, gain: 0.1 });

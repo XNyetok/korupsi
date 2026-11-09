@@ -95,6 +95,12 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
+// Safari only starts audio from a gesture, and devices disagree about which
+// events count. Any of these is enough; unlock() is cheap once running.
+for (const type of ['pointerdown', 'touchend', 'click', 'keydown'] as const) {
+  window.addEventListener(type, () => audio.unlock(), { capture: true, passive: true });
+}
+
 let resizeTimer = 0;
 window.addEventListener('resize', () => {
   resize();
