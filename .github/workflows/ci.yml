@@ -168,7 +168,7 @@ jobs:
         run: |
           set -euo pipefail
           for path in / /og.png /manifest.webmanifest /sw.js; do
-            code=$(curl -fsS --retry 5 --retry-delay 3 -o /dev/null -w '%{http_code}' "\${SITE}\${path}")
+            code=$(curl -fsS --retry 5 --retry-delay 3 -o /dev/null -w '%{http_code}' "${SITE}${path}")
             echo "$code $path"
             [ "$code" = "200" ]
           done
