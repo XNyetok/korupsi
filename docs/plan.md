@@ -51,8 +51,10 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   - Done together with D1 and D3: all three rewrite the same deploy job.
   - Code: `release.yml` (release-please, then deploy), `deploy.yml` (one tag to
     production, also runnable by hand), `ci.yml` builds and tests only.
-  - Needs the maintainer, after merge: allow GitHub Actions to create pull requests, and
-    give the `production` environment its protection rules. Both are repository settings.
+  - Settings, 2026-11-10: the `production` environment exists (deploys from protected
+    refs only). The XNyetok organisation forbids Actions from creating pull requests, so
+    the workflow tags and deploys on its own but the release PR is opened with
+    `release-please release-pr` (`docs/deploy.md`, Releases).
 - [~] **D1 — Deploy order and rollback for the collector** (#7). Restart and check the
   collector before switching the site; give it release folders so it rolls back with the
   site. Code: `deploy/remote.sh` with `tests/remote.test.mjs`. Needs a one-time migration

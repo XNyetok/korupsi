@@ -30,14 +30,27 @@ jobs:
       pull-requests: write
       actions: write
     outputs:
-      release_created: ${{ steps.rp.outputs.release_created }}
-      tag_name: ${{ steps.rp.outputs.tag_name }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - id: rp
+      # 1. Tag and publish a merged release PR. This alone decides the deploy.
+      - id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          skip-github-pull-request: true
+
+      # 2. Open or update the next release PR. The organisation may forbid
+      #    GITHUB_TOKEN from creating pull requests; then this step fails on its
+      #    own and the release PR is opened by hand (docs/deploy.md, Releases).
+      - id: rp
+        continue-on-error: true
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-release: true
 
       - name: Run the checks on the release PR
         if: steps.rp.outputs.prs_created == 'true' && steps.rp.outputs.pr != ''

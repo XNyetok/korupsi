@@ -77,6 +77,16 @@ Before merging a release PR, edit its `CHANGELOG.md` entry into player language:
 changed in the game, not how. Operational notes (a migration, a config to reinstall) go
 in this file instead.
 
+If the organisation does not allow GitHub Actions to create pull requests, the "open the
+release PR" step fails on its own and tagging still works. Open the release PR from a
+machine logged in with `gh` instead:
+
+```sh
+npx release-please@17 release-pr --token="$(gh auth token)" \
+  --repo-url=XNyetok/korupsi --config-file=release-please-config.json \
+  --manifest-file=.release-please-manifest.json
+```
+
 GitHub starts no workflows for anything created with `GITHUB_TOKEN`. That is why the
 deploy runs inside the release workflow instead of listening for the release event, and
 why the release workflow starts CI on the release PR branch itself: the PR needs its
