@@ -208,8 +208,8 @@ function drawPlayer(ctx: CanvasRenderingContext2D, game: Game): void {
 
 function drawBand(ctx: CanvasRenderingContext2D, game: Game): void {
   const { width: W, height: H } = game;
-  const bandH = 68;
-  const y = H - bandH;
+  const bandH = PARAMS.bandHeight;
+  const y = game.auditLine;
 
   const grad = ctx.createLinearGradient(0, y, 0, H);
   grad.addColorStop(0, 'rgba(217, 72, 59, 0)');
@@ -246,7 +246,7 @@ function drawBand(ctx: CanvasRenderingContext2D, game: Game): void {
   ctx.textAlign = 'left';
   ctx.fillText('TIM AUDIT', 12, H - 10);
 
-  const closeness = clamp(1 - (game.camY + H - game.player.y) / 240, 0, 1);
+  const closeness = clamp(1 - (game.camY + game.auditLine - game.player.y) / 240, 0, 1);
   if (closeness > 0) {
     ctx.fillStyle = `rgba(217, 72, 59, ${0.05 + closeness * 0.15})`;
     ctx.fillRect(0, 0, W, H);
@@ -260,6 +260,9 @@ export function draw(
 ): void {
   const { width: W, height: H } = game;
 
+  // Everything below may translate (screen shake); without save/restore the
+  // offset from one frame carried into the next and the scene drifted.
+  ctx.save();
   ctx.clearRect(0, 0, W, H);
 
   ctx.fillStyle = C.inkDeep;
@@ -324,7 +327,8 @@ export function draw(
     const life = clamp(1 - f.t / 1.2, 0, 1);
     const pop = 1 + Math.max(0, 0.22 - f.t) * 1.6;
     ctx.save();
-    ctx.translate(f.x, f.y - game.camY);
+    // Keep the text on screen when the ledge it belongs to is against a wall.
+    ctx.translate(clamp(f.x, 44, W - 44), f.y - game.camY);
     ctx.scale(pop, pop);
     ctx.font = '700 10px ui-sans-serif, system-ui, sans-serif';
     ctx.fillStyle = `rgba(227, 176, 75, ${life})`;
@@ -339,4 +343,5 @@ export function draw(
   ctx.fillRect(0, 0, W, H);
 
   drawBand(ctx, game);
+  ctx.restore();
 }

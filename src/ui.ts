@@ -31,7 +31,10 @@ export class Ui {
   private cache = '';
 
   constructor() {
-    this.mute.addEventListener('click', () => {
+    this.mute.addEventListener('click', (event) => {
+      // A mouse click leaves focus on the button, and Space would then toggle
+      // the sound instead of jumping. Keyboard activation keeps focus.
+      if (event.detail > 0) this.mute.blur();
       audio.setMuted(!audio.muted);
       if (!audio.muted) audio.play('start');
       this.renderMute();
@@ -87,6 +90,18 @@ export class Ui {
           <p class="cta">Tap untuk mulai</p>
           <p class="rev">rev ${buildLabel()}</p>
         </div>
+      </div>`;
+    this.overlay.classList.add('is-visible');
+    document.body.classList.remove('is-playing');
+  }
+
+  showPaused(game: Game): void {
+    this.overlay.innerHTML = `
+      <div class="card">
+        <p class="stamp">dijeda</p>
+        <h1 class="money">${rupiah(game.money)}</h1>
+        <p class="lede">Berkasmu menunggu. Pergi lebih dari semenit, dianggap kabur.</p>
+        <p class="cta">Tap untuk lanjut</p>
       </div>`;
     this.overlay.classList.add('is-visible');
     document.body.classList.remove('is-playing');

@@ -21,6 +21,8 @@ export const PARAMS = {
   // pressure
   cameraBase: 26,
   cameraAccel: 1.3,
+  /** Height of the audit band. Its top edge is where the run ends. */
+  bandHeight: 40,
 
   // things
   crumbleDelay: 0.45,
@@ -31,6 +33,13 @@ export const PARAMS = {
 };
 
 export type Params = typeof PARAMS;
+
+/**
+ * The simulation is always this wide, whatever the screen. The renderer scales
+ * it to fit, so rotating a phone or resizing a window never moves a ledge out
+ * of reach, and every device plays the same level geometry.
+ */
+export const WORLD_WIDTH = 360;
 
 export const PALETTE = {
   ink: '#0A0E14',
@@ -50,7 +59,7 @@ export const PALETTE = {
 } as const;
 
 export type PlatformType = 'solid' | 'krat' | 'fiktif';
-export type Phase = 'ready' | 'playing' | 'over';
+export type Phase = 'ready' | 'playing' | 'paused' | 'over';
 export type Cause = 'auditor' | 'band' | 'fall' | 'abandoned' | '';
 
 export interface Platform {
