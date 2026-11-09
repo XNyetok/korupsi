@@ -66,7 +66,8 @@ in this public file.
 Production only ever runs a tagged release.
 
 - `.github/workflows/ci.yml` runs on every push and pull request: secret scan, file checks,
-  type-check, tests, build. It never deploys.
+  type-check, tests, build, browser smoke tests. It never deploys, and a release is only
+  deployed when all of it passes on the tag.
 - `.github/workflows/release.yml` runs release-please on every push to `main`. It keeps a
   release PR open that bumps `package.json` and writes `CHANGELOG.md` from the
   Conventional Commits since the last tag. Merging that PR creates the tag and the GitHub
