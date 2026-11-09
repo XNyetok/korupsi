@@ -198,6 +198,9 @@
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
 
   .dot { width: 8px; height: 8px; border-radius: 2px; }
+  .dot.aman { background: #C9C0AF; }
+  .dot.amplop { background: #E3B04B; }
+  .dot.auditor { background: #D9483B; }
 
   .stats {
     display: grid;

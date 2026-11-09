@@ -1,7 +1,7 @@
 # Korupsi — game design
 
-**Status:** prototype. The loop lives in [`../prototype/index.html`](../../prototype/index.html)
-and is being tuned for feel before any production structure is written.
+**Status:** playable. The loop lives in [`../../src/game.ts`](../../src/game.ts) and runs at
+[korupsi.web.id](https://korupsi.web.id). Balance is still expected to move.
 
 ## One line
 

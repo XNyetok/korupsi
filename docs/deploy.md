@@ -80,9 +80,9 @@ No rebuild, no downtime, instant.
 
 ## Notes
 
-- The CSP currently allows `'unsafe-inline'` for script and style, because the single-file
-  prototype carries both inline. The Vite port splits them into `/assets/`, and that
-  location already ships the stricter policy. Tighten the root policy at the same time.
+- The CSP allows no inline script or style: Vite emits external files, and the few colours
+  that used to be inline attributes live in the stylesheet. Adding an inline handler later
+  will break on the live site before it breaks locally, which is the point.
 - Caching: pages are `no-cache` so a deploy shows up on the next refresh; anything under
   `/assets/` is immutable for a year because the filenames are content-hashed.
 - The panel serves its own default page until the first deploy writes `current`.

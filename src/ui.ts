@@ -46,9 +46,9 @@ export class Ui {
           <p class="lede">Dua pijakan tiap jenjang. Ambil yang bergaris emas untuk skor,
             tapi makin berat, makin pendek lompatanmu.</p>
           <div class="legend">
-            <span><i class="dot" style="background:#C9C0AF"></i>aman</span>
-            <span><i class="dot" style="background:#E3B04B"></i>amplop</span>
-            <span><i class="dot" style="background:#D9483B"></i>auditor</span>
+            <span><i class="dot aman"></i>aman</span>
+            <span><i class="dot amplop"></i>amplop</span>
+            <span><i class="dot auditor"></i>auditor</span>
           </div>
         </div>
         <div>
