@@ -39,7 +39,7 @@ resumes. Staying away longer ends it and banks the score. Closing the tab loses 
 
 | | |
 | --- | --- |
-| Build size | about 12 KB gzipped, no runtime dependencies |
+| Build size | about 13 KB gzipped, no runtime dependencies; CI enforces an 18 KB budget |
 | Stack | TypeScript and Canvas 2D, bundled by Vite |
 | Audio | WebAudio oscillators, no audio files |
 | Caching | none beyond HTTP: every visit loads the live build |
@@ -58,6 +58,7 @@ npm run lint     # lint and format check (npm run format fixes the format)
 npm test         # simulation tests, no browser needed
 npm run test:e2e # browser smoke tests (once: npx playwright install chromium)
 npm run build    # production build in dist/
+npm run size     # gzipped size of the build against its budget
 ```
 
 Add `?debug=1` to the URL for live sliders over jump velocity, gravity, weight penalty,

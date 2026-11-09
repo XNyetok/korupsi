@@ -11,19 +11,21 @@ this line.
 
 ## Rules for whoever updates this file
 
-1. **Read it before starting, update it in the same PR as the work.** A PR that finishes or
-   starts an item changes its line here. Work outside a PR (server, GitHub settings) gets
-   its line updated in the next commit, with the date.
+1. **Read it before starting, update it in the same PR as the work.** A PR that finishes
+   or starts an item changes its line here. Work outside a PR (server, GitHub settings)
+   gets its line updated in the next commit, with the date.
 2. **Done means evidence.** Tick `[x]` only with a PR number, a commit, or a dated note of
    what was checked. No evidence, no tick.
 3. **The code wins.** If this file and the repository disagree, the repository is right:
    check (`git log`, the code, `gh pr list`) and correct this file. Never act on a line
    here without confirming it is still true.
-4. **Keep items small and stable.** IDs never change or get reused. Split an item by adding
-   new IDs; drop one by moving it to *Dropped* with the reason.
-5. **No secrets and no weaknesses in detail.** The repository is public. Write "harden SSH",
-   not what is currently open, and never a host, user, path to a credential or a password.
-6. **Keep it short.** Done items older than one release collapse into one line per release.
+4. **Keep items small and stable.** IDs never change or get reused. Split an item by
+   adding new IDs; drop one by moving it to *Dropped* with the reason.
+5. **No secrets and no weaknesses in detail.** The repository is public. Write "harden
+   SSH", not what is currently open, and never a host, user, path to a credential or a
+   password.
+6. **Keep it short.** Done items older than one release collapse into one line per
+   release.
 7. **Order is urgency.** Within a section, the first open item is the next one to do.
 
 Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done · `[!]` blocked
@@ -31,17 +33,32 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **H3 — Keep addresses out of telemetry** (split from H1, #6). Error messages keep their first line only, and URLs, inline
-  URIs, email addresses and host paths are replaced, in the page and again in the
-  collector; rows stored earlier are cleaned on start. nginx answers 404 for `/api/health`
+- [ ] **M1 — Maintainer steps for the open PRs** (#6–#13). The PRs are stacked: each one
+  targets the branch of the one before it. Merge them oldest first with "Squash and merge"
+  (the PR titles are Conventional Commits, so each becomes one changelog line), then rebase
+  the next branch onto `main` and point its PR at `main`. Outside the repository, in this
+  order:
+  1. Merge #6, then reinstall the nginx rewrite rules on the server (H3).
+  2. Before merging #7: Settings → Actions → allow GitHub Actions to create pull requests;
+     Settings → Environments → create `production` (reviewer and `v*` tags as wanted).
+  3. Before the first release deploy: install `korupsi-apply-config` and its sudoers rule
+     (#8, `docs/deploy.md`, Server config), optionally move the collector into
+     `releases/legacy` (One-time migration).
+  4. After #10: add "Browser smoke tests" to the required checks of `main`.
+  5. After #12: turn on Dependabot security updates.
+  6. Merge the release PR that release-please opens: that is R2.
+  Tick each step here with its date, as rule 1 says.
+- [~] **H3 — Keep addresses out of telemetry** (split from H1, #6). Error messages keep
+  their first line only, and URLs, inline URIs, email addresses and host paths are
+  replaced, in the page and again in the collector; rows stored earlier are cleaned on
+  start. nginx answers 404 for `/api/health`
   and any other unlisted `/api/` path. Most urgent because the README already promises "no
   addresses". Done when merged and the nginx config is reinstalled on the server.
 - [ ] **H1 — Harden the server.** Restrict the deploy key to what the deploy needs, review
   SSH settings. Operator work outside the repository. Record only "done" and the date here.
-- [~] **R1 — Release process** (#7, with D1 and D3). Adopt
-  release-please (the commits already follow
-  Conventional Commits): it opens a release PR that bumps `package.json` and writes
-  `CHANGELOG.md`; merging it creates the tag and the GitHub Release.
+- [~] **R1 — Release process** (#7, with D1 and D3). Adopt release-please (the commits
+  already follow Conventional Commits): it opens a release PR that bumps `package.json`
+  and writes `CHANGELOG.md`; merging it creates the tag and the GitHub Release.
   - Production deploy runs on a published release, behind a GitHub `production`
     environment. Pushes to `main` build and test only.
   - One version identity: build label `X.Y.Z+<sha7>`, dev builds `X.Y.Z-dev+<sha7>`,
@@ -66,9 +83,8 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   ready screen shows `v0.3.0`. Until then the live build says `v0.2.0` while running
   v0.3.0 code. `release-please-config.json` pins `release-as: 0.3.0`, because the commits
   since v0.2.0 alone would only make 0.2.1; remove that line once the tag exists.
-- [~] **D2 — Server config from the repository** (#8). Apply
-  `deploy/nginx` and `deploy/systemd` from CI (with `nginx -t` and automatic restore),
-  instead of by hand.
+- [~] **D2 — Server config from the repository** (#8). Apply `deploy/nginx` and
+  `deploy/systemd` from CI (with `nginx -t` and automatic restore), instead of by hand.
   - Code: `deploy/apply-config.sh`, tested in `tests/apply-config.test.mjs`; CI runs
     `nginx -t` on the repository config and shellcheck on the scripts.
   - The script runs as root and takes only a release tag: it fetches the files from the
@@ -78,29 +94,29 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Next
 
-- [~] **S1 — Seeded runs** (#9). Replace `Math.random` in the simulation with a seeded RNG; accept
-  `?seed=` and show the seed on the result screen, so a bug report can be replayed exactly.
-  Before B1, so playtest runs can be replayed. Code: `src/core/rng.ts` (mulberry32, base-36
-  seeds), `tests/rng.test.ts`; the bug report form asks for the seed.
-- [~] **S3 — Browser tests** (#10). Playwright smoke run for input, pause and result screens,
-  replacing the ad hoc headless checks used in #3. Before S2: the split moves input,
-  viewport and UI code that no test covers yet.
+- [~] **S1 — Seeded runs** (#9). Replace `Math.random` in the simulation with a seeded
+  RNG; accept `?seed=` and show the seed on the result screen, so a bug report can be
+  replayed exactly. Before B1, so playtest runs can be replayed. Code: `src/core/rng.ts`
+  (mulberry32, base-36 seeds), `tests/rng.test.ts`; the bug report form asks for the seed.
+- [~] **S3 — Browser tests** (#10). Playwright smoke run for input, pause and result
+  screens, replacing the ad hoc headless checks used in #3. Before S2: the split moves
+  input, viewport and UI code that no test covers yet.
   - Code: `e2e/smoke.spec.ts`, desktop and phone (Chromium), against the production
     build; CI job "Browser smoke tests". Checked to catch a removed wake lock and a
     removed button-key guard.
   - Needs the maintainer, after merge: add "Browser smoke tests" to the required checks
     of `main`.
-- [~] **S2 — Split the source by layer** (#11). `src/core/` (no DOM: rng, params, types, level,
-  physics, rules, game), `src/platform/` (input, loop, viewport, storage, audio, telemetry,
-  share), `src/view/` (renderer, camera, sprites, fx), `src/ui/`. Behaviour must not change:
-  the existing tests pass untouched apart from import paths.
+- [~] **S2 — Split the source by layer** (#11). `src/core/` (no DOM: rng, params, types,
+  level, physics, rules, game), `src/platform/` (input, loop, viewport, storage, audio,
+  telemetry, share), `src/view/` (renderer, camera, sprites, fx), `src/ui/`. Behaviour
+  must not change: the existing tests pass untouched apart from import paths.
   - Done as listed, plus `core/types.ts` and `view/palette.ts` (the colours are shared by
     the canvas and the DOM). The best score reaches the core through a `BestStore`, so
     the core never touches `localStorage`.
   - Kept honest by two checks: `src/core/tsconfig.json` compiles the core without the DOM
     library, and `tests/layers.test.ts` fails on an import that points up a layer.
-  - Checked: a frame-by-frame trace of four seeded runs is byte-identical before and after;
-    unit and browser tests pass with only import paths changed.
+  - Checked: a frame-by-frame trace of four seeded runs is byte-identical before and
+    after; unit and browser tests pass with only import paths changed.
 - [~] **H2 — Repository settings** (#12). Enable Dependabot security
   updates; add lint and format checks to CI.
   - Code: Biome (`biome.json`, `npm run lint` in CI, `npm run format` to fix), and npm in
@@ -112,10 +128,16 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Later
 
-- [ ] **B1 — Retune after a hands-on playtest.** #3 made the game slightly harder (see the
+- [!] **B1 — Retune after a hands-on playtest.** #3 made the game slightly harder (see the
   playtest log). Retune `cameraBase` / `cameraAccel` only from real play, and log it.
-- [ ] **V1 — Visual redesign, vertical slice.** One zone (Kelurahan) and the player sprite,
-  in the direction set out in the 2026-11-09 audit:
+  Blocked on a person playing: the simulation already says what it can (game-design.md),
+  and the open question is how the band feels. Ready once S1 (#9) is live: note the seed
+  of each playtest run, so a run that felt wrong can be replayed with `?seed=`.
+- [!] **V1 — Visual redesign, vertical slice.** Blocked on art: the sprites have to be
+  drawn or commissioned, and licensed per `docs/design/assets.md`; the internal resolution
+  and palette are the maintainer's call. The code side is ready for it: drawing lives in
+  `src/view/` only (#11), so a new renderer does not touch the simulation. One zone
+  (Kelurahan) and the player sprite, in the direction set out in the 2026-11-09 audit:
   - Pixel art at a low internal resolution, scaled by whole numbers without smoothing,
     with a three-layer parallax background.
   - The player: an official in a safari suit and peci. The belly and briefcase grow with
@@ -127,19 +149,25 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   - Every asset recorded in `docs/design/assets.md`. No state emblems, no real agency
     logos, no real faces.
   - Reference for quality, not for copying: poteto.com.
-- [ ] **V3 — Loading screen and asset budget.** Needed once V1 adds sprite sheets (expected
-  0.5–1 MB). Set the budget with V1, not after it.
-- [ ] **V2 — Height zones.** Kelurahan → Kecamatan → Dinas → Kementerian → roof, each with
-  its own facade and a promotion card. Depends on V1.
-- [ ] **C1 — Remove the service worker kill switch** after 2027-02: delete `public/sw.js`,
-  its nginx location, the smoke test line, and `tests/sw.test.mjs`.
+- [!] **V3 — Loading screen.** Needed once V1 adds sprite sheets (expected 0.5–1 MB).
+  Blocked on V1: there is nothing to load yet. The asset budget part is split out as V4.
+- [~] **V4 — Size budget in CI** (split from V3, #13).
+  `scripts/check-size.mjs` fails the build when what a first visit downloads passes its
+  gzipped budget (JS 14 KB, CSS 3 KB, HTML 1.5 KB, other assets 4 KB, total 18 KB; 13 KB
+  today). V1 raises the numbers on purpose, in its own PR.
+- [!] **V2 — Height zones.** Kelurahan → Kecamatan → Dinas → Kementerian → roof, each with
+  its own facade and a promotion card. Blocked on V1.
+- [!] **C1 — Remove the service worker kill switch** after 2027-02: delete `public/sw.js`,
+  its nginx location, the smoke test line in `deploy.yml`, and `tests/sw.test.mjs`. Blocked
+  on the date: old installs need the switch until then.
 
 ## Done
 
 - [x] **v0.3.0 work (untagged, live)**
   - Service worker replaced by a kill switch; manifest and install metadata removed (#2).
   - The deploy validates its settings; the smoke test checks the live build (#2).
-  - The server address is out of the docs; `DEPLOY_HOST` is a secret, so logs mask it (#2).
+  - The server address is out of the docs; `DEPLOY_HOST` is a secret, so logs mask it
+    (#2).
   - Gameplay fixes, with 12 new tests (#3):
     - two ledges on every level; the safe path is never guarded;
     - no reroll by landing back on the same ledge; levels counted per new ledge;
@@ -161,8 +189,8 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Dropped
 
-- **PWA / offline play.** It served stale builds and cached the private panel; removed in #2.
-  Reasoning in `docs/design/game-design.md`, Decisions.
+- **PWA / offline play.** It served stale builds and cached the private panel; removed in
+  #2. Reasoning in `docs/design/game-design.md`, Decisions.
 
 ## Open questions
 

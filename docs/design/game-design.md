@@ -106,6 +106,7 @@ bureaucratic absurdity, never from a real person or a real institution.
 | 2026-11-09 | Plays offline, installs to the home screen | The game is meant for a spare minute, which is often a spare minute without signal |
 | 2026-11-09 | Offline play removed again (v0.3.0) | The service worker kept serving a stale build after deploys and cached the private panel. A one-minute game loads fast enough without it; a kill switch at `/sw.js` cleans up old installs |
 | 2026-11-09 | Sound is synthesised, not sampled | Keeps binary assets out of the repository and the download under 10 KB gzipped |
+| 2026-11-09 | The build has a size budget checked in CI | 18 KB gzipped for everything a first visit loads (13 KB today). Growth should be a decision, not a drift; V1's sprite sheets will raise it on purpose, together with a loading screen |
 | 2026-11-09 | The share text never names the run | The joke is the choice; the next player should walk into it cold |
 | 2026-11-09 | A run survives a glance, not a departure | 60 s of absence ends it; anything shorter resumes. Otherwise pausing is saving |
 | 2026-11-09 | Every level has two ledges, even against a wall (v0.3.0) | 43% of levels used to show a single ledge, because the ledge on the wall side was dropped. A jump into a wall ends at the wall, so that side's ledge now sits there; the choice never disappears |
