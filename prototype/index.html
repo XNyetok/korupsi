@@ -477,9 +477,12 @@
     // Horizontal speed is constant, so the landing spot is fixed for a given
     // rise. Place the ledge around that spot, with the offset small enough
     // that the player still lands on it.
+    // The landing point is fixed, so the ledge sits around it. The minimum
+    // distance keeps the pair reading as left/right instead of two shelves
+    // bunched under the player's own column.
     const travel = env.dxAt(dy);
-    const jitter = rand(-(w / 2 - 10), w / 2 - 10);
-    const x = anchorX + dir * (travel + jitter);
+    const jitter = rand(-w * 0.28, w * 0.28);
+    const x = anchorX + dir * Math.max(58, travel + jitter);
 
     if (x < lo || x > hi) return null;
 
@@ -761,6 +764,19 @@
       if (plat.alive && plat.crumble >= params.crumbleDelay) {
         plat.alive = false;
         if (p.onGround === plat) p.onGround = null;
+
+        // Show the thing breaking, so a vanishing ledge never reads as a bug.
+        for (let i = 0; i < 10; i++) {
+          dust.push({
+            x: plat.x + rand(-plat.w / 2, plat.w / 2),
+            y: plat.y + rand(0, 6),
+            vx: rand(-46, 46),
+            vy: rand(-34, 18),
+            life: rand(0.3, 0.65),
+            t: 0,
+            r: rand(1, 2.6),
+          });
+        }
       }
     }
 
@@ -1114,10 +1130,14 @@
     for (const plat of platforms) {
       const top = plat.y - camY;
       if (top < -60 || top > H + 60) continue;
-      // Only the pair ahead stays lit; the path already taken recedes so the
-      // current choice is the only bright thing on screen.
-      const behind = plat !== player.onGround && plat.y >= player.y - 4;
-      ctx.globalAlpha = behind ? 0.2 : 1;
+
+      // Ledges behind the player stay visible, just dimmer with distance: the
+      // route taken is part of the scenery, not something that vanished.
+      let alpha = 1;
+      if (plat !== player.onGround && plat.y > player.y) {
+        alpha = clamp(1 - (plat.y - player.y) / (H * 0.95), 0.34, 1);
+      }
+      ctx.globalAlpha = alpha;
       drawPlatform(plat);
       ctx.globalAlpha = 1;
     }
