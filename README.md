@@ -61,6 +61,10 @@ npm run build    # production build in dist/
 Add `?debug=1` to the URL for live sliders over jump velocity, gravity, weight penalty,
 camera speed and how often the money appears.
 
+Every run has a seed, shown at the bottom of the result screen. `?seed=<seed>` plays that
+seed on every run: the same choices meet the same levels, which is how a bug report gets
+replayed.
+
 ## Documentation
 
 - [`docs/plan.md`](docs/plan.md) — what is done, what is next; the only work list

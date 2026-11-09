@@ -31,6 +31,12 @@ body:
     validations:
       required: true
   - type: input
+    id: seed
+    attributes:
+      label: Seed
+      description: The seed at the bottom of the result screen. Opening the game with ?seed=<seed> replays the same levels.
+      placeholder: 1x2y3z
+  - type: input
     id: environment
     attributes:
       label: Browser and OS
