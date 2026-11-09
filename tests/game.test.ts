@@ -217,7 +217,10 @@ test('landing back on the same ledge does not reroll the level', () => {
   assert.ok(footing);
   // Nothing above to reach, and a ledge as wide as the world: the jump has
   // to come back down where it started.
+  // The auditor guarding the old level would still patrol where its ledge was
+  // and catch the jump: that failed about one run in twenty.
   game.platforms = [footing];
+  game.auditors = [];
   footing.x = game.width / 2;
   footing.w = game.width;
   footing.type = 'solid';
