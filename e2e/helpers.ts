@@ -53,9 +53,12 @@ export function state(page: Page): Promise<State> {
 
 /** Changes a tuning number for this page only, like the debug sliders do. */
 export function setParam(page: Page, key: string, value: number): Promise<void> {
-  return page.evaluate(([k, v]) => {
-    (window as unknown as { __korupsi: Exposed }).__korupsi.params[k as string] = v as number;
-  }, [key, value] as const);
+  return page.evaluate(
+    ([k, v]) => {
+      (window as unknown as { __korupsi: Exposed }).__korupsi.params[k as string] = v as number;
+    },
+    [key, value] as const,
+  );
 }
 
 export function waitForPhase(page: Page, phase: Exposed['phase'], timeout = 10_000): Promise<unknown> {

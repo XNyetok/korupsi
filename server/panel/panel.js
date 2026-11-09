@@ -1,12 +1,4 @@
-const rupiah = (n) =>
-  'Rp ' + Number(n).toLocaleString('id-ID', { maximumFractionDigits: 0 });
-
-const short = (n) => {
-  const value = Number(n) || 0;
-  if (value >= 1_000_000) return (value / 1_000_000).toFixed(1).replace('.0', '') + ' jt';
-  if (value >= 1_000) return Math.round(value / 1_000) + ' rb';
-  return String(value);
-};
+const rupiah = (n) => 'Rp ' + Number(n).toLocaleString('id-ID', { maximumFractionDigits: 0 });
 
 const dayLabel = (iso) => {
   const [, m, d] = iso.split('-');

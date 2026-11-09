@@ -10,8 +10,7 @@ import { redactMessage } from './redact.ts';
 const ENDPOINT = '/api/beacon';
 const MAX_PER_PAGE = 40;
 
-const enabled =
-  import.meta.env.PROD && location.protocol === 'https:' && navigator.doNotTrack !== '1';
+const enabled = import.meta.env.PROD && location.protocol === 'https:' && navigator.doNotTrack !== '1';
 
 let sent = 0;
 

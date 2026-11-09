@@ -50,10 +50,7 @@ function jumpAndLand(game: Game, preferGold: boolean): boolean {
 }
 
 /** Plays many levels, calling `visit` on each with the pair above the player. */
-function eachLevel(
-  levels: number,
-  visit: (game: Game, options: ReturnType<typeof levelAbove>) => void,
-): number {
+function eachLevel(levels: number, visit: (game: Game, options: ReturnType<typeof levelAbove>) => void): number {
   const game = newGame();
   let seen = 0;
   for (let i = 0; i < levels * 20 && seen < levels; i++) {
@@ -159,8 +156,7 @@ test('every level offers two separate ledges, and each side lands on its own', (
     assert.ok(a.x - a.w / 2 >= 0 && b.x + b.w / 2 <= game.width, 'ledges stay inside the world');
     assert.ok(a.x + a.w / 2 < b.x - b.w / 2, 'the two ledges must not touch');
 
-    const nearWall =
-      game.player.x < PLAYER_EDGE + 40 || game.player.x > game.width - PLAYER_EDGE - 40;
+    const nearWall = game.player.x < PLAYER_EDGE + 40 || game.player.x > game.width - PLAYER_EDGE - 40;
     if (nearWall) counts.wall++;
 
     // Pick a side at random and check the jump ends on that side's ledge.
@@ -264,7 +260,10 @@ test('resizing mid-run keeps the world and its ledges', () => {
   game.setViewport(1200);
 
   assert.equal(game.width, WORLD_WIDTH);
-  assert.deepEqual(game.platforms.map((p) => `${p.id}:${p.x}`), before);
+  assert.deepEqual(
+    game.platforms.map((p) => `${p.id}:${p.x}`),
+    before,
+  );
   assert.ok(jumpAndLand(game, false), 'the level is still playable after a resize');
 });
 

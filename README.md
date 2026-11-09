@@ -54,6 +54,7 @@ is how balance changes get compared before they ship.
 npm install
 npm run dev      # dev server with hot reload
 npm run check    # types only
+npm run lint     # lint and format check (npm run format fixes the format)
 npm test         # simulation tests, no browser needed
 npm run test:e2e # browser smoke tests (once: npx playwright install chromium)
 npm run build    # production build in dist/

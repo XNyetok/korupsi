@@ -8,15 +8,14 @@ declare global {
   }
 }
 
-const CONTROLS: { key: keyof typeof PARAMS; label: string; min: number; max: number; step: number }[] =
-  [
-    { key: 'jumpV', label: 'Lompat', min: 500, max: 900, step: 10 },
-    { key: 'gravity', label: 'Gravitasi', min: 1200, max: 2600, step: 20 },
-    { key: 'weightPenalty', label: 'Berat/amplop', min: 0, max: 0.12, step: 0.005 },
-    { key: 'cameraBase', label: 'Scroll awal', min: 6, max: 60, step: 1 },
-    { key: 'cameraAccel', label: 'Scroll naik', min: 0, max: 1.5, step: 0.05 },
-    { key: 'goldChance', label: 'Peluang emas', min: 0, max: 1, step: 0.05 },
-  ];
+const CONTROLS: { key: keyof typeof PARAMS; label: string; min: number; max: number; step: number }[] = [
+  { key: 'jumpV', label: 'Lompat', min: 500, max: 900, step: 10 },
+  { key: 'gravity', label: 'Gravitasi', min: 1200, max: 2600, step: 20 },
+  { key: 'weightPenalty', label: 'Berat/amplop', min: 0, max: 0.12, step: 0.005 },
+  { key: 'cameraBase', label: 'Scroll awal', min: 6, max: 60, step: 1 },
+  { key: 'cameraAccel', label: 'Scroll naik', min: 0, max: 1.5, step: 0.05 },
+  { key: 'goldChance', label: 'Peluang emas', min: 0, max: 1, step: 0.05 },
+];
 
 export interface Debug {
   tick(): void;
