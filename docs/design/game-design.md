@@ -98,6 +98,7 @@ bureaucratic absurdity, never from a real person or a real institution.
 | 2026-11-09 | Two ledges per level instead of money scattered on the path | With a fixed arc the player cannot aim at a spot on a ledge, so the choice has to be which side, not where to land |
 | 2026-11-09 | The auditor only guards the money | The safe side has to be reliably safe, or the decision is a lie |
 | 2026-11-09 | Plays offline, installs to the home screen | The game is meant for a spare minute, which is often a spare minute without signal |
+| 2026-11-09 | Offline play removed again (v0.3.0) | The service worker kept serving a stale build after deploys and cached the private panel. A one-minute game loads fast enough without it; a kill switch at `/sw.js` cleans up old installs |
 | 2026-11-09 | Sound is synthesised, not sampled | Keeps binary assets out of the repository and the download under 10 KB gzipped |
 | 2026-11-09 | The share text never names the run | The joke is the choice; the next player should walk into it cold |
 | 2026-11-09 | A run survives a glance, not a departure | 60 s of absence ends it; anything shorter resumes. Otherwise pausing is saving |

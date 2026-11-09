@@ -42,7 +42,7 @@ ends it and banks the score. Closing the tab loses the run.
 | Build size | about 12 KB gzipped, no runtime dependencies |
 | Stack | TypeScript and Canvas 2D, bundled by Vite |
 | Audio | WebAudio oscillators, no audio files |
-| Offline | service worker, installable to the home screen |
+| Caching | none beyond HTTP: every visit loads the live build |
 | Hosting | nginx on a VPS, deployed by GitHub Actions |
 
 The simulation has no DOM in it, so a run can be stepped in a test without a browser. That
@@ -74,7 +74,7 @@ camera speed and how often the money appears.
 - The game's copy is Indonesian, because the thing it is poking at is Indonesian.
 - On an iPhone, the silent switch mutes the game: Safari treats Web Audio as ambient
   sound, so the ringer switch wins.
-- Sound, offline play and sharing are deliberate choices, recorded in the design notes
+- Sound and sharing are deliberate choices, recorded in the design notes
   rather than left to be rediscovered.
 - Telemetry is anonymous and aggregate: a visit, a finished run, a share, a JavaScript
   error. No cookies, no addresses, no identifiers; Do Not Track disables it; raw rows are
