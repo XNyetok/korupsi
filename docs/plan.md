@@ -31,8 +31,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **H3 — Keep addresses out of telemetry** (split from H1, branch
-  `fix/telemetry-redact`). Error messages keep their first line only, and URLs, inline
+- [~] **H3 — Keep addresses out of telemetry** (split from H1, #6). Error messages keep their first line only, and URLs, inline
   URIs, email addresses and host paths are replaced, in the page and again in the
   collector; rows stored earlier are cleaned on start. nginx answers 404 for `/api/health`
   and any other unlisted `/api/` path. Most urgent because the README already promises "no
