@@ -112,10 +112,16 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Later
 
-- [ ] **B1 — Retune after a hands-on playtest.** #3 made the game slightly harder (see the
+- [!] **B1 — Retune after a hands-on playtest.** #3 made the game slightly harder (see the
   playtest log). Retune `cameraBase` / `cameraAccel` only from real play, and log it.
-- [ ] **V1 — Visual redesign, vertical slice.** One zone (Kelurahan) and the player sprite,
-  in the direction set out in the 2026-11-09 audit:
+  Blocked on a person playing: the simulation already says what it can (game-design.md),
+  and the open question is how the band feels. Ready once S1 (#9) is live: note the seed
+  of each playtest run, so a run that felt wrong can be replayed with `?seed=`.
+- [!] **V1 — Visual redesign, vertical slice.** Blocked on art: the sprites have to be drawn
+  or commissioned, and licensed per `docs/design/assets.md`; the internal resolution and
+  palette are the maintainer's call. The code side is ready for it: drawing lives in
+  `src/view/` only (#11), so a new renderer does not touch the simulation. One zone
+  (Kelurahan) and the player sprite, in the direction set out in the 2026-11-09 audit:
   - Pixel art at a low internal resolution, scaled by whole numbers without smoothing,
     with a three-layer parallax background.
   - The player: an official in a safari suit and peci. The belly and briefcase grow with
@@ -127,12 +133,17 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   - Every asset recorded in `docs/design/assets.md`. No state emblems, no real agency
     logos, no real faces.
   - Reference for quality, not for copying: poteto.com.
-- [ ] **V3 — Loading screen and asset budget.** Needed once V1 adds sprite sheets (expected
-  0.5–1 MB). Set the budget with V1, not after it.
-- [ ] **V2 — Height zones.** Kelurahan → Kecamatan → Dinas → Kementerian → roof, each with
-  its own facade and a promotion card. Depends on V1.
-- [ ] **C1 — Remove the service worker kill switch** after 2027-02: delete `public/sw.js`,
-  its nginx location, the smoke test line, and `tests/sw.test.mjs`.
+- [!] **V3 — Loading screen.** Needed once V1 adds sprite sheets (expected 0.5–1 MB).
+  Blocked on V1: there is nothing to load yet. The asset budget part is split out as V4.
+- [~] **V4 — Size budget in CI** (split from V3, branch `ci/size-budget`).
+  `scripts/check-size.mjs` fails the build when what a first visit downloads passes its
+  gzipped budget (JS 14 KB, CSS 3 KB, HTML 1.5 KB, other assets 4 KB, total 18 KB; 13 KB
+  today). V1 raises the numbers on purpose, in its own PR.
+- [!] **V2 — Height zones.** Kelurahan → Kecamatan → Dinas → Kementerian → roof, each with
+  its own facade and a promotion card. Blocked on V1.
+- [!] **C1 — Remove the service worker kill switch** after 2027-02: delete `public/sw.js`,
+  its nginx location, the smoke test line in `deploy.yml`, and `tests/sw.test.mjs`. Blocked
+  on the date: old installs need the switch until then.
 
 ## Done
 
