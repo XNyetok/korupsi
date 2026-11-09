@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 
 import { normaliseEvent, openStore } from '../server/store.mjs';
@@ -33,6 +37,41 @@ test('error messages are clipped and empty ones dropped', () => {
   const long = normaliseEvent({ type: 'error', message: 'x'.repeat(1000) });
   assert.equal(long.message.length, 300);
   assert.equal(normaliseEvent({ type: 'error', message: '   ' }), null);
+});
+
+test('error messages are stored without addresses', () => {
+  const event = normaliseEvent({
+    type: 'error',
+    message: 'Failed at https://korupsi.web.id/?seed=1\n    at chrome-extension://abc/x.js',
+  });
+  assert.equal(event.message, 'Failed at <url>');
+  assert.equal(normaliseEvent({ type: 'error', message: '\n https://only.example/x' }), null);
+});
+
+test('messages stored before redaction are cleaned when the store opens', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'korupsi-stats-'));
+  const path = join(dir, 'stats.db');
+  try {
+    const raw = new DatabaseSync(path);
+    raw.exec(`CREATE TABLE events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL,
+      type TEXT NOT NULL, rev TEXT, cause TEXT, money INTEGER, weight INTEGER,
+      height INTEGER, duration INTEGER, message TEXT)`);
+    const insert = raw.prepare('INSERT INTO events (ts, day, type, message) VALUES (?, ?, ?, ?)');
+    const day = new Date().toISOString().slice(0, 10);
+    insert.run(Date.now(), day, 'error', 'boom at https://korupsi.web.id/?a=1');
+    insert.run(Date.now(), day, 'error', 'https://only.example/x');
+    insert.run(Date.now(), day, 'error', 'clean message');
+    insert.run(Date.now(), day, 'error', '   ');
+    raw.close();
+
+    const store = openStore(path);
+    const messages = store.stats(1).errors.map((row) => row.message).sort();
+    assert.deepEqual(messages, ['<url>', 'boom at <url>', 'clean message']);
+    store.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('stats aggregate counts, causes and medians', () => {

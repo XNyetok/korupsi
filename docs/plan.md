@@ -24,11 +24,21 @@ this line.
 5. **No secrets and no weaknesses in detail.** The repository is public. Write "harden SSH",
    not what is currently open, and never a host, user, path to a credential or a password.
 6. **Keep it short.** Done items older than one release collapse into one line per release.
+7. **Order is urgency.** Within a section, the first open item is the next one to do.
 
-Status: `[ ]` to do · `[~]` in progress (name the branch) · `[x]` done · `[!]` blocked (say on what)
+Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done · `[!]` blocked
+(say on what)
 
 ## Now
 
+- [~] **H3 — Keep addresses out of telemetry** (split from H1, branch
+  `fix/telemetry-redact`). Error messages keep their first line only, and URLs, inline
+  URIs, email addresses and host paths are replaced, in the page and again in the
+  collector; rows stored earlier are cleaned on start. nginx answers 404 for `/api/health`
+  and any other unlisted `/api/` path. Most urgent because the README already promises "no
+  addresses". Done when merged and the nginx config is reinstalled on the server.
+- [ ] **H1 — Harden the server.** Restrict the deploy key to what the deploy needs, review
+  SSH settings. Operator work outside the repository. Record only "done" and the date here.
 - [ ] **R1 — Release process.** Adopt release-please (the commits already follow
   Conventional Commits): it opens a release PR that bumps `package.json` and writes
   `CHANGELOG.md`; merging it creates the tag and the GitHub Release.
@@ -38,33 +48,37 @@ Status: `[ ]` to do · `[~]` in progress (name the branch) · `[x]` done · `[!]
     release folders `vX.Y.Z-<sha7>`.
   - Release notes are player-facing; operational notes go to `docs/deploy.md`.
   - Done when: a release PR exists, and the deploy job is gated on the release event.
+  - Done together with D1 and D3: all three rewrite the same deploy job.
+- [ ] **D1 — Deploy order and rollback for the collector.** Restart and check the collector
+  before switching the site; give it release folders so it rolls back with the site.
+- [ ] **D3 — Pin Node.** `engines` in `package.json`, and check the server's Node version in
+  the deploy (the collector needs `node:sqlite`, Node 22.13 or newer).
 - [ ] **R2 — Cut v0.3.0** through R1. Contents: service worker removed (#2), deploy guard
-  (#2), gameplay fixes (#3). Done when the tag exists and the ready screen shows `v0.3.0`.
+  (#2), gameplay fixes (#3), telemetry redaction (H3). Done when the tag exists and the
+  ready screen shows `v0.3.0`. Until then the live build says `v0.2.0` while running
+  v0.3.0 code.
+- [ ] **D2 — Server config from the repository.** Apply `deploy/nginx` and `deploy/systemd`
+  from CI (with `nginx -t` and automatic restore), instead of by hand.
 
 ## Next
 
 - [ ] **S1 — Seeded runs.** Replace `Math.random` in the simulation with a seeded RNG; accept
   `?seed=` and show the seed on the result screen, so a bug report can be replayed exactly.
+  Before B1, so playtest runs can be replayed.
+- [ ] **S3 — Browser tests.** Playwright smoke run for input, pause and result screens,
+  replacing the ad hoc headless checks used in #3. Before S2: the split moves input,
+  viewport and UI code that no test covers yet.
 - [ ] **S2 — Split the source by layer.** `src/core/` (no DOM: rng, params, types, level,
   physics, rules, game), `src/platform/` (input, loop, viewport, storage, audio, telemetry,
   share), `src/view/` (renderer, camera, sprites, fx), `src/ui/`. Behaviour must not change:
   the existing tests pass untouched apart from import paths.
-- [ ] **S3 — Browser tests.** Playwright smoke run for input, pause and result screens,
-  replacing the ad hoc headless checks used in #3.
-- [ ] **D1 — Deploy order and rollback for the collector.** Restart and check the collector
-  before switching the site; give it release folders so it rolls back with the site.
-- [ ] **D2 — Server config from the repository.** Apply `deploy/nginx` and `deploy/systemd`
-  from CI (with `nginx -t` and automatic restore), instead of by hand.
-- [ ] **D3 — Pin Node.** `engines` in `package.json`, and check the server's Node version in
-  the deploy (the collector needs `node:sqlite`, Node 22.13 or newer).
-- [ ] **H1 — Harden the server.** Restrict the deploy key to what the deploy needs, review
-  SSH settings, keep `/api/health` local, filter URLs out of telemetry error messages.
-  Record only "done" and the date here.
 - [ ] **H2 — Repository settings.** Enable Dependabot security updates; add lint and format
   checks to CI.
 
 ## Later
 
+- [ ] **B1 — Retune after a hands-on playtest.** #3 made the game slightly harder (see the
+  playtest log). Retune `cameraBase` / `cameraAccel` only from real play, and log it.
 - [ ] **V1 — Visual redesign, vertical slice.** One zone (Kelurahan) and the player sprite,
   in the direction set out in the 2026-11-09 audit:
   - Pixel art at a low internal resolution, scaled by whole numbers without smoothing,
@@ -78,12 +92,10 @@ Status: `[ ]` to do · `[~]` in progress (name the branch) · `[x]` done · `[!]
   - Every asset recorded in `docs/design/assets.md`. No state emblems, no real agency
     logos, no real faces.
   - Reference for quality, not for copying: poteto.com.
+- [ ] **V3 — Loading screen and asset budget.** Needed once V1 adds sprite sheets (expected
+  0.5–1 MB). Set the budget with V1, not after it.
 - [ ] **V2 — Height zones.** Kelurahan → Kecamatan → Dinas → Kementerian → roof, each with
   its own facade and a promotion card. Depends on V1.
-- [ ] **V3 — Loading screen and asset budget.** Needed once V1 adds sprite sheets (expected
-  0.5–1 MB).
-- [ ] **B1 — Retune after a hands-on playtest.** #3 made the game slightly harder (see the
-  playtest log). Retune `cameraBase` / `cameraAccel` only from real play, and log it.
 - [ ] **C1 — Remove the service worker kill switch** after 2027-02: delete `public/sw.js`,
   its nginx location, the smoke test line, and `tests/sw.test.mjs`.
 
@@ -107,6 +119,8 @@ Status: `[ ]` to do · `[~]` in progress (name the branch) · `[x]` done · `[!]
       from the server.
     - nginx config reinstalled from #2.
   - Stale docs, comments and the unused `installed` telemetry event cleaned up (#5).
+  - Plan reordered by urgency (2026-11-09): H1 split into H3 (code) and H1 (server); D1
+    and D3 move up next to R1; S3 before S2; V3 next to V1.
 - [x] **v0.2.0** — telemetry collector and private panel.
 - [x] **v0.1.0** — first playable release.
 

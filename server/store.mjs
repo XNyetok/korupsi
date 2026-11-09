@@ -1,5 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
+import { redactMessage } from './redact.mjs';
+
 export const EVENT_TYPES = new Set([
   'visit',
   'run_started',
@@ -51,7 +53,7 @@ export function normaliseEvent(input) {
   }
 
   if (input.type === 'error') {
-    event.message = clip(String(input.message ?? ''), 300);
+    event.message = redactMessage(input.message) || null;
     if (!event.message) return null;
   }
 
@@ -86,6 +88,16 @@ export function openStore(path) {
   `);
   db.exec('CREATE INDEX IF NOT EXISTS events_day ON events (day)');
   db.exec('CREATE INDEX IF NOT EXISTS events_type_day ON events (type, day)');
+
+  // Rows stored before messages were redacted get the same treatment, so the
+  // promise holds for old data too. Cheap: errors are few and expire in 90 days.
+  const update = db.prepare('UPDATE events SET message = ? WHERE id = ?');
+  const remove = db.prepare('DELETE FROM events WHERE id = ?');
+  for (const row of db.prepare("SELECT id, message FROM events WHERE type = 'error'").all()) {
+    const clean = redactMessage(row.message);
+    if (!clean) remove.run(row.id);
+    else if (clean !== row.message) update.run(clean, row.id);
+  }
 
   const insertStmt = db.prepare(
     `INSERT INTO events (ts, day, type, rev, cause, money, weight, height, duration, message)
