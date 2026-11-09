@@ -16,7 +16,7 @@ and the certificate, and this repository owns what nginx actually serves.
 
 ## One-time setup
 
-1. **DNS** — `A korupsi.web.id → <server IP>`, `CNAME www → korupsi.web.id`. Done.
+1. **DNS** — `A korupsi.web.id → <server IP>`, `CNAME www → korupsi.web.id`.
 2. **Site in aaPanel** — Website → Add site. Domain `korupsi.web.id`, root
    `/www/wwwroot/korupsi.web.id`, no PHP, no database, no FTP.
 3. **Certificate in aaPanel** — Site → SSL → Let's Encrypt → file verification. The panel
@@ -40,19 +40,24 @@ and the certificate, and this repository owns what nginx actually serves.
 | Name | Kind | Value |
 | --- | --- | --- |
 | `DEPLOY_SSH_KEY` | secret | private key of the deploy keypair |
-| `DEPLOY_KNOWN_HOSTS` | secret | output of `ssh-keyscan <server IP>` |
-| `DEPLOY_HOST` | variable | `<server IP>` |
-| `DEPLOY_USER` | variable | `deploy` |
-| `DEPLOY_PORT` | variable | `22` |
-| `DEPLOY_PATH` | variable | `/www/wwwroot/korupsi.web.id` |
+| `DEPLOY_KNOWN_HOSTS` | secret | output of `ssh-keyscan <server>` |
+| `DEPLOY_HOST` | variable | server address |
+| `DEPLOY_USER` | variable | the unprivileged deploy user |
+| `DEPLOY_PORT` | variable | SSH port |
+| `DEPLOY_PATH` | variable | site root, for example `/www/wwwroot/korupsi.web.id` |
 | `DEPLOY_ENABLED` | variable | `true`, or `false` to pause deploys |
 
-A variable missing from GitHub is an empty string in the workflow, not an error, so the
-deploy job checks them before using them.
+A variable missing from GitHub is an empty string in the workflow, not an error. The first
+step of the deploy job ("Check deploy settings") fails the run when any of them is empty or
+malformed, and `DEPLOY_PATH` must be an absolute path at least two levels deep. The
+remote script also refuses to switch `current` unless the new release directory exists.
+
+The actual values live only in the repository settings and in the operator's notes, not
+in this public file.
 
 ## What a deploy does
 
-`.github/workflows/ci.yml` follows the pattern already used on `nyetok.id`:
+`.github/workflows/ci.yml` does this:
 
 1. Scan the full git history for secrets, and check tracked files. A finding fails the run.
 2. Type-check and build, then upload the artifact.
@@ -61,7 +66,8 @@ deploy job checks them before using them.
 4. Point `current.next` at the new directory, then `mv -Tf current.next current` in one
    step, so no request ever sees a half-written release.
 5. Keep the five newest releases, delete the rest.
-6. Smoke test: `curl -fsS https://korupsi.web.id/`.
+6. Smoke test: `/`, `/og.png` and `/sw.js` answer 200, the live page loads the script
+   this run built, and `/sw.js` is the kill switch.
 
 The deploy only runs on `main`, and only while the repository variable `DEPLOY_ENABLED` is
 `true`. Pull requests get the secret scan, the file checks, and the build, but no deploy.
@@ -83,10 +89,10 @@ and serves a read-only panel.
 
 - Unit: `deploy/systemd/korupsi-stats.service`, listening on `127.0.0.1:8787` only.
 - nginx proxies `/api/` and `/panel/`; the panel sits behind basic auth.
-- The panel password is written to `/root/korupsi-panel-password.txt` on first setup.
-  Change it with `htpasswd -c /www/server/nginx/conf/.htpasswd-korupsi admin` (then
+- The panel password is kept in the operator's password manager, never in a file on the
+  server or in this repository. Change it with `htpasswd -c <htpasswd file> <user>` (then
   `chown root:www`, `chmod 640`; nginx returns 500, not 403, when it cannot read the file).
-- `deploy` may restart only this unit, via `/etc/sudoers.d/korupsi-stats-deploy`.
+- The deploy user may restart only this unit, through a single sudoers rule.
 - A unit file change needs one manual `systemctl daemon-reload`; code changes deploy normally.
 
 What is stored: event type, build revision, run outcome (cause, money, height, duration,
@@ -108,9 +114,10 @@ No rebuild, no downtime, instant.
   that used to be inline attributes live in the stylesheet. Adding an inline handler later
   will break on the live site before it breaks locally, which is the point.
 - Caching: pages are `no-cache` so a deploy shows up on the next refresh; anything under
-  `/assets/` is immutable for a year because the filenames are content-hashed. `/sw.js` is
-  never cached, because that file is how the browser learns there is a new version.
-- Offline: `dist/sw.js` is generated at build time with the file list baked in, so the
-  whole game works without a network after the first visit. The offline shell is
-  `/index.html`, which the worker refreshes on every successful navigation.
+  `/assets/` is immutable for a year because the filenames are content-hashed.
+- No service worker: v0.3.0 removed offline play because the old worker kept serving
+  stale builds and cached the panel. `public/sw.js` is now a kill switch that deletes every
+  cache, unregisters itself and reloads the tab. It must stay at `/sw.js`, uncached, until
+  the old worker is gone from the wild (about three months, until 2027-02); after that,
+  delete the file, its nginx location, and the smoke test line.
 - The panel serves its own default page until the first deploy writes `current`.
