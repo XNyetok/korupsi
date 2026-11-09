@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Korupsi">
+  <rect width="64" height="64" rx="14" fill="#0A0E14"/>
+  <rect x="13" y="21" width="38" height="25" rx="4" fill="#E3B04B"/>
+  <path d="M15 24.5 L32 36.5 L49 24.5" fill="none" stroke="#A87B23" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="32" cy="40" r="4.6" fill="#D9483B"/>
+</svg>
