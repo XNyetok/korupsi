@@ -1,8 +1,9 @@
 import './style.css';
 import { audio } from './audio.ts';
-import { PARAMS } from './config.ts';
+import { PARAMS, WORLD_WIDTH } from './config.ts';
 import { mountDebug } from './debug.ts';
 import { Game } from './game.ts';
+import { Controls, keyAction } from './input.ts';
 import { draw } from './render.ts';
 import { track, trackErrors } from './telemetry.ts';
 import { Ui } from './ui.ts';
@@ -16,10 +17,15 @@ if (!foundContext) throw new Error('canvas 2d context unavailable');
 const ctx: CanvasRenderingContext2D = foundContext;
 
 const ui = new Ui();
-let runStartedAt = 0;
+
+/** Long enough to stop the tap that was meant as a jump from skipping the result. */
+const RESULT_LOCK_MS = 700;
+/** A tap that wakes the phone should not count. */
+const WAKE_LOCK_MS = 350;
 
 const game = new Game({
   onEnd() {
+    controls.block(RESULT_LOCK_MS);
     ui.showResult(game);
     audio.play('caught');
     track('run_ended', {
@@ -27,7 +33,7 @@ const game = new Game({
       money: game.money,
       weight: game.weight,
       height: game.heightMetres,
-      duration: runStartedAt ? Math.round((performance.now() - runStartedAt) / 1000) : 0,
+      duration: Math.round(game.elapsed),
     });
   },
   onJump() {
@@ -41,70 +47,68 @@ const game = new Game({
   },
 });
 
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-let width = 360;
-let height = 640;
-
-function resize(): void {
-  const rect = canvas.getBoundingClientRect();
-  width = Math.max(260, Math.round(rect.width));
-  height = Math.max(320, Math.round(rect.height));
-
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  game.setViewport(width, height);
-}
-
-// ---------- input ----------
-
-function tap(clientX: number): void {
-  // A tap that wakes the phone should not turn into a jump.
-  if (performance.now() < ignoreTapUntil) return;
-
-  if (game.phase !== 'playing') {
+const controls = new Controls(game, {
+  start() {
     audio.unlock();
     audio.play('start');
     game.start();
     ui.hideOverlay();
-    runStartedAt = performance.now();
     track('run_started');
-    return;
-  }
+  },
+  resume() {
+    game.resume();
+    ui.hideOverlay();
+  },
+});
+
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Screen pixels per world unit, times the device pixel ratio. */
+let pixelScale = 1;
+
+function resize(): void {
   const rect = canvas.getBoundingClientRect();
-  game.jump(clientX < rect.left + rect.width / 2 ? -1 : 1);
+  const cssWidth = Math.max(260, Math.round(rect.width));
+  const cssHeight = Math.max(320, Math.round(rect.height));
+
+  // The world is always WORLD_WIDTH wide; only how much of it is visible
+  // vertically depends on the screen.
+  const scale = cssWidth / WORLD_WIDTH;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+  pixelScale = scale * dpr;
+
+  game.setViewport(cssHeight / scale);
 }
+
+// ---------- input ----------
 
 canvas.addEventListener('pointerdown', (event) => {
   event.preventDefault();
   canvas.focus({ preventScroll: true });
   audio.unlock();
-  tap(event.clientX);
+  const rect = canvas.getBoundingClientRect();
+  controls.pointer(event.clientX, rect.left, rect.width);
 });
 
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
 window.addEventListener('keydown', (event) => {
-  if (event.repeat) return;
+  if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
 
-  if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') {
-    audio.unlock();
-    if (game.phase === 'playing') game.jump(-1);
-    else tap(width * 0.25);
-    event.preventDefault();
-  } else if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') {
-    audio.unlock();
-    if (game.phase === 'playing') game.jump(1);
-    else tap(width * 0.75);
-    event.preventDefault();
-  } else if (event.key === ' ' || event.key === 'Enter') {
-    audio.unlock();
-    tap(width / 2 + game.player.dir);
-    event.preventDefault();
-  }
+  // Enter and Space on a button belong to the button, not to the game.
+  const target = event.target;
+  if (target instanceof Element && target.closest('button, a, input, select, textarea')) return;
+
+  const action = keyAction(event.key);
+  if (!action) return;
+
+  event.preventDefault();
+  audio.unlock();
+  if (action === 'left') controls.press(-1);
+  else if (action === 'right') controls.press(1);
+  else controls.repeat();
 });
 
 // Safari only starts audio from a gesture, and devices disagree about which
@@ -113,17 +117,7 @@ for (const type of ['pointerdown', 'touchend', 'click', 'keydown'] as const) {
   window.addEventListener(type, () => audio.unlock(), { capture: true, passive: true });
 }
 
-let resizeTimer = 0;
-window.addEventListener('resize', () => {
-  resize();
-  clearTimeout(resizeTimer);
-  resizeTimer = window.setTimeout(() => {
-    if (game.phase !== 'playing') {
-      game.reset();
-      draw(ctx, game, reducedMotion);
-    }
-  }, 120);
-});
+window.addEventListener('resize', resize);
 
 // ---------- loop ----------
 
@@ -149,6 +143,7 @@ function frame(now: number): void {
     acc = 0;
   }
 
+  ctx.setTransform(pixelScale, 0, 0, pixelScale, 0, 0);
   draw(ctx, game, reducedMotion);
   ui.update(game);
   debug?.tick();
@@ -156,11 +151,11 @@ function frame(now: number): void {
 }
 
 let hiddenAt = 0;
-let ignoreTapUntil = 0;
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     hiddenAt = performance.now();
+    game.pause();
     audio.suspend();
     return;
   }
@@ -170,9 +165,12 @@ document.addEventListener('visibilitychange', () => {
   lastFrame = performance.now();
   acc = 0;
 
-  if (game.phase === 'playing') {
-    ignoreTapUntil = performance.now() + 350;
-    game.handleAway(awayMs);
+  // Coming back never drops the player straight into a moving band: a short
+  // absence waits on a pause card, a long one has already ended the run.
+  game.handleAway(awayMs);
+  if (game.phase === 'paused') {
+    controls.block(WAKE_LOCK_MS);
+    ui.showPaused(game);
   }
 });
 
