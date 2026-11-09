@@ -78,7 +78,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Next
 
-- [~] **S1 — Seeded runs** (branch `feat/seeded-runs`). Replace `Math.random` in the simulation with a seeded RNG; accept
+- [~] **S1 — Seeded runs** (#9). Replace `Math.random` in the simulation with a seeded RNG; accept
   `?seed=` and show the seed on the result screen, so a bug report can be replayed exactly.
   Before B1, so playtest runs can be replayed. Code: `src/rng.ts` (mulberry32, base-36
   seeds), `tests/rng.test.ts`; the bug report form asks for the seed.
