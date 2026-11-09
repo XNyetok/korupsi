@@ -63,6 +63,7 @@ camera speed and how often the money appears.
 
 ## Documentation
 
+- [`docs/plan.md`](docs/plan.md) — what is done, what is next; the only work list
 - [`docs/design/game-design.md`](docs/design/game-design.md) — rules, the numbers, the
   playtest log, and why each decision was made
 - [`docs/deploy.md`](docs/deploy.md) — server layout, releases, rollback, CI pipeline

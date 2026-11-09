@@ -8,6 +8,7 @@ reasoning stays in the git history where it belongs.
 
 | File | Contents |
 | --- | --- |
+| [plan.md](plan.md) | The only work list: done, next, later. Read it first, update it with every PR |
 | [game-design.md](design/game-design.md) | Concept, pillars, core loop, open questions |
 | [assets.md](design/assets.md) | What may be committed, and under which license |
 
