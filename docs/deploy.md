@@ -52,17 +52,22 @@ deploy job checks them before using them.
 
 ## What a deploy does
 
-The workflow arrives with the Vite port. It follows the pattern already used on
-`nyetok.id`:
+`.github/workflows/ci.yml` follows the pattern already used on `nyetok.id`:
 
-1. Scan the full git history for secrets. A finding fails the run.
-2. Build, then upload the artifact.
+1. Scan the full git history for secrets, and check tracked files. A finding fails the run.
+2. Type-check and build, then upload the artifact.
 3. `rsync` the build into `releases/<UTC timestamp>-<sha>/`, leaving the live site alone
    while the upload runs.
 4. Point `current.next` at the new directory, then `mv -Tf current.next current` in one
    step, so no request ever sees a half-written release.
 5. Keep the five newest releases, delete the rest.
 6. Smoke test: `curl -fsS https://korupsi.web.id/`.
+
+The deploy only runs on `main`, and only while the repository variable `DEPLOY_ENABLED` is
+`true`. Pull requests get the secret scan, the file checks, and the build, but no deploy.
+
+The build stamps the revision into the ready screen (`rev r12-2a7e3d3`), so it is obvious
+which build a bug report came from.
 
 ## Rollback
 

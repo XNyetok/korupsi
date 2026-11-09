@@ -1,0 +1,103 @@
+import { PALETTE as C } from './config';
+import { rupiah, type Game } from './game';
+
+const buildLabel = () =>
+  typeof __BUILD_LABEL__ === 'string' && __BUILD_LABEL__ ? __BUILD_LABEL__ : 'dev';
+
+function el<T extends HTMLElement>(id: string): T {
+  const node = document.getElementById(id);
+  if (!node) throw new Error(`missing element #${id}`);
+  return node as T;
+}
+
+/**
+ * Owns the DOM: the HUD numbers and the two cards (ready, result).
+ * The canvas never draws text that the browser can render better.
+ */
+export class Ui {
+  private overlay = el<HTMLDivElement>('overlay');
+  private money = el<HTMLSpanElement>('hud-money');
+  private height = el<HTMLSpanElement>('hud-height');
+  private weight = el<HTMLSpanElement>('hud-weight');
+  private bar = el<HTMLElement>('hud-bar');
+  private cache = '';
+
+  update(game: Game): void {
+    const key = `${game.money}|${game.heightMetres}|${game.weight}`;
+    if (key === this.cache) return;
+    this.cache = key;
+
+    this.money.textContent = rupiah(game.money);
+    this.height.textContent = `${game.heightMetres} m`;
+    this.weight.textContent = `Beban ${game.weight}`;
+
+    const pct = Math.max(0, Math.min(100, (game.weight / 12) * 100));
+    this.bar.style.width = `${pct}%`;
+    this.bar.style.background =
+      game.weight >= 8 ? C.red : game.weight >= 5 ? C.gold : 'rgba(227, 176, 75, 0.65)';
+  }
+
+  showReady(): void {
+    this.overlay.innerHTML = `
+      <div class="card ready">
+        <div>
+          <p class="eyebrow">prototipe</p>
+          <h1>Korupsi</h1>
+          <p class="lede">Dua pijakan tiap jenjang. Ambil yang bergaris emas untuk skor,
+            tapi makin berat, makin pendek lompatanmu.</p>
+          <div class="legend">
+            <span><i class="dot" style="background:#C9C0AF"></i>aman</span>
+            <span><i class="dot" style="background:#E3B04B"></i>amplop</span>
+            <span><i class="dot" style="background:#D9483B"></i>auditor</span>
+          </div>
+        </div>
+        <div>
+          <p class="cta">Tap untuk mulai</p>
+          <p class="rev">rev ${buildLabel()}</p>
+        </div>
+      </div>`;
+    this.overlay.classList.add('is-visible');
+    document.body.classList.remove('is-playing');
+  }
+
+  showResult(game: Game): void {
+    const cause = game.cause;
+    const eyebrow =
+      cause === 'auditor' ? 'tertangkap' : cause === 'fall' ? 'terjatuh' : 'ketinggalan';
+
+    let line: string;
+    if (cause === 'auditor') {
+      line = game.weight
+        ? `Ditangkap dengan ${game.weight} amplop di dalam tas.`
+        : 'Ditangkap tanpa membawa apa pun. Tetap diperiksa.';
+    } else if (cause === 'fall') {
+      line = game.weight
+        ? `Jatuh, ${game.weight} amplop ikut berhamburan.`
+        : 'Jatuh dari pijakan yang belum diresmikan.';
+    } else {
+      line = game.weight
+        ? `${game.weight} amplop, semuanya tercatat di berkas.`
+        : 'Tangan kosong, tetap dicurigai.';
+    }
+
+    this.overlay.innerHTML = `
+      <div class="card">
+        <p class="stamp">${eyebrow}</p>
+        <h1 class="money">${rupiah(game.money)}</h1>
+        <p class="lede">${line}</p>
+        <div class="stats">
+          <span><i>Amplop</i><b>${game.weight}</b></span>
+          <span><i>Tinggi</i><b>${game.heightMetres} m</b></span>
+        </div>
+        <p class="record">Rekor ${rupiah(game.best.money)}</p>
+        <p class="cta">Tap untuk ulang</p>
+      </div>`;
+    this.overlay.classList.add('is-visible');
+    document.body.classList.remove('is-playing');
+  }
+
+  hideOverlay(): void {
+    this.overlay.classList.remove('is-visible');
+    document.body.classList.add('is-playing');
+  }
+}

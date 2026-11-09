@@ -21,23 +21,24 @@ rather than lost in chat scrollback.
 .githooks/          local git hooks (secret scan, large file guard)
 .github/            workflows, issue and pull request templates
 docs/design/        design notes and open questions
-prototype/          the playable feel test: one file, no build step
+public/             static files served as-is (favicon)
+src/                the game: simulation, rendering, UI (Vite + TypeScript)
 scripts/            developer tooling
 .gitleaks.toml      secret scanning rules
 ```
 
 ## Playing it
 
-From the repository root:
-
 ```sh
-python3 -m http.server 8080
+npm install
+npm run dev
 ```
 
-Then open <http://localhost:8080/prototype/>. A phone on the same network can load
-`http://<your-ip>:8080/prototype/`; the file also runs from disk.
+Then open the address Vite prints. To try the production build: `npm run build` and
+`npm run preview`. Tap the left or right half of the screen to jump; money adds weight and
+shortens your jump.
 
-Tap the left or right half of the screen to jump. Money adds weight and shortens your jump.
+`?debug=1` adds tuning sliders for jump, gravity, weight and camera speed.
 
 ## Working on it
 

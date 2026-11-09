@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0A0E14">
+<meta name="description" content="Panjat birokrasi satu lompatan sekaligus. Ambil amplop untuk skor; makin berat, makin pendek lompatanmu.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Korupsi">
+<meta property="og:description" content="Panjat birokrasi satu lompatan sekaligus. Makin berat, makin pendek lompatanmu.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://korupsi.web.id/">
+<meta name="twitter:card" content="summary">
+<title>Korupsi</title>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" tabindex="0" role="application" aria-label="Korupsi: ketuk kiri atau kanan layar untuk melompat"></canvas>
+
+  <div id="scrim" aria-hidden="true"></div>
+
+  <div id="hud" aria-hidden="true">
+    <div class="row">
+      <div class="stat">
+        <span class="label">Dibawa</span>
+        <span class="value gold" id="hud-money">Rp 0</span>
+      </div>
+      <div class="stat right">
+        <span class="label">Tinggi</span>
+        <span class="value" id="hud-height">0 m</span>
+      </div>
+    </div>
+    <div class="weight">
+      <span id="hud-weight">Beban 0</span>
+      <div class="bar"><i id="hud-bar"></i></div>
+    </div>
+  </div>
+
+  <div id="overlay"></div>
+  <div id="debug"></div>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
