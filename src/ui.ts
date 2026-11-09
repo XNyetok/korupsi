@@ -7,7 +7,7 @@ import { track } from './telemetry.ts';
 declare const __BUILD_LABEL__: string;
 
 const buildLabel = () =>
-  typeof __BUILD_LABEL__ === 'string' && __BUILD_LABEL__ ? __BUILD_LABEL__ : 'dev';
+  typeof __BUILD_LABEL__ === 'string' && __BUILD_LABEL__ ? __BUILD_LABEL__ : `${__VERSION__}-dev`;
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -88,7 +88,7 @@ export class Ui {
         </div>
         <div>
           <p class="cta">Tap untuk mulai</p>
-          <p class="rev">rev ${buildLabel()}</p>
+          <p class="rev">build ${buildLabel()}</p>
         </div>
       </div>`;
     this.overlay.classList.add('is-visible');
