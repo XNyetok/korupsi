@@ -16,6 +16,13 @@ const BEST_KEY = 'korupsi.best';
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
+export interface GameEvents {
+  onEnd(): void;
+  onJump?(): void;
+  onLand?(): void;
+  onCollect?(): void;
+}
+
 export interface Envelope {
   jv: number;
   h: number;
@@ -89,10 +96,10 @@ export class Game {
   best: Best = readBest();
 
   private nextId = 1;
-  private onEnd: () => void;
+  private readonly events: GameEvents;
 
-  constructor(onEnd: () => void) {
-    this.onEnd = onEnd;
+  constructor(events: GameEvents) {
+    this.events = events;
   }
 
   setViewport(width: number, height: number): void {
@@ -313,7 +320,7 @@ export class Game {
       this.best = { money: this.money, height: h };
       writeBest(this.best);
     }
-    this.onEnd();
+    this.events.onEnd();
   }
 
   jump(dir: number): void {
@@ -327,6 +334,7 @@ export class Game {
 
     this.squash = 0.86;
     this.puff(6, 0);
+    this.events.onJump?.();
 
     if (plat.type === 'fiktif' && plat.crumble === 0) plat.crumble = 0.0001;
   }
@@ -353,6 +361,7 @@ export class Game {
     this.lastFooting = plat.y;
     this.squash = 1.18;
     this.puff(9, 0);
+    this.events.onLand?.();
 
     if (plat.type === 'fiktif' && plat.crumble === 0) plat.crumble = 0.0001;
 
@@ -366,6 +375,7 @@ export class Game {
         t: 0,
         text: '+' + rupiah(PARAMS.moneyValue),
       });
+      this.events.onCollect?.();
     }
 
     this.rebuildAhead();

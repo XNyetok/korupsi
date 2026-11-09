@@ -1,5 +1,9 @@
+import { audio } from './audio';
 import { PALETTE as C } from './config';
 import { rupiah, type Game } from './game';
+import { shareResult } from './share';
+
+declare const __BUILD_LABEL__: string;
 
 const buildLabel = () =>
   typeof __BUILD_LABEL__ === 'string' && __BUILD_LABEL__ ? __BUILD_LABEL__ : 'dev';
@@ -11,7 +15,7 @@ function el<T extends HTMLElement>(id: string): T {
 }
 
 /**
- * Owns the DOM: the HUD numbers and the two cards (ready, result).
+ * Owns the DOM: HUD numbers, the two cards, the mute switch, and the toast.
  * The canvas never draws text that the browser can render better.
  */
 export class Ui {
@@ -20,7 +24,25 @@ export class Ui {
   private height = el<HTMLSpanElement>('hud-height');
   private weight = el<HTMLSpanElement>('hud-weight');
   private bar = el<HTMLElement>('hud-bar');
+  private mute = el<HTMLButtonElement>('mute');
+  private toastEl = el<HTMLDivElement>('toast');
+  private toastTimer = 0;
   private cache = '';
+
+  constructor() {
+    this.mute.addEventListener('click', () => {
+      audio.setMuted(!audio.muted);
+      if (!audio.muted) audio.play('start');
+      this.renderMute();
+    });
+    this.renderMute();
+  }
+
+  private renderMute(): void {
+    const muted = audio.muted;
+    this.mute.setAttribute('aria-pressed', String(muted));
+    this.mute.setAttribute('aria-label', muted ? 'Nyalakan suara' : 'Matikan suara');
+  }
 
   update(game: Game): void {
     const key = `${game.money}|${game.heightMetres}|${game.weight}`;
@@ -35,6 +57,15 @@ export class Ui {
     this.bar.style.width = `${pct}%`;
     this.bar.style.background =
       game.weight >= 8 ? C.red : game.weight >= 5 ? C.gold : 'rgba(227, 176, 75, 0.65)';
+  }
+
+  toast(message: string): void {
+    this.toastEl.textContent = message;
+    this.toastEl.classList.add('is-visible');
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => {
+      this.toastEl.classList.remove('is-visible');
+    }, 1900);
   }
 
   showReady(): void {
@@ -90,8 +121,21 @@ export class Ui {
           <span><i>Tinggi</i><b>${game.heightMetres} m</b></span>
         </div>
         <p class="record">Rekor ${rupiah(game.best.money)}</p>
+        <button class="share" type="button">Bagikan hasil</button>
         <p class="cta">Tap untuk ulang</p>
       </div>`;
+
+    const share = this.overlay.querySelector<HTMLButtonElement>('.share');
+    if (share) {
+      const text = `${eyebrow === 'tertangkap' ? 'Ditangkap' : eyebrow === 'terjatuh' ? 'Terjatuh' : 'Ketinggalan'}: ${game.weight} amplop, ${rupiah(game.money)}, ${game.heightMetres} m.`;
+      share.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        const outcome = await shareResult(text);
+        if (outcome === 'copied') this.toast('Disalin ke papan klip');
+        if (outcome === 'failed') this.toast('Tidak bisa membagikan');
+      });
+    }
+
     this.overlay.classList.add('is-visible');
     document.body.classList.remove('is-playing');
   }

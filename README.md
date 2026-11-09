@@ -38,6 +38,9 @@ Then open the address Vite prints. To try the production build: `npm run build` 
 `npm run preview`. Tap the left or right half of the screen to jump; money adds weight and
 shortens your jump.
 
+The build is a PWA: after the first visit the game plays offline, and it can be added to
+a phone's home screen. Sound is synthesised, with a mute switch in the corner.
+
 `?debug=1` adds tuning sliders for jump, gravity, weight and camera speed.
 
 ## Working on it

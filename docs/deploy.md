@@ -84,5 +84,9 @@ No rebuild, no downtime, instant.
   that used to be inline attributes live in the stylesheet. Adding an inline handler later
   will break on the live site before it breaks locally, which is the point.
 - Caching: pages are `no-cache` so a deploy shows up on the next refresh; anything under
-  `/assets/` is immutable for a year because the filenames are content-hashed.
+  `/assets/` is immutable for a year because the filenames are content-hashed. `/sw.js` is
+  never cached, because that file is how the browser learns there is a new version.
+- Offline: `dist/sw.js` is generated at build time with the file list baked in, so the
+  whole game works without a network after the first visit. The offline shell is
+  `/index.html`, which the worker refreshes on every successful navigation.
 - The panel serves its own default page until the first deploy writes `current`.

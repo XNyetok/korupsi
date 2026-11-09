@@ -1,4 +1,5 @@
 import './style.css';
+import { audio } from './audio';
 import { PARAMS } from './config';
 import { mountDebug } from './debug';
 import { Game } from './game';
@@ -14,7 +15,22 @@ if (!foundContext) throw new Error('canvas 2d context unavailable');
 const ctx: CanvasRenderingContext2D = foundContext;
 
 const ui = new Ui();
-const game = new Game(() => ui.showResult(game));
+const game = new Game({
+  onEnd() {
+    ui.showResult(game);
+    audio.play('caught');
+  },
+  onJump() {
+    audio.play('jump');
+  },
+  onLand() {
+    audio.play('land');
+  },
+  onCollect() {
+    audio.play('collect');
+  },
+});
+
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let width = 360;
@@ -37,6 +53,8 @@ function resize(): void {
 
 function tap(clientX: number): void {
   if (game.phase !== 'playing') {
+    audio.unlock();
+    audio.play('start');
     game.start();
     ui.hideOverlay();
     return;
@@ -48,6 +66,7 @@ function tap(clientX: number): void {
 canvas.addEventListener('pointerdown', (event) => {
   event.preventDefault();
   canvas.focus({ preventScroll: true });
+  audio.unlock();
   tap(event.clientX);
 });
 
@@ -57,14 +76,17 @@ window.addEventListener('keydown', (event) => {
   if (event.repeat) return;
 
   if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') {
+    audio.unlock();
     if (game.phase === 'playing') game.jump(-1);
     else tap(width * 0.25);
     event.preventDefault();
   } else if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') {
+    audio.unlock();
     if (game.phase === 'playing') game.jump(1);
     else tap(width * 0.75);
     event.preventDefault();
   } else if (event.key === ' ' || event.key === 'Enter') {
+    audio.unlock();
     tap(width / 2 + game.player.dir);
     event.preventDefault();
   }
@@ -120,6 +142,13 @@ resize();
 game.reset();
 ui.showReady();
 requestAnimationFrame(frame);
+
+// Offline play: the shell and the hashed assets are cached by the worker.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js');
+  });
+}
 
 // Keep the parameter object reachable from the console during tuning.
 if (import.meta.env.DEV) {

@@ -295,3 +295,80 @@
   #debug label { display: flex; flex-direction: column; gap: 2px; }
   #debug input { width: 100%; accent-color: var(--gold); }
   #debug .readout { grid-column: 1 / -1; color: #6f7a89; font-variant-numeric: tabular-nums; }
+
+/* ---------- sound, sharing, feedback ---------- */
+
+.mute {
+  position: absolute;
+  right: 12px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(240, 233, 219, 0.12);
+  border-radius: 13px;
+  background: rgba(10, 14, 20, 0.55);
+  color: var(--muted);
+  cursor: pointer;
+  z-index: 5;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.mute svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mute svg path:first-child { fill: currentColor; stroke: none; }
+.mute .icon-off { display: none; }
+.mute[aria-pressed="true"] .icon-on { display: none; }
+.mute[aria-pressed="true"] .icon-off { display: block; }
+.mute:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.share {
+  display: inline-block;
+  margin: 0 0 16px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #10151d;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.share:active { transform: translateY(1px); }
+.share:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 8px);
+  margin: 0;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: rgba(240, 233, 219, 0.94);
+  color: #12171f;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 6;
+}
+
+.toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
