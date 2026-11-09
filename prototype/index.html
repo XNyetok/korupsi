@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a0d12">
+<title>Korupsi — prototipe</title>
+<style>
+  :root {
+    --ink: #0a0d12;
+    --paper: #e7e2d6;
+    --muted: #8b95a3;
+    --gold: #e9b949;
+    --red: #e5524a;
+    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--ink);
+    overflow: hidden;
+    color: var(--paper);
+    font-family: var(--font);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    overscroll-behavior: none;
+  }
+
+  #stage {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--ink);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    outline: none;
+  }
+
+  /* ---------- HUD ---------- */
+
+  #hud {
+    position: absolute;
+    inset: 0 0 auto 0;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  body.is-playing #hud { opacity: 1; }
+
+  .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .stat { display: flex; flex-direction: column; gap: 1px; }
+  .stat.right { align-items: flex-end; }
+
+  .label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .value {
+    font-size: 19px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value.gold { color: var(--gold); }
+
+  .weight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .bar {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  .bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--gold);
+    transition: width 120ms linear, background 200ms ease;
+  }
+
+  /* ---------- Overlay ---------- */
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    pointer-events: none;
+    background: radial-gradient(120% 80% at 50% 45%, rgba(10, 13, 18, 0.72), rgba(10, 13, 18, 0.94));
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 180ms ease, visibility 180ms;
+  }
+
+  #overlay.is-visible { opacity: 1; visibility: visible; }
+
+  .card {
+    width: 100%;
+    max-width: 330px;
+    text-align: center;
+  }
+
+  .card.ready {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 9vh 0 21vh;
+  }
+
+  .eyebrow {
+    margin: 0 0 10px;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--red);
+  }
+
+  .card h1 {
+    margin: 0 0 14px;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+
+  .card h1.money {
+    font-size: 30px;
+    color: var(--gold);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lede {
+    margin: 0 0 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #b9c1cc;
+    text-wrap: balance;
+  }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 0 0 18px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 0 0 14px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stats span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: nowrap;
+  }
+
+  .stats i {
+    font-style: normal;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stats b { color: var(--paper); font-weight: 600; font-size: 13px; }
+
+  .record {
+    margin: 0 0 22px;
+    font-size: 11px;
+    color: #6f7a89;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cta {
+    align-self: center;
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--paper);
+    padding: 9px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(231, 226, 214, 0.22);
+  }
+
+  /* ---------- Debug ---------- */
+
+  #debug {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    display: none;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(6, 8, 11, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 10px;
+    color: #9aa4b2;
+    backdrop-filter: blur(6px);
+  }
+
+  #debug.is-on { display: grid; grid-template-columns: 1fr 1fr; }
+  #debug.is-muted { display: none; }
+
+  #debug label { display: flex; flex-direction: column; gap: 2px; }
+  #debug input { width: 100%; accent-color: var(--gold); }
+  #debug .readout { grid-column: 1 / -1; color: #6f7a89; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" tabindex="0" role="application" aria-label="Korupsi: ketuk kiri atau kanan layar untuk melompat"></canvas>
+
+  <div id="hud" aria-hidden="true">
+    <div class="row">
+      <div class="stat">
+        <span class="label">Dibawa</span>
+        <span class="value gold" id="hud-money">Rp 0</span>
+      </div>
+      <div class="stat right">
+        <span class="label">Tinggi</span>
+        <span class="value" id="hud-height">0 m</span>
+      </div>
+    </div>
+    <div class="weight">
+      <span id="hud-weight">Beban 0</span>
+      <div class="bar"><i id="hud-bar"></i></div>
+    </div>
+  </div>
+
+  <div id="overlay"></div>
+  <div id="debug"></div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // Tunables. Change here first, then write down what won in docs/design/.
+  const params = {
+    gravity: 1900,
+    jumpV: 700,
+    moveVX: 115,
+    weightPenalty: 0.03,
+    minFactor: 0.45,
+    gapMin: 0.42,
+    gapMax: 0.62,
+    cameraBase: 26,
+    cameraAccel: 1.3,
+    crumbleDelay: 0.45,
+    moneyValue: 500000,
+    pixelsPerMetre: 6,
+    goldChance: 0.45,
+    doubleGoldChance: 0,
+  };
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const hudMoney = document.getElementById('hud-money');
+  const hudHeight = document.getElementById('hud-height');
+  const hudWeight = document.getElementById('hud-weight');
+  const hudBar = document.getElementById('hud-bar');
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 360;
+  let H = 640;
+
+  // ---------- state ----------
+
+  let phase = 'ready'; // ready | playing | over
+  let platforms = [];
+  let auditors = [];
+  let floaters = [];
+  let money = 0;
+  let weight = 0;
+  let camY = 0;
+  let camSpeed = 0;
+  let maxClimb = 0;
+  let lastFooting = 0;
+  let shake = 0;
+  let cause = '';
+  let nextId = 1;
+
+  const player = { x: 0, y: 0, vx: 0, vy: 0, onGround: null, dir: 1 };
+
+  let best = readBest();
+
+  // ---------- helpers ----------
+
+  const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const round = (n) => Math.round(n);
+
+  function readBest() {
+    try {
+      const raw = localStorage.getItem('korupsi.best');
+      if (!raw) return { money: 0, height: 0 };
+      const parsed = JSON.parse(raw);
+      return { money: Number(parsed.money) || 0, height: Number(parsed.height) || 0 };
+    } catch {
+      return { money: 0, height: 0 };
+    }
+  }
+
+  function writeBest() {
+    try {
+      localStorage.setItem('korupsi.best', JSON.stringify(best));
+    } catch {
+      /* private mode, ignore */
+    }
+  }
+
+  const rupiah = (n) => 'Rp ' + n.toLocaleString('id-ID');
+  const height = () => Math.round(maxClimb / params.pixelsPerMetre);
+
+  function jumpFactor() {
+    return Math.max(params.minFactor, 1 - params.weightPenalty * weight);
+  }
+
+  // Envelope of a jump at the current weight: rise, air time, and horizontal
+  // travel at the moment the player crosses a ledge `dy` above the launch point.
+  function envelope(factor) {
+    const jv = params.jumpV * factor;
+    const g = params.gravity;
+    const h = (jv * jv) / (2 * g);
+    const air = (2 * jv) / g;
+    return {
+      jv,
+      h,
+      air,
+      dxAt(dy) {
+        const inner = Math.max(0, jv * jv - 2 * g * dy);
+        const t = (jv + Math.sqrt(inner)) / g;
+        return params.moveVX * t;
+      },
+    };
+  }
+
+  // ---------- world ----------
+
+  function topPlatform() {
+    let top = platforms[0];
+    for (const p of platforms) if (p.y < top.y) top = p;
+    return top;
+  }
+
+  function riskyType() {
+    const r = Math.random();
+    if (r < 0.66) return 'solid';
+    if (r < 0.88) return 'krat';
+    return 'fiktif';
+  }
+
+  function makeOption(anchorX, anchorY, dir, dy, env, gold) {
+    const w = gold ? rand(60, 74) : rand(84, 108);
+    const lo = w / 2 + 10;
+    const hi = W - w / 2 - 10;
+    if (lo > hi) return null;
+
+    // Horizontal speed is constant, so the landing spot is fixed for a given
+    // rise. Place the ledge around that spot, with the offset small enough
+    // that the player still lands on it.
+    const travel = env.dxAt(dy);
+    const jitter = rand(-(w / 2 - 10), w / 2 - 10);
+    const x = anchorX + dir * (travel + jitter);
+
+    if (x < lo || x > hi) return null;
+
+    return {
+      id: nextId++,
+      x,
+      y: anchorY - dy,
+      w,
+      gold,
+      type: gold ? riskyType() : Math.random() < 0.35 ? 'krat' : 'solid',
+      crumble: 0,
+      alive: true,
+      taken: false,
+    };
+  }
+
+  // One level of the climb: two ledges at the same height, one of them usually
+  // carrying money. The player's only decision is which side to tap.
+  function generateChoices(anchorX, anchorY) {
+    const env = envelope(jumpFactor());
+    const dy = rand(env.h * params.gapMin, env.h * params.gapMax);
+
+    const roll = Math.random();
+    let goldLeft = false;
+    let goldRight = false;
+    if (roll < params.goldChance) {
+      if (Math.random() < 0.5) goldLeft = true;
+      else goldRight = true;
+    } else if (roll < params.goldChance + params.doubleGoldChance) {
+      goldLeft = true;
+      goldRight = true;
+    }
+
+    // The first level always shows the choice, so the mechanic is visible
+    // before the player has to guess at it.
+    if (levelsClimbed() < 1) {
+      goldLeft = Math.random() < 0.5;
+      goldRight = !goldLeft;
+    }
+
+    const left = makeOption(anchorX, anchorY, -1, dy, env, goldLeft);
+    const right = makeOption(anchorX, anchorY, 1, dy, env, goldRight);
+
+    const placed = [];
+    if (left) {
+      platforms.push(left);
+      placed.push(left);
+    }
+    if (right) {
+      platforms.push(right);
+      placed.push(right);
+    }
+
+    // If both sides were out of bounds, fall back to one reachable ledge.
+    if (!placed.length) {
+      const w = rand(70, 100);
+      const travel = env.dxAt(dy);
+      const dir = anchorX < W / 2 ? 1 : -1;
+      const x = clamp(anchorX + dir * travel, w / 2 + 10, W - w / 2 - 10);
+      const plat = {
+        id: nextId++,
+        x,
+        y: anchorY - dy,
+        w,
+        gold: false,
+        type: 'solid',
+        crumble: 0,
+        alive: true,
+        taken: false,
+      };
+      platforms.push(plat);
+      placed.push(plat);
+    }
+
+    // A single ledge means no choice, so it must never be the risky one.
+    if (placed.length === 1 && placed[0].gold) {
+      placed[0].gold = false;
+      placed[0].type = 'solid';
+      placed[0].w = Math.max(placed[0].w, 84);
+    }
+
+    maybeAddAuditor(anchorY, placed);
+  }
+
+  function maybeAddAuditor(anchorY, placed) {
+    if (levelsClimbed() < 5) return;
+    const gold = placed.find((p) => p.gold);
+    if (!gold) return;
+    if (Math.random() > 0.5) return;
+
+    // The auditor only guards the money: its patrol never reaches the safe
+    // ledge, so choosing the safe side always works.
+    const reach = gold.w / 2 + 26;
+    auditors.push({
+      lowerY: anchorY,
+      upper: gold,
+      x: gold.x,
+      dir: Math.random() < 0.5 ? -1 : 1,
+      speed: rand(34, 62),
+      w: 30,
+      h: 26,
+      y: gold.y - 11,
+      minX: gold.x - reach,
+      maxX: gold.x + reach,
+    });
+  }
+
+  function levelsClimbed() {
+    return Math.round(-topPlatform().y / 70);
+  }
+
+  // After landing, everything above the new footing is stale: it was generated
+  // from the previous position and no longer describes a reachable path.
+  function rebuildAhead() {
+    const anchor = player.onGround;
+    if (!anchor) return;
+    platforms = platforms.filter((p) => p !== anchor && p.y >= anchor.y);
+    auditors = [];
+    generateChoices(player.x, anchor.y);
+  }
+
+  function resetWorld() {
+    platforms = [];
+    auditors = [];
+    floaters = [];
+    money = 0;
+    weight = 0;
+    maxClimb = 0;
+    lastFooting = 0;
+    shake = 0;
+    cause = '';
+    nextId = 1;
+
+    const groundW = Math.min(W - 56, 220);
+    const ground = {
+      id: nextId++,
+      x: W / 2,
+      y: 0,
+      w: groundW,
+      gold: false,
+      type: 'solid',
+      crumble: 0,
+      alive: true,
+      taken: false,
+    };
+    platforms.push(ground);
+
+    player.x = ground.x;
+    player.y = ground.y;
+    player.vx = 0;
+    player.vy = 0;
+    player.onGround = ground;
+    player.dir = 1;
+
+    camY = player.y - H * 0.62;
+    camSpeed = params.cameraBase;
+
+    generateChoices(ground.x, ground.y);
+  }
+
+  // ---------- flow ----------
+
+  function start() {
+    resetWorld();
+    phase = 'playing';
+    overlay.classList.remove('is-visible');
+    document.body.classList.add('is-playing');
+    updateHud();
+  }
+
+  function endRun(reason) {
+    phase = 'over';
+    cause = reason;
+    shake = reduceMotion ? 0 : 1;
+
+    const h = height();
+    if (money > best.money || (money === best.money && h > best.height)) {
+      best = { money, height: h };
+      writeBest();
+    }
+    showResult();
+  }
+
+  function jump(dir) {
+    if (!player.onGround) return;
+    const plat = player.onGround;
+
+    player.vy = -params.jumpV * jumpFactor();
+    player.vx = dir * params.moveVX;
+    player.dir = dir;
+    player.onGround = null;
+
+    if (plat.type === 'fiktif' && plat.crumble === 0) plat.crumble = 0.0001;
+  }
+
+  function land(plat) {
+    player.y = plat.y;
+    player.vy = 0;
+    player.vx = 0;
+    player.onGround = plat;
+    lastFooting = plat.y;
+
+    if (plat.type === 'fiktif' && plat.crumble === 0) plat.crumble = 0.0001;
+
+    if (plat.gold && !plat.taken) {
+      plat.taken = true;
+      money += params.moneyValue;
+      weight += 1;
+      floaters.push({ x: plat.x, y: plat.y - 46, t: 0, text: '+' + rupiah(params.moneyValue) });
+    }
+
+    rebuildAhead();
+  }
+
+  // ---------- simulation ----------
+
+  function step(dt) {
+    if (phase !== 'playing') return;
+
+    const p = player;
+    const prevY = p.y;
+
+    // A dead ledge cannot hold the player.
+    if (p.onGround && !p.onGround.alive) p.onGround = null;
+
+    if (p.onGround) {
+      p.x = clamp(p.x, 12, W - 12);
+      p.y = p.onGround.y;
+      p.vx = 0;
+      p.vy = 0;
+    } else {
+      p.vy += params.gravity * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+
+      if (p.x < 12) {
+        p.x = 12;
+        p.vx = 0;
+      } else if (p.x > W - 12) {
+        p.x = W - 12;
+        p.vx = 0;
+      }
+
+      if (p.vy > 0) {
+        for (const plat of platforms) {
+          if (!plat.alive) continue;
+          if (prevY <= plat.y && p.y >= plat.y && Math.abs(p.x - plat.x) <= plat.w / 2 + 6) {
+            land(plat);
+            break;
+          }
+        }
+      }
+    }
+
+    for (const plat of platforms) {
+      if (plat.crumble <= 0) continue;
+      plat.crumble += dt;
+      if (plat.alive && plat.crumble >= params.crumbleDelay) {
+        plat.alive = false;
+        if (p.onGround === plat) p.onGround = null;
+      }
+    }
+
+    for (const a of auditors) {
+      a.x += a.dir * a.speed * dt;
+      if (a.x < a.minX) {
+        a.x = a.minX;
+        a.dir = 1;
+      } else if (a.x > a.maxX) {
+        a.x = a.maxX;
+        a.dir = -1;
+      }
+      a.y = a.upper.y - 11;
+
+      if (
+        Math.abs(a.x - p.x) < (a.w + 18) / 2 &&
+        p.y - 30 < a.y + a.h / 2 &&
+        p.y > a.y - a.h / 2
+      ) {
+        endRun('auditor');
+        return;
+      }
+    }
+    auditors = auditors.filter((a) => a.upper.alive);
+
+    camSpeed += params.cameraAccel * dt;
+    camY -= camSpeed * dt;
+
+    const follow = p.y - H * 0.62;
+    if (follow < camY) camY += (follow - camY) * Math.min(1, dt * 12);
+
+    maxClimb = Math.max(maxClimb, -p.y);
+
+    if (platforms.length > 60) {
+      const cutoff = camY + H + 420;
+      platforms = platforms.filter((plat) => plat.y < cutoff || plat === p.onGround);
+    }
+
+    for (const f of floaters) {
+      f.t += dt;
+      f.y -= 30 * dt;
+    }
+    floaters = floaters.filter((f) => f.t < 1.2);
+
+    shake = Math.max(0, shake - dt * 2.5);
+
+    if (p.y > camY + H) {
+      // Well below the last ledge means a missed jump; otherwise the audit
+      // simply caught up with a player who could not climb fast enough.
+      endRun(!p.onGround && p.y > lastFooting + 180 ? 'fall' : 'band');
+    }
+  }
+
+  // ---------- rendering ----------
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    W = Math.max(260, Math.round(rect.width));
+    H = Math.max(320, Math.round(rect.height));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    canvas.width = round(W * dpr);
+    canvas.height = round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function roundRect(x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  function drawPlatform(plat) {
+    const top = plat.y - camY;
+    const x = plat.x - plat.w / 2;
+
+    if (!plat.alive) {
+      if (plat.crumble <= 0) return;
+      const fade = clamp(1 - (plat.crumble - params.crumbleDelay) / 0.3, 0, 1);
+      if (fade <= 0) return;
+      ctx.globalAlpha = fade * 0.5;
+      ctx.fillStyle = '#8b95a3';
+      roundRect(x, top + (1 - fade) * 14, plat.w, 8, 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    const wobble = plat.crumble > 0 ? Math.sin(plat.crumble * 70) * 2.2 : 0;
+
+    if (plat.type === 'solid') {
+      ctx.fillStyle = plat.gold ? '#e9b949' : '#d8d2c3';
+      roundRect(x + wobble, top, plat.w, 12, 3);
+      ctx.fill();
+      ctx.fillStyle = plat.gold ? 'rgba(255, 240, 200, 0.55)' : 'rgba(255, 255, 255, 0.4)';
+      ctx.fillRect(x + wobble + 4, top + 1.5, plat.w - 8, 1.5);
+    } else if (plat.type === 'krat') {
+      ctx.fillStyle = plat.gold ? '#c08f2f' : '#8a6a4b';
+      roundRect(x + wobble, top, plat.w, 14, 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + wobble + plat.w / 2, top + 1);
+      ctx.lineTo(x + wobble + plat.w / 2, top + 13);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      ctx.fillRect(x + wobble + 3, top + 1.5, plat.w - 6, 1.5);
+    } else {
+      ctx.fillStyle = plat.gold ? 'rgba(233, 185, 73, 0.14)' : 'rgba(140, 152, 166, 0.1)';
+      roundRect(x + wobble, top, plat.w, 11, 3);
+      ctx.fill();
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = plat.gold
+        ? 'rgba(233, 185, 73, 0.85)'
+        : plat.crumble > 0
+          ? 'rgba(233, 185, 73, 0.6)'
+          : 'rgba(140, 152, 166, 0.5)';
+      ctx.lineWidth = 1.4;
+      roundRect(x + wobble, top, plat.w, 11, 3);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    if (plat.gold && !plat.taken) drawMoney(plat.x + wobble, top - 16);
+  }
+
+  function drawMoney(x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = '#f4cf74';
+    roundRect(-10, -6.5, 20, 13, 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(120, 84, 12, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-9, -5.5);
+    ctx.lineTo(0, 1);
+    ctx.lineTo(9, -5.5);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawAuditor(a) {
+    const y = a.y - camY;
+    if (y < -40 || y > H + 40) return;
+    ctx.fillStyle = '#e5524a';
+    roundRect(a.x - a.w / 2, y - a.h / 2, a.w, a.h, 4);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(a.x - a.w / 2 + 5, y - 4, a.w - 10, 5);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+    ctx.fillRect(a.x - a.w / 2 + 5, y - a.h / 2 + 3, a.w - 10, 2);
+  }
+
+  function drawPlayer() {
+    const x = player.x;
+    const y = player.y - camY;
+
+    if (player.onGround) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+      ctx.beginPath();
+      ctx.ellipse(x, y, 11, 3.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const lean = player.onGround ? 0 : clamp(player.vx / 400, -0.12, 0.12);
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(lean);
+
+    ctx.fillStyle = '#232e3b';
+    roundRect(-9, -27, 18, 27, 4);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(231, 226, 214, 0.22)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#e9b949';
+    ctx.beginPath();
+    ctx.moveTo(0, -25);
+    ctx.lineTo(3.4, -21);
+    ctx.lineTo(0, -11);
+    ctx.lineTo(-3.4, -21);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#e8d7c0';
+    ctx.beginPath();
+    ctx.arc(0, -33, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillRect(-7.5, -36.5, 15, 3);
+
+    ctx.restore();
+  }
+
+  function drawBand() {
+    const bandH = 64;
+    const y = H - bandH;
+    const grad = ctx.createLinearGradient(0, y, 0, H);
+    grad.addColorStop(0, 'rgba(229, 82, 74, 0)');
+    grad.addColorStop(1, 'rgba(229, 82, 74, 0.34)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y, W, bandH);
+
+    ctx.fillStyle = 'rgba(229, 82, 74, 0.75)';
+    ctx.fillRect(0, H - 2, W, 2);
+
+    const closeness = clamp(1 - (camY + H - player.y) / 240, 0, 1);
+    if (closeness > 0) {
+      ctx.fillStyle = `rgba(229, 82, 74, ${0.06 + closeness * 0.16})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.fillStyle = 'rgba(229, 82, 74, 0.62)';
+    ctx.font = '600 9px ui-sans-serif, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('TIM AUDIT', 12, H - 14);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#090c11');
+    bg.addColorStop(0.6, '#0d1218');
+    bg.addColorStop(1, '#131a22');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    if (shake > 0) {
+      const s = shake * 7;
+      ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
+    }
+
+    const gap = 76;
+    ctx.strokeStyle = 'rgba(130, 150, 170, 0.055)';
+    ctx.lineWidth = 1;
+    const first = Math.ceil(camY / gap) * gap;
+    for (let wy = first; wy < camY + H + gap; wy += gap) {
+      const sy = wy - camY;
+      ctx.beginPath();
+      ctx.moveTo(0, sy);
+      ctx.lineTo(W, sy);
+      ctx.stroke();
+    }
+
+    for (const plat of platforms) {
+      const top = plat.y - camY;
+      if (top < -60 || top > H + 60) continue;
+      // Only the pair ahead stays lit; the path already taken recedes so the
+      // current choice is the only bright thing on screen.
+      const behind = plat !== player.onGround && plat.y >= player.y - 4;
+      ctx.globalAlpha = behind ? 0.22 : 1;
+      drawPlatform(plat);
+      ctx.globalAlpha = 1;
+    }
+
+    for (const a of auditors) drawAuditor(a);
+
+    if (phase !== 'over') drawPlayer();
+
+    ctx.textAlign = 'center';
+    ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
+    for (const f of floaters) {
+      const a = clamp(1 - f.t / 1.2, 0, 1);
+      ctx.fillStyle = `rgba(233, 185, 73, ${a})`;
+      ctx.fillText(f.text, f.x, f.y - camY);
+    }
+
+    drawBand();
+  }
+
+  // ---------- HUD and overlay ----------
+
+  let hudCache = '';
+
+  function updateHud() {
+    const key = money + '|' + height() + '|' + weight;
+    if (key === hudCache) return;
+    hudCache = key;
+
+    hudMoney.textContent = rupiah(money);
+    hudHeight.textContent = height() + ' m';
+    hudWeight.textContent = 'Beban ' + weight;
+
+    const pct = clamp((weight / 12) * 100, 0, 100);
+    hudBar.style.width = pct + '%';
+    hudBar.style.background =
+      weight >= 8 ? '#e5524a' : weight >= 5 ? '#e9b949' : 'rgba(233, 185, 73, 0.7)';
+  }
+
+  function showReady() {
+    overlay.innerHTML = `
+      <div class="card ready">
+        <div>
+          <p class="eyebrow">prototipe</p>
+          <h1>Korupsi</h1>
+          <p class="lede">Dua pijakan tiap jenjang. Ambil yang bergaris emas untuk skor,
+            tapi makin berat, makin pendek lompatanmu.</p>
+          <div class="legend">
+            <span><i class="dot" style="background:#d8d2c3"></i>aman</span>
+            <span><i class="dot" style="background:#e9b949"></i>amplop</span>
+            <span><i class="dot" style="background:#e5524a"></i>auditor</span>
+          </div>
+        </div>
+        <p class="cta">Tap untuk mulai</p>
+      </div>`;
+    overlay.classList.add('is-visible');
+    document.body.classList.remove('is-playing');
+  }
+
+  function showResult() {
+    const met = height();
+    const eyebrow = cause === 'auditor' ? 'tertangkap' : cause === 'fall' ? 'terjatuh' : 'ketinggalan';
+
+    let line;
+    if (cause === 'auditor') {
+      line = weight
+        ? `Ditangkap dengan ${weight} amplop di dalam tas.`
+        : 'Ditangkap tanpa membawa apa pun. Tetap diperiksa.';
+    } else if (cause === 'fall') {
+      line = weight
+        ? `Jatuh, ${weight} amplop ikut berhamburan.`
+        : 'Jatuh dari pijakan yang belum diresmikan.';
+    } else {
+      line = weight
+        ? `${weight} amplop, semuanya tercatat di berkas.`
+        : 'Tangan kosong, tetap dicurigai.';
+    }
+
+    overlay.innerHTML = `
+      <div class="card">
+        <p class="eyebrow">${eyebrow}</p>
+        <h1 class="money">${rupiah(money)}</h1>
+        <p class="lede">${line}</p>
+        <div class="stats">
+          <span><i>Amplop</i><b>${weight}</b></span>
+          <span><i>Tinggi</i><b>${met} m</b></span>
+        </div>
+        <p class="record">Rekor ${rupiah(best.money)}</p>
+        <p class="cta">Tap untuk ulang</p>
+      </div>`;
+    overlay.classList.add('is-visible');
+    document.body.classList.remove('is-playing');
+  }
+
+  // ---------- input ----------
+
+  function tap(clientX) {
+    if (phase !== 'playing') {
+      start();
+      return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const dir = clientX < rect.left + rect.width / 2 ? -1 : 1;
+    jump(dir);
+  }
+
+  canvas.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    canvas.focus({ preventScroll: true });
+    tap(event.clientX);
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if (event.repeat) return;
+    if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') {
+      if (phase === 'playing') jump(-1);
+      else tap(W * 0.25);
+      event.preventDefault();
+    } else if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') {
+      if (phase === 'playing') jump(1);
+      else tap(W * 0.75);
+      event.preventDefault();
+    } else if (event.key === ' ' || event.key === 'Enter') {
+      tap(W / 2 + player.dir);
+      event.preventDefault();
+    }
+  });
+
+  canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
+  let resizeTimer = 0;
+  window.addEventListener('resize', () => {
+    resize();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (phase !== 'playing') {
+        resetWorld();
+        draw();
+      }
+    }, 120);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) lastFrame = performance.now();
+  });
+
+  // ---------- debug ----------
+
+  const DEBUG = new URLSearchParams(location.search).has('debug');
+  const debugPanel = DEBUG ? document.getElementById('debug') : null;
+
+  // Debug handle: lets the balance harness drive the simulation without a
+  // browser and inspect what the player can actually see.
+  if (DEBUG) {
+    Object.defineProperty(window, '__korupsi', {
+      value: {
+        get phase() { return phase; },
+        get platforms() { return platforms; },
+        get auditors() { return auditors; },
+        get player() { return player; },
+        get camY() { return camY; },
+        get camSpeed() { return camSpeed; },
+        get money() { return money; },
+        get weight() { return weight; },
+        get maxClimb() { return maxClimb; },
+        get cause() { return cause; },
+        step,
+        jump,
+        start,
+        params,
+      },
+      configurable: true,
+    });
+  }
+
+  function buildDebug() {
+    const panel = debugPanel;
+    panel.classList.add('is-on');
+
+    const controls = [
+      { key: 'jumpV', label: 'Lompat', min: 500, max: 900, step: 10 },
+      { key: 'gravity', label: 'Gravitasi', min: 1200, max: 2600, step: 20 },
+      { key: 'weightPenalty', label: 'Berat/amplop', min: 0, max: 0.12, step: 0.005 },
+      { key: 'cameraBase', label: 'Scroll awal', min: 6, max: 60, step: 1 },
+      { key: 'cameraAccel', label: 'Scroll naik', min: 0, max: 1.5, step: 0.05 },
+      { key: 'goldChance', label: 'Peluang emas', min: 0, max: 1, step: 0.05 },
+    ];
+
+    panel.innerHTML =
+      controls
+        .map(
+          (c) => `
+          <label>${c.label} <b data-out="${c.key}">${params[c.key]}</b>
+            <input type="range" data-key="${c.key}" min="${c.min}" max="${c.max}" step="${c.step}" value="${params[c.key]}">
+          </label>`
+        )
+        .join('') + '<div class="readout" data-readout></div>';
+
+    panel.addEventListener('input', (event) => {
+      const input = event.target.closest('input[data-key]');
+      if (!input) return;
+      const key = input.dataset.key;
+      params[key] = Number(input.value);
+      panel.querySelector(`[data-out="${key}"]`).textContent = params[key];
+    });
+
+    const readout = panel.querySelector('[data-readout]');
+    setInterval(() => {
+      const env = envelope(jumpFactor());
+      readout.textContent =
+        `factor ${jumpFactor().toFixed(2)} · rise ${round(env.h)}px · ` +
+        `air ${env.air.toFixed(2)}s · scroll ${camSpeed.toFixed(0)}px/s`;
+    }, 250);
+  }
+
+  // ---------- loop ----------
+
+  let lastFrame = performance.now();
+  let acc = 0;
+  const STEP = 1 / 120;
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastFrame) / 1000);
+    lastFrame = now;
+
+    if (phase === 'playing') {
+      acc += dt;
+      let guard = 0;
+      while (acc >= STEP && guard++ < 8) {
+        step(STEP);
+        acc -= STEP;
+        if (phase !== 'playing') break;
+      }
+    } else {
+      acc = 0;
+    }
+
+    draw();
+    updateHud();
+    if (debugPanel) debugPanel.classList.toggle('is-muted', phase !== 'playing');
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  resetWorld();
+  showReady();
+  if (DEBUG) buildDebug();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
