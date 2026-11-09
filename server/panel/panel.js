@@ -45,7 +45,6 @@ function renderTotals(data) {
     { label: 'Run selesai', value: data.totals.ended },
     { label: 'Run / kunjungan', value: data.totals.visits ? (data.totals.ended / data.totals.visits).toFixed(2) : '—' },
     { label: 'Dibagikan', value: data.totals.shared, tone: 'gold' },
-    { label: 'Dipasang', value: data.totals.installed },
     { label: 'Error', value: data.totals.errors, tone: 'red' },
   ];
 

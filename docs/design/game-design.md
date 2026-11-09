@@ -11,7 +11,7 @@ kamu bawa sebelum tim audit menyusul.
 ## Pillars
 
 1. **Satu jari, satu detik.** Every action is one tap. No menus, no reading, no pause
-   inside a run.
+   button inside a run.
 2. **Greed has weight.** Money raises the score and shortens your jump. The theme lives in
    the mechanic, not in the copy.
 3. **Fair, not generous.** Every death can be explained by the player's last decision.
@@ -33,8 +33,9 @@ kamu bawa sebelum tim audit menyusul.
 
 The game is played in gaps between other things, so leaving is normal, not an edge case.
 
-- **Switching apps pauses the run.** Coming back within a minute resumes it exactly where it
-  stopped, including mid-jump. A tap that only wakes the phone does not become a jump.
+- **Switching apps pauses the run.** Coming back within a minute shows a pause card; a tap
+  resumes exactly where the run stopped, including mid-jump. Presses in the first 350 ms
+  are ignored, so a tap that only wakes the phone does nothing.
 - **Staying away longer than a minute ends the run** and banks the score. The audit does not
   pause for anyone; a pause that lasts forever would quietly become a save button.
 - **Closing the tab loses the run.** A minute-long game can afford an arcade contract, and it
@@ -57,23 +58,28 @@ bureaucratic absurdity, never from a real person or a real institution.
 | Weight from money | Risk and reward on the same button | Jump velocity falls 3% per envelope, floored at 45% |
 | Fake ledges | Tension inside the reward | "Proyek fiktif" crumbles 0.45 s after it is touched |
 | Auditor on the money | Immediate, visible risk | Patrols only around the gold ledge, never the safe side |
-| Audit band | Ends every run | Screen bottom scrolls up and accelerates |
+| Audit band | Ends every run | A 40 px band at the bottom of the view, rising and accelerating; feet past its top edge end the run |
 | Rebuild after landing | Keeps the path honest | The next pair is generated from where the player actually landed, at the current weight |
 
 ## Scope
 
-**In scope for the first playable**
+**What exists**
 
 - One endless climb, one difficulty curve, one high score in `localStorage`
-- Portrait-first layout that also works on desktop, no assets, no network requests
-- Runs of 45 to 120 seconds
+- Portrait-first layout that also works on desktop; shapes and colour drawn in code, no
+  image assets in the game itself
+- Synthesised sound, sharing, anonymous telemetry to the game's own server
+- Runs of roughly 45 to 120 seconds
+
+**Planned** (tracked in [`../plan.md`](../plan.md), not here)
+
+- A pixel-art redesign with height zones
 
 **Out of scope until the loop is proven**
 
-- Deposit checkpoints that shed weight mid-run (planned for the version after MVP)
+- Deposit checkpoints that shed weight mid-run
 - Accounts, leaderboards, multiplayer, daily challenges
-- Narration, cutscenes, art beyond shapes and colour
-- Sound design
+- Narration, cutscenes
 
 ## Open questions
 
@@ -83,7 +89,7 @@ bureaucratic absurdity, never from a real person or a real institution.
 | Are runs too short for a curious player and too long for an honest one? | After 10 playtests | Debi |
 | Should content be Indonesian only, or Indonesian and English? | Before writing final copy | Debi |
 | Is there room for a daily seeded run? | After the loop survives a week of play | Debi |
-| Final title: keep "Korupsi" as the game, or add a mode name? | Before the first public release | Debi |
+| Final title: keep "Korupsi" as the game, or add a mode name? | Before v1.0.0 | Debi |
 
 ## Decisions
 
@@ -107,15 +113,16 @@ bureaucratic absurdity, never from a real person or a real institution.
 | 2026-11-09 | The run ends at the top of the audit band, not the bottom of the screen (v0.3.0) | What is drawn is what kills. The band shrank from 68 to 40 px so the room to recover barely changed |
 | 2026-11-09 | Coming back shows a pause card (v0.3.0) | The band no longer starts moving the moment the tab is visible; a tap resumes, and the first 350 ms are ignored |
 
-## What the prototype measures
+## What the simulation measures
 
-Simulated runs, 40 per policy, with the current numbers:
+500 simulated runs per play style with the v0.3.0 numbers and a 0.25 s reaction delay
+after each landing (see the playtest log for how it compared with v0.2.0):
 
-| Policy | Average run | Money | Ends by |
+| Play style | Median height | Median money | Ends by |
 | --- | --- | --- | --- |
-| Takes every envelope, never waits | ~8 s | ~2 M | Auditor |
-| Takes envelopes, waits for a gap | ~61 s | ~5 M | Audit band |
-| Never takes an envelope | ~82 s | 0 | Audit band |
+| Always takes the envelope | 134 m | Rp 3 jt | Auditor (94%) |
+| Takes the envelope half the time | 237 m | Rp 2,5 jt | Auditor (83%) |
+| Never takes an envelope | 716 m | 0 | Audit band (100%) |
 
 The honest run is the control: a player who refuses the mechanic survives longer and
 scores nothing. That is the joke, and it needs a playtest to confirm it reads as a choice.
@@ -130,17 +137,18 @@ scores nothing. That is the joke, and it needs a playtest to confirm it reads as
 
 ## Tuning
 
-Numbers live in the prototype so they stay in one place:
+Numbers live in [`src/config.ts`](../../src/config.ts). Distances are world units: the
+world is 360 units wide on every screen, so a unit is a CSS pixel on a 360 px phone.
 
 | Parameter | Value | Effect |
 | --- | --- | --- |
-| Gravity | 1900 px/s² | Snappy fall, no float |
-| Jump velocity | 700 px/s | About 129 px of rise at zero weight |
-| Horizontal impulse | 115 px/s | About 65 px of travel per ledge |
+| Gravity | 1900 /s² | Snappy fall, no float |
+| Jump velocity | 700 /s | About 129 units of rise at zero weight |
+| Horizontal impulse | 115 /s | About 70 units of travel per ledge |
 | Weight penalty | 3% per envelope | Noticeable after five, fatal after fifteen |
 | Minimum jump factor | 0.45 | A heavy player is slow, never stuck |
-| Audit band | 26 px/s, +1.3 px/s² | Catches a resting player quickly, a climbing one in about a minute |
-| Audit band height | 40 px | Its top edge is the line the feet must not cross |
+| Audit band | 26 /s, +1.3 /s² | Catches a resting player quickly, a climbing one in about a minute |
+| Audit band height | 40 | Its top edge is the line the feet must not cross |
 | Crumble delay | 0.45 s | Enough to react, not enough to relax |
 | Gold chance | 45% of levels | Roughly one decision every two jumps |
 | Envelope value | Rp 500.000 | Score is money, so nothing else needs to be scored |

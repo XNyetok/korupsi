@@ -5,7 +5,6 @@ export const EVENT_TYPES = new Set([
   'run_started',
   'run_ended',
   'shared',
-  'installed',
   'error',
 ]);
 
@@ -120,7 +119,6 @@ export function openStore(path) {
                   SUM(type = 'run_started') AS runs,
                   SUM(type = 'run_ended')   AS ended,
                   SUM(type = 'shared')    AS shared,
-                  SUM(type = 'installed') AS installed,
                   SUM(type = 'error')     AS errors
              FROM events
             WHERE day >= ?
@@ -135,11 +133,10 @@ export function openStore(path) {
           acc.runs += row.runs;
           acc.ended += row.ended;
           acc.shared += row.shared;
-          acc.installed += row.installed;
           acc.errors += row.errors;
           return acc;
         },
-        { visits: 0, runs: 0, ended: 0, shared: 0, installed: 0, errors: 0 },
+        { visits: 0, runs: 0, ended: 0, shared: 0, errors: 0 },
       );
 
       const causes = db

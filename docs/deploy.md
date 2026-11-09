@@ -106,7 +106,8 @@ cd /www/wwwroot/korupsi.web.id
 ln -sfn releases/<previous> current.next && mv -Tf current.next current
 ```
 
-No rebuild, no downtime, instant.
+No rebuild, no downtime, instant. This rolls back the site only: the collector has no
+release folders yet, so it stays on the latest code (see `docs/plan.md`, D1).
 
 ## Notes
 
@@ -120,4 +121,5 @@ No rebuild, no downtime, instant.
   cache, unregisters itself and reloads the tab. It must stay at `/sw.js`, uncached, until
   the old worker is gone from the wild (about three months, until 2027-02); after that,
   delete the file, its nginx location, and the smoke test line.
-- The panel serves its own default page until the first deploy writes `current`.
+- TLS 1.1 is disabled on the host by hand. If the panel ever re-saves the site's SSL
+  settings, check that it is still off.

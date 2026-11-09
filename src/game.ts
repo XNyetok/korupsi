@@ -128,7 +128,7 @@ export class Game {
     this.height = height;
   }
 
-  /** Where the audit band starts, in screen space. Feet past it end the run. */
+  /** Where the audit band starts, measured from the top of the view. Feet past it end the run. */
   get auditLine(): number {
     return this.height - PARAMS.bandHeight;
   }

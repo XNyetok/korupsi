@@ -37,9 +37,9 @@ file in a later commit is not enough: it stays in the public history.
 Use a short conventional prefix, lowercase, imperative summary:
 
 ```
-feat: add turn resolution for council votes
-fix: stop the lobby from accepting empty names
-docs: record the decision to drop real-time multiplayer
+feat: add a pause card when the player comes back
+fix: make Space follow the last jump on desktop
+docs: record why offline play was removed
 chore: pin gitleaks to 8.30.1
 ```
 
@@ -54,6 +54,7 @@ documentation stay in English so the repository stays readable to outside contri
 - One topic per pull request. Split unrelated cleanups.
 - Describe the behaviour change and how you checked it.
 - Keep the branch up to date with `main` and squash fixup commits before review.
+- Update `docs/plan.md` in the same pull request: the item it starts or finishes.
 - Design changes need a note in `docs/design/` explaining the tradeoff, not just code.
 
 ## Reporting bugs and ideas

@@ -31,7 +31,7 @@ body:
     attributes:
       label: Scope
       options:
-        - Prototype-friendly, small
+        - Small
         - Meaningful subsystem
         - Direction change
     validations:
