@@ -2,6 +2,7 @@ import { audio } from './audio.ts';
 import { PALETTE as C } from './config.ts';
 import { rupiah, type Game } from './game.ts';
 import { shareResult } from './share.ts';
+import { track } from './telemetry.ts';
 
 declare const __BUILD_LABEL__: string;
 
@@ -149,6 +150,7 @@ export class Ui {
       share.addEventListener('click', async (event) => {
         event.stopPropagation();
         const outcome = await shareResult(text);
+        if (outcome !== 'failed') track('shared', { via: outcome });
         if (outcome === 'copied') this.toast('Disalin ke papan klip');
         if (outcome === 'failed') this.toast('Tidak bisa membagikan');
       });

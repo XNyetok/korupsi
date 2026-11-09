@@ -69,6 +69,30 @@ The deploy only runs on `main`, and only while the repository variable `DEPLOY_E
 The build stamps the revision into the ready screen (`rev r12-2a7e3d3`), so it is obvious
 which build a bug report came from.
 
+## Telemetry collector
+
+The game posts anonymous events to `/api/beacon`. A small Node service keeps them in SQLite
+and serves a read-only panel.
+
+```
+/opt/korupsi-stats/            code, deployed by CI, owned by deploy
+/var/lib/korupsi-stats/        stats.db, owned by the korupsi service user
+/www/server/nginx/conf/.htpasswd-korupsi   panel credentials
+/www/server/panel/vhost/nginx/0.korupsi-limits.conf   rate limit zone
+```
+
+- Unit: `deploy/systemd/korupsi-stats.service`, listening on `127.0.0.1:8787` only.
+- nginx proxies `/api/` and `/panel/`; the panel sits behind basic auth.
+- The panel password is written to `/root/korupsi-panel-password.txt` on first setup.
+  Change it with `htpasswd -c /www/server/nginx/conf/.htpasswd-korupsi admin` (then
+  `chown root:www`, `chmod 640`; nginx returns 500, not 403, when it cannot read the file).
+- `deploy` may restart only this unit, via `/etc/sudoers.d/korupsi-stats-deploy`.
+- A unit file change needs one manual `systemctl daemon-reload`; code changes deploy normally.
+
+What is stored: event type, build revision, run outcome (cause, money, height, duration,
+weight), and the first line of JavaScript errors. No address, no cookie, no identifier.
+Rows older than 90 days are pruned every six hours.
+
 ## Rollback
 
 ```sh

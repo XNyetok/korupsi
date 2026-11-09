@@ -4,6 +4,7 @@ import { PARAMS } from './config.ts';
 import { mountDebug } from './debug.ts';
 import { Game } from './game.ts';
 import { draw } from './render.ts';
+import { track, trackErrors } from './telemetry.ts';
 import { Ui } from './ui.ts';
 
 const found = document.getElementById('game');
@@ -15,10 +16,19 @@ if (!foundContext) throw new Error('canvas 2d context unavailable');
 const ctx: CanvasRenderingContext2D = foundContext;
 
 const ui = new Ui();
+let runStartedAt = 0;
+
 const game = new Game({
   onEnd() {
     ui.showResult(game);
     audio.play('caught');
+    track('run_ended', {
+      cause: game.cause,
+      money: game.money,
+      weight: game.weight,
+      height: game.heightMetres,
+      duration: runStartedAt ? Math.round((performance.now() - runStartedAt) / 1000) : 0,
+    });
   },
   onJump() {
     audio.play('jump');
@@ -60,6 +70,8 @@ function tap(clientX: number): void {
     audio.play('start');
     game.start();
     ui.hideOverlay();
+    runStartedAt = performance.now();
+    track('run_started');
     return;
   }
   const rect = canvas.getBoundingClientRect();
@@ -173,6 +185,10 @@ resize();
 game.reset();
 ui.showReady();
 requestAnimationFrame(frame);
+
+trackErrors();
+track('visit');
+window.addEventListener('appinstalled', () => track('installed'));
 
 // Offline play: the shell and the hashed assets are cached by the worker.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

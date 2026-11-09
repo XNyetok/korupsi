@@ -1,0 +1,26 @@
+[Unit]
+Description=Korupsi telemetry collector
+Documentation=https://github.com/XNyetok/korupsi
+After=network.target
+
+[Service]
+Type=simple
+User=korupsi
+Group=korupsi
+WorkingDirectory=/opt/korupsi-stats
+Environment=PORT=8787
+Environment=HOST=127.0.0.1
+Environment=DB_PATH=/var/lib/korupsi-stats/stats.db
+ExecStart=/usr/bin/node /opt/korupsi-stats/index.mjs
+Restart=on-failure
+RestartSec=3
+
+# The service only needs to read its code and write its database.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/korupsi-stats
+
+[Install]
+WantedBy=multi-user.target

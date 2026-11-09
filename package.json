@@ -1,7 +1,7 @@
 {
   "name": "korupsi",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "A one-tap browser game about climbing a bureaucracy.",
   "license": "MIT",
@@ -10,7 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
-    "test": "node --test tests/game.test.ts"
+    "test": "node --test tests/game.test.ts tests/stats.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Korupsi — panel</title>
+<link rel="stylesheet" href="/panel/panel.css">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<header>
+  <div>
+    <p class="eyebrow">panel</p>
+    <h1>Korupsi</h1>
+  </div>
+  <div class="controls">
+    <div class="range" role="group" aria-label="Rentang">
+      <button type="button" data-days="7">7 hari</button>
+      <button type="button" data-days="30" class="on">30 hari</button>
+      <button type="button" data-days="90">90 hari</button>
+    </div>
+    <button type="button" id="refresh">Muat ulang</button>
+  </div>
+</header>
+
+<main>
+  <section class="totals" id="totals"></section>
+
+  <section class="grid">
+    <article class="card">
+      <h2>Harian</h2>
+      <table id="daily">
+        <thead><tr><th>Tanggal</th><th>Kunjungan</th><th>Run</th><th>Share</th><th>Error</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </article>
+
+    <article class="card">
+      <h2>Cara berakhir</h2>
+      <div id="causes" class="bars"></div>
+      <h2 class="mt">Median run</h2>
+      <dl id="medians" class="stats"></dl>
+    </article>
+
+    <article class="card wide">
+      <h2>Error</h2>
+      <ul id="errors" class="list"></ul>
+    </article>
+
+    <article class="card">
+      <h2>Versi yang dipakai</h2>
+      <ul id="revs" class="list"></ul>
+    </article>
+  </section>
+</main>
+
+<footer>
+  <p>Tanpa cookie, tanpa alamat IP, tanpa ID pengunjung. Data mentah disimpan 90 hari.</p>
+</footer>
+
+<script src="/panel/panel.js" type="module"></script>
+</body>
+</html>

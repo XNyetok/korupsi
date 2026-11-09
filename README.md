@@ -76,6 +76,10 @@ camera speed and how often the money appears.
   sound, so the ringer switch wins.
 - Sound, offline play and sharing are deliberate choices, recorded in the design notes
   rather than left to be rediscovered.
+- Telemetry is anonymous and aggregate: a visit, a finished run, a share, a JavaScript
+  error. No cookies, no addresses, no identifiers; Do Not Track disables it; raw rows are
+  deleted after 90 days. The dashboard is private, but the collector's code is in
+  [`server/`](server/) like everything else.
 
 ## License
 
