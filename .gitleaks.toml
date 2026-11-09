@@ -1,0 +1,43 @@
+# Secret scanning policy for the Korupsi repository.
+# Used by the local pre-commit hook and by CI. Keep this file boring and explicit:
+# anything not matched here is still covered by the gitleaks default ruleset.
+title = "korupsi"
+
+[extend]
+useDefault = true
+
+# Credentials written plainly into a dotenv file. Default rules catch many of these,
+# but .env files are the most common leak path for a web project, so they get their own rule.
+[[rules]]
+id = "dotenv-credential"
+description = "Credential value assigned in an environment file"
+regex = '''(?i)^\s*[A-Z0-9_.-]*(SECRET|TOKEN|PASSWORD|PASSWD|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY|AUTH)[A-Z0-9_.-]*\s*=\s*["']?[A-Za-z0-9_\-./+]{12,}'''
+path = '''(?i)(^|/)\.env'''
+tags = ["credential", "env"]
+
+# Connection strings carry passwords often enough to be worth their own pattern.
+[[rules]]
+id = "connection-string-credential"
+description = "Database or broker connection string with embedded password"
+regex = '''(?i)\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis|amqp|mssql)://[^\s:@/]+:[^\s@/]{6,}@'''
+tags = ["credential", "connection-string"]
+
+[[rules]]
+id = "private-key-material"
+description = "Inline private key material"
+regex = '''(?i)(private_key|privateKey|secret_key|secretKey)\s*[:=]\s*["'][A-Za-z0-9+/=]{32,}["']'''
+tags = ["key"]
+
+[allowlist]
+description = "Documented placeholders, fixtures and generated lockfiles"
+paths = [
+  '''(^|/)package-lock\.json$''',
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)yarn\.lock$''',
+  '''(^|/)Cargo\.lock$''',
+  '''(^|/)\.env\.example$''',
+]
+regexes = [
+  '''^(?i)(example|placeholder|dummy|sample|changeme|your[_-]?(key|token|secret))$''',
+  '''^\$\{[A-Z0-9_]+\}$''',
+]

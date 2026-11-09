@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+#
+# Pre-commit gate: nothing leaves this machine with a secret attached.
+# Installed by `git config core.hooksPath .githooks` (see scripts/setup-hooks.sh).
+
+set -euo pipefail
+
+fail() {
+  printf '\n%s\n\n' "$1" >&2
+  exit 1
+}
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  fail "gitleaks is not installed. Install it with: brew install gitleaks"
+fi
+
+# 1. Refuse files that should never be tracked, even when .gitignore is bypassed.
+blocked=$(git diff --cached --name-only --diff-filter=ACMR | grep -Ei \
+  '(^|/)\.env($|\.|/)' \
+  | grep -vE '(^|/)\.env\.example$' || true)
+
+if [ -n "$blocked" ]; then
+  fail "Refusing to commit environment files:
+$blocked
+
+Only .env.example may be tracked."
+fi
+
+blocked=$(git diff --cached --name-only --diff-filter=ACMR | grep -Ei \
+  '\.(pem|key|p12|pfx|jks|keystore)$|(^|/)id_(rsa|ed25519)|credentials\.json$|service-account.*\.json$' || true)
+
+if [ -n "$blocked" ]; then
+  fail "Refusing to commit key or credential files:
+$blocked"
+fi
+
+# 2. Refuse payloads that do not belong in a game repository.
+max_bytes=$((5 * 1024 * 1024))
+oversized=$(git diff --cached --name-only --diff-filter=ACMR -z \
+  | while IFS= read -r -d '' file; do
+      [ -f "$file" ] || continue
+      size=$(wc -c <"$file" | tr -d ' ')
+      if [ "$size" -gt "$max_bytes" ]; then
+        printf '%s (%s bytes)\n' "$file" "$size"
+      fi
+    done)
+
+if [ -n "$oversized" ]; then
+  fail "Refusing files larger than 5 MB:
+$oversized
+
+Use Git LFS or host large assets outside the repository."
+fi
+
+# 3. Scan the staged diff for credentials.
+gitleaks git --staged --redact --no-banner --config .gitleaks.toml \
+  || fail "gitleaks found something that looks like a secret. Fix or rotate it before committing."
+
+exit 0

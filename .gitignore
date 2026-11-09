@@ -1,0 +1,72 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+vendor/
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+.turbo/
+.parcel-cache/
+.vite/
+.next/
+.nuxt/
+.astro/
+coverage/
+*.log
+
+# Environment and local configuration
+.env
+.env.*
+!.env.example
+*.local
+config.local.*
+settings.local.*
+
+# Secrets and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+credentials.json
+client_secret*.json
+service-account*.json
+secrets/
+.secrets/
+
+# Databases and local data
+*.sqlite
+*.sqlite3
+*.db
+dumps/
+backups/
+
+# Game and design assets that are not cleared for publication
+# Everything shipped publicly must be licensed or self-made.
+/assets-private/
+/assets/unverified/
+/design-private/
+
+# Editor and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json.example
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# Tooling caches
+.gitleaks-cache/
+.eslintcache
+.stylelintcache

@@ -1,0 +1,38 @@
+name: Idea or design note
+description: Propose a mechanic, a system, or a change in direction
+labels: [design]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Design is still open, so rough ideas are welcome. Say what the player does
+        differently, not only what the game should feel like.
+  - type: textarea
+    id: proposal
+    attributes:
+      label: The idea
+      description: One paragraph. What changes for the player?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it fits
+      description: Which pillar or existing system does this support, and what does it cost?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including "do nothing". This helps decide rather than accumulate.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Prototype-friendly, small
+        - Meaningful subsystem
+        - Direction change
+    validations:
+      required: true
