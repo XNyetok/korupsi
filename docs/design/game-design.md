@@ -85,6 +85,9 @@ bureaucratic absurdity, never from a real person or a real institution.
 | 2026-11-09 | Prototype first, production stack later | The game lives or dies on jump feel, so tune that before scaffolding |
 | 2026-11-09 | Two ledges per level instead of money scattered on the path | With a fixed arc the player cannot aim at a spot on a ledge, so the choice has to be which side, not where to land |
 | 2026-11-09 | The auditor only guards the money | The safe side has to be reliably safe, or the decision is a lie |
+| 2026-11-09 | Plays offline, installs to the home screen | The game is meant for a spare minute, which is often a spare minute without signal |
+| 2026-11-09 | Sound is synthesised, not sampled | Keeps binary assets out of the repository and the download under 10 KB gzipped |
+| 2026-11-09 | The share text never names the run | The joke is the choice; the next player should walk into it cold |
 
 ## What the prototype measures
 
