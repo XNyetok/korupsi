@@ -53,14 +53,17 @@ jobs:
           skip-github-release: true
 
       - name: Run the checks on the release PR
-        if: steps.rp.outputs.prs_created == 'true' && steps.rp.outputs.pr != ''
+        if: steps.rp.outcome == 'success' && steps.rp.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ fromJSON(steps.rp.outputs.pr).headBranchName }}
+          PR_JSON: ${{ steps.rp.outputs.pr }}
         run: |
           set -euo pipefail
-          gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
-          echo "Started CI on $BRANCH"
+          # Parsed here, not in an expression: an empty output must not break the run.
+          branch=$(jq -r '.headBranchName // empty' <<<"$PR_JSON")
+          [ -n "$branch" ] || { echo "No release PR branch to check"; exit 0; }
+          gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$branch"
+          echo "Started CI on $branch"
 
   deploy:
     name: Deploy
