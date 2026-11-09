@@ -5,7 +5,9 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-09 · Live: `main` at `019095d`, last tagged release `v0.2.0`
+Last updated: 2026-11-09 · Last tagged release: `v0.2.0`. What is live is whatever the
+latest successful deploy run on `main` shipped: check `gh run list --branch main`, not
+this line.
 
 ## Rules for whoever updates this file
 
@@ -87,7 +89,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch) · `[x]` done · `[!]
 
 ## Done
 
-- [x] **v0.3.0 work (untagged, live at `019095d`)**
+- [x] **v0.3.0 work (untagged, live)**
   - Service worker replaced by a kill switch; manifest and install metadata removed (#2).
   - The deploy validates its settings; the smoke test checks the live build (#2).
   - The server address is out of the docs; `DEPLOY_HOST` is a secret, so logs mask it (#2).
@@ -104,6 +106,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch) · `[x]` done · `[!]
     - v0.2.0 release notes no longer name the panel password file; the file was removed
       from the server.
     - nginx config reinstalled from #2.
+  - Stale docs, comments and the unused `installed` telemetry event cleaned up (#5).
 - [x] **v0.2.0** — telemetry collector and private panel.
 - [x] **v0.1.0** — first playable release.
 

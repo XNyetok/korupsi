@@ -1,16 +1,15 @@
-# Design notes
+# Docs
 
-Korupsi is being designed before it is built. These files are the working memory of that
-process: what we are making, what we decided against, and what is still open.
-
-Nothing here is final. When a decision changes, the note changes with it, and the old
-reasoning stays in the git history where it belongs.
+Start with `plan.md`: it says what is done and what is next. The other files explain why
+the game is the way it is and how it reaches the server. When a decision changes, the note
+changes with it; the old reasoning stays in the git history.
 
 | File | Contents |
 | --- | --- |
 | [plan.md](plan.md) | The only work list: done, next, later. Read it first, update it with every PR |
 | [game-design.md](design/game-design.md) | Concept, pillars, core loop, open questions |
 | [assets.md](design/assets.md) | What may be committed, and under which license |
+| [deploy.md](deploy.md) | Server layout, the deploy pipeline, rollback |
 
 ## Writing notes
 

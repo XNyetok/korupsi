@@ -25,8 +25,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 /**
- * Native sheet on phones, clipboard everywhere else. The text never contains a
- * spoiler: no case, no answer, just the run.
+ * Native sheet on phones, clipboard everywhere else. The text is only the
+ * outcome and the numbers; it never says which choices led there.
  */
 export async function shareResult(text: string): Promise<ShareOutcome> {
   if (isMobile() && typeof navigator.share === 'function') {

@@ -46,9 +46,8 @@ The project is a browser game. Relevant reports include, but are not limited to:
 ## Not in scope
 
 - findings that require a modified browser or an already-compromised machine
-- rate limiting or spam reports against a deployment that is not live
 - automated scanner output pasted without a reproduction
 
 ## Supported versions
 
-Only the current `main` branch receives fixes. There are no released versions yet.
+Only the latest release, deployed from `main`, receives fixes.

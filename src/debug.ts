@@ -25,8 +25,8 @@ export interface Debug {
 export function mountDebug(game: Game): Debug | null {
   if (!new URLSearchParams(location.search).has('debug')) return null;
 
-  // Balance harness: drive the simulation without a browser and inspect what
-  // the player can actually see.
+  // Expose the running game in the console, so a session can be inspected or
+  // driven by hand while tuning.
   window.__korupsi = Object.assign(game, { params: PARAMS, audio });
 
   const panel = document.getElementById('debug');

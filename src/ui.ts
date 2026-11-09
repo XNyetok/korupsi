@@ -16,8 +16,8 @@ function el<T extends HTMLElement>(id: string): T {
 }
 
 /**
- * Owns the DOM: HUD numbers, the two cards, the mute switch, and the toast.
- * The canvas never draws text that the browser can render better.
+ * Owns the DOM: HUD numbers, the ready, pause and result cards, the mute
+ * switch, and the toast. The canvas only draws the world.
  */
 export class Ui {
   private overlay = el<HTMLDivElement>('overlay');

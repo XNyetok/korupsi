@@ -32,8 +32,8 @@ money you carried, the height you reached, and one dry sentence about how it end
 | `A` / `←`, `D` / `→` | Same, with a keyboard |
 | `Space` | Jump in the direction of the last jump |
 
-Switching apps pauses the run; coming back within a minute resumes it. Staying away longer
-ends it and banks the score. Closing the tab loses the run.
+Switching apps pauses the run; coming back within a minute shows a pause card, and a tap
+resumes. Staying away longer ends it and banks the score. Closing the tab loses the run.
 
 ## Under the hood
 
