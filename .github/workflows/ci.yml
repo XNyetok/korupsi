@@ -140,6 +140,32 @@ jobs:
           name: collector
           path: server
 
+      - name: Check deploy settings
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          HAS_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY != '' }}
+          HAS_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS != '' }}
+        run: |
+          set -euo pipefail
+          # A variable missing from GitHub arrives as an empty string, and an empty
+          # path would point rsync and the cleanup at the wrong directory.
+          failed=0
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_PORT DEPLOY_PATH; do
+            if [ -z "${!name}" ]; then echo "::error::$name is not set"; failed=1; fi
+          done
+          [ "$HAS_SSH_KEY" = "true" ] || { echo "::error::secret DEPLOY_SSH_KEY is not set"; failed=1; }
+          [ "$HAS_KNOWN_HOSTS" = "true" ] || { echo "::error::secret DEPLOY_KNOWN_HOSTS is not set"; failed=1; }
+          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]] || { echo "::error::DEPLOY_PORT must be a number"; failed=1; }
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo "::error::DEPLOY_USER has unexpected characters"; failed=1; }
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9.:-]+$ ]] || { echo "::error::DEPLOY_HOST has unexpected characters"; failed=1; }
+          # Absolute, at least two levels deep, no "..", no spaces or shell characters.
+          [[ "$DEPLOY_PATH" =~ ^/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+$ ]] && [[ "$DEPLOY_PATH" != *..* ]] \
+            || { echo "::error::DEPLOY_PATH must be an absolute path like /www/wwwroot/site"; failed=1; }
+          exit "$failed"
+
       - name: Set up SSH
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -169,7 +195,10 @@ jobs:
           # 2. Point "current" at it in one atomic step, then keep the 5 newest releases.
           ssh "${ssh_opts[@]}" "$DEPLOY_USER@$DEPLOY_HOST" bash -s -- "$DEPLOY_PATH" "$release" <<'REMOTE'
           set -euo pipefail
-          cd "$1"
+          # Refuse to touch anything unless this is the site root it should be.
+          [ -n "$1" ] && [ -n "$2" ] && [ "$1" != "/" ] || { echo "bad arguments" >&2; exit 1; }
+          cd -- "$1"
+          [ -d "releases/$2" ] || { echo "release $2 was not uploaded" >&2; exit 1; }
           ln -sfn "releases/$2" current.next
           mv -Tf current.next current
           ls -1dt releases/*/ | tail -n +6 | xargs -r rm -rf --
@@ -199,12 +228,23 @@ jobs:
             'sudo /usr/bin/systemctl restart korupsi-stats && sleep 1 && curl -fsS http://127.0.0.1:8787/api/health'
 
       - name: Smoke test
+        env:
+          SITE: https://korupsi.web.id
         run: |
           set -euo pipefail
-          for path in / /og.png /manifest.webmanifest /sw.js; do
+          for path in / /og.png /sw.js; do
             code=$(curl -fsS --retry 5 --retry-delay 3 -o /dev/null -w '%{http_code}' "${SITE}${path}")
             echo "$code $path"
             [ "$code" = "200" ]
           done
-        env:
-          SITE: https://korupsi.web.id
+
+          # The page that is live must be the one this run built, not just any page.
+          expected=$(grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -n1)
+          live=$(curl -fsS -H 'Cache-Control: no-cache' "${SITE}/?smoke=${GITHUB_SHA::7}")
+          grep -qF "$expected" <<<"$live" || { echo "::error::live page does not load $expected"; exit 1; }
+          echo "live page loads $expected"
+
+          # Old installs only stop caching once they fetch the kill switch.
+          worker=$(curl -fsS "${SITE}/sw.js")
+          grep -qF 'registration.unregister' <<<"$worker" \
+            || { echo "::error::/sw.js is not the kill switch"; exit 1; }
