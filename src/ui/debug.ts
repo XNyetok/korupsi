@@ -21,8 +21,12 @@ export interface Debug {
   tick(): void;
 }
 
+/** Debug tooling shows only with `?debug=1`: the tuning panel and the seed
+ *  on the result card. Playtests and bug reports need them; players do not. */
+export const debugOn = new URLSearchParams(location.search).has('debug');
+
 export function mountDebug(game: Game): Debug | null {
-  if (!new URLSearchParams(location.search).has('debug')) return null;
+  if (!debugOn) return null;
 
   // Expose the running game in the console, so a session can be inspected or
   // driven by hand while tuning.

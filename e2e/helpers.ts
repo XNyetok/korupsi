@@ -14,13 +14,15 @@ export interface Exposed {
 /** A fixed seed, so every run in these tests starts with the same levels. */
 export const SEED = 'e2e1';
 
-export async function open(page: Page, query = ''): Promise<string[]> {
+/** Opens the page. `debug` adds `?debug=1` (the tests read the exposed state);
+ *  pass false to check what a player without it sees. */
+export async function open(page: Page, query = '', debug = true): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text());
   });
-  await page.goto(`/?debug=1&seed=${SEED}${query}`);
+  await page.goto(`/${debug ? '?debug=1&' : '?'}seed=${SEED}${query}`);
   await expect(page.locator('.card.ready')).toBeVisible();
   return errors;
 }

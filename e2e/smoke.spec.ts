@@ -148,6 +148,17 @@ test.describe('result screen', () => {
     expect(errors).toEqual([]);
   });
 
+  test('the seed shows only with debug', async ({ page }) => {
+    await open(page, '', false);
+    await tap(page, 'right');
+
+    // Standing still ends the run in about a minute with the default band.
+    await leaveAndReturn(page, 61_000);
+    const card = page.locator('#overlay .card');
+    await expect(card.locator('.stamp')).toHaveText('ditinggal');
+    await expect(card.locator('.seed')).toHaveCount(0);
+  });
+
   test('sharing on a desktop copies the result', async ({ page, context, isMobile }) => {
     test.skip(isMobile, 'phones open the native share sheet');
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);

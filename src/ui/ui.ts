@@ -5,6 +5,7 @@ import { audio } from '../platform/audio.ts';
 import { shareResult } from '../platform/share.ts';
 import { track } from '../platform/telemetry.ts';
 import { PALETTE as C } from '../view/palette.ts';
+import { debugOn } from './debug.ts';
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -145,7 +146,7 @@ export class Ui {
         <p class="record">Rekor ${rupiah(game.best.money)}</p>
         <button class="share" type="button">Bagikan hasil</button>
         <p class="cta">Tap untuk ulang</p>
-        <p class="seed">Seed <b>${formatSeed(game.seed)}</b></p>
+        ${debugOn ? `<p class="seed">Seed <b>${formatSeed(game.seed)}</b></p>` : ''}
       </div>`;
 
     const share = this.overlay.querySelector<HTMLButtonElement>('.share');

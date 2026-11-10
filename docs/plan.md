@@ -45,7 +45,8 @@ code.
   playtest log). Retune `cameraBase` / `cameraAccel` only from real play, and log it.
   Blocked on a person playing: the simulation already says what it can (game-design.md),
   and the open question is how the band feels. Note the seed of each playtest run (S1,
-  #9), so a run that felt wrong can be replayed with `?seed=`.
+  #9) — open the page with `?debug=1` to see it — so a run that felt wrong can be
+  replayed with `?seed=`.
 - [!] **V1 — Visual redesign, vertical slice.** Blocked on art: the sprites have to be
   drawn or commissioned, and licensed per `docs/design/assets.md`; the internal resolution
   and palette are the maintainer's call. The code side is ready for it: drawing lives in

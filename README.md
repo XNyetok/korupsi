@@ -64,9 +64,9 @@ npm run size     # gzipped size of the build against its budget
 Add `?debug=1` to the URL for live sliders over jump velocity, gravity, weight penalty,
 camera speed and how often the money appears.
 
-Every run has a seed, shown at the bottom of the result screen. `?seed=<seed>` plays that
-seed on every run: the same choices meet the same levels, which is how a bug report gets
-replayed.
+Every run has a seed, shown on the result screen with `?debug=1` (it is tooling for
+playtests and bug reports, not game copy). `?seed=<seed>` plays that seed on every run:
+the same choices meet the same levels, which is how a bug report gets replayed.
 
 ## Documentation
 
