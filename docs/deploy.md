@@ -118,7 +118,7 @@ bumped. Patch (`0.3.1`) for fixes, minor (`0.4.0`) for anything a player notices
 - **Pause deploying:** set the repository variable `DEPLOY_ENABLED` to `false`. Publishing
   then deploys nothing.
 
-The build stamps its identity into the ready screen and telemetry:
+The build stamps its identity into telemetry, and its version into the ready screen:
 
 | Build | Label | Example |
 | --- | --- | --- |

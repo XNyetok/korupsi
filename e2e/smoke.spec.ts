@@ -3,11 +3,10 @@ import { expect, test } from '@playwright/test';
 import { leaveAndReturn, open, SEED, setParam, state, tap, unfreeze, waitForLanding, waitForPhase } from './helpers.ts';
 
 test.describe('ready screen and input', () => {
-  test('shows the version, the build and the fixed seed', async ({ page }) => {
+  test('shows the version and the fixed seed', async ({ page }) => {
     const errors = await open(page);
     const card = page.locator('.card.ready');
     await expect(card.locator('.eyebrow')).toHaveText(/^v\d+\.\d+\.\d+$/);
-    await expect(card.locator('.rev')).toHaveText(/^build \d+\.\d+\.\d+-dev/);
     await expect(card.locator('.seed')).toHaveText(`Seed tetap ${SEED}`);
     expect(errors).toEqual([]);
   });
