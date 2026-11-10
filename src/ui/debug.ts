@@ -1,4 +1,5 @@
 import type { Game } from '../core/game.ts';
+import { jumpFactor } from '../core/game.ts';
 import { PARAMS } from '../core/params.ts';
 import { audio } from '../platform/audio.ts';
 
@@ -9,27 +10,26 @@ declare global {
 }
 
 const CONTROLS: { key: keyof typeof PARAMS; label: string; min: number; max: number; step: number }[] = [
-  { key: 'jumpV', label: 'Lompat', min: 500, max: 900, step: 10 },
-  { key: 'gravity', label: 'Gravitasi', min: 1200, max: 2600, step: 20 },
-  { key: 'weightPenalty', label: 'Berat/amplop', min: 0, max: 0.12, step: 0.005 },
-  { key: 'cameraBase', label: 'Scroll awal', min: 6, max: 60, step: 1 },
-  { key: 'cameraAccel', label: 'Scroll naik', min: 0, max: 1.5, step: 0.05 },
-  { key: 'goldChance', label: 'Peluang emas', min: 0, max: 1, step: 0.05 },
+  { key: 'jumpV', label: 'Lompat', min: 240, max: 400, step: 5 },
+  { key: 'gravity', label: 'Gravitasi', min: 600, max: 1600, step: 20 },
+  { key: 'runSpeed', label: 'Lari', min: 60, max: 150, step: 2 },
+  { key: 'dashSpeed', label: 'Ngeles', min: 140, max: 320, step: 5 },
+  { key: 'weightPenalty', label: 'Berat/amplop', min: 0, max: 0.05, step: 0.0025 },
+  { key: 'coyote', label: 'Coyote', min: 0, max: 0.2, step: 0.01 },
 ];
 
 export interface Debug {
   tick(): void;
 }
 
-/** Debug tooling shows only with `?debug=1`: the tuning panel and the seed
- *  on the result card. Playtests and bug reports need them; players do not. */
+/** Debug tooling shows only with `?debug=1`: the tuning panel and the game on `window`. */
 export const debugOn = new URLSearchParams(location.search).has('debug');
 
 export function mountDebug(game: Game): Debug | null {
   if (!debugOn) return null;
 
   // Expose the running game in the console, so a session can be inspected or
-  // driven by hand while tuning.
+  // driven by hand while tuning. The browser tests use the same handle.
   window.__korupsi = Object.assign(game, { params: PARAMS, audio });
 
   const panel = document.getElementById('debug');
@@ -56,13 +56,13 @@ export function mountDebug(game: Game): Debug | null {
   const readout = panel.querySelector('[data-readout]');
   window.setInterval(() => {
     if (!readout) return;
-    const factor = game.jumpFactor();
+    const factor = jumpFactor(game.weight);
     const jv = PARAMS.jumpV * factor;
     const rise = (jv * jv) / (2 * PARAMS.gravity);
-    const air = (2 * jv) / PARAMS.gravity;
+    const p = game.player;
     readout.textContent =
-      `factor ${factor.toFixed(2)} · rise ${Math.round(rise)}px · ` +
-      `air ${air.toFixed(2)}s · scroll ${game.camSpeed.toFixed(0)}px/s`;
+      `factor ${factor.toFixed(2)} · rise ${rise.toFixed(1)}px · ` +
+      `x ${p.x.toFixed(0)} y ${p.y.toFixed(0)} · ledge ${p.ground}`;
   }, 250);
 
   return {

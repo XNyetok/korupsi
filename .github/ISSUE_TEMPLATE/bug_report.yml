@@ -31,11 +31,11 @@ body:
     validations:
       required: true
   - type: input
-    id: seed
+    id: where
     attributes:
-      label: Seed
-      description: The seed at the bottom of the result screen. Opening the game with ?seed=<seed> replays the same levels.
-      placeholder: 1x2y3z
+      label: Where in the tower
+      description: The floor, and what was nearby (a desk, the stamp, an auditor). The tower is the same on every run, so that is enough to find the spot.
+      placeholder: Kelurahan, the desk with the first stamp
   - type: input
     id: environment
     attributes:

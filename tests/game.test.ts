@@ -1,369 +1,332 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { clock, Game, jumpFactor, rupiah } from '../src/core/game.ts';
 import { PARAMS } from '../src/core/params.ts';
-import { Game } from '../src/core/game.ts';
-import { AWAY_LIMIT_MS } from '../src/core/rules.ts';
-import { PLAYER_EDGE, envelope } from '../src/core/physics.ts';
-import { WORLD_WIDTH } from '../src/core/params.ts';
+import { auditorAt, KELURAHAN, ledgeX, STAMP, stampAt } from '../src/core/tower.ts';
+import type { Best, FloorDef, Input } from '../src/core/types.ts';
+import { idle, jumpApex, quietGame, run, STEP } from './helpers.ts';
 
-const STEP = 1 / 120;
+const hold = (input: Partial<Input>): Input => ({ ...idle, ...input });
 
-function newGame(): Game {
-  const game = new Game({ onEnd() {} });
-  game.setViewport(780);
+/** A floor with one of everything, small enough to reason about by hand. */
+const YARD: FloorDef = {
+  name: 'Yard',
+  height: 300,
+  ledges: [
+    { x: 0, y: 0, w: 384 },
+    { x: 100, y: 28, w: 80 },
+    { x: 220, y: 28, w: 40, kind: 'fiktif' },
+    { x: 60, y: 120, w: 120 },
+    { x: 280, y: 28, w: 40, kind: 'troli', travel: 20, period: 2 },
+  ],
+  auditors: [{ ledge: 0, from: 300, to: 340, speed: 20 }],
+  stamps: [{ ledge: 1, x: 150, period: 2.4, offset: 0 }],
+  amplop: [
+    { x: 60, y: 12 },
+    { x: 40, y: 12 },
+  ],
+  checkpoints: [
+    { ledge: 0, x: 20 },
+    { ledge: 3, x: 80 },
+  ],
+  exit: { ledge: 3, x: 170 },
+};
+
+function yard(): Game {
+  const game = new Game({ floor: YARD });
   game.start();
   return game;
 }
 
-function advance(game: Game, seconds: number): void {
-  const steps = Math.round(seconds / STEP);
-  for (let i = 0; i < steps && game.phase === 'playing'; i++) game.step(STEP);
-}
-
-function levelAbove(game: Game): { x: number; y: number; w: number; gold: boolean }[] {
-  const anchor = game.player.onGround;
-  if (!anchor) return [];
-  const above = game.platforms.filter((p) => p.alive && p.y < anchor.y - 4);
-  let top = Infinity;
-  for (const p of above) if (p.y < top) top = p.y;
-  return above.filter((p) => Math.abs(p.y - top) < 1);
-}
-
-/** -1 for the left ledge of the pair, 1 for the right one. */
-function sideOf(option: { x: number }, options: { x: number }[]): -1 | 1 {
-  return options.every((o) => o.x >= option.x) ? -1 : 1;
-}
-
-function land(game: Game): void {
-  for (let i = 0; i < 400 && game.phase === 'playing' && !game.player.onGround; i++) game.step(STEP);
-}
-
-function jumpAndLand(game: Game, preferGold: boolean): boolean {
-  const options = levelAbove(game);
-  if (!options.length) return false;
-
-  const pick = (preferGold ? options.find((o) => o.gold) : options.find((o) => !o.gold)) ?? options[0];
-  game.jump(sideOf(pick, options));
-  land(game);
-  return game.phase === 'playing' && !!game.player.onGround;
-}
-
-/** Plays many levels, calling `visit` on each with the pair above the player. */
-function eachLevel(levels: number, visit: (game: Game, options: ReturnType<typeof levelAbove>) => void): number {
-  const game = newGame();
-  let seen = 0;
-  for (let i = 0; i < levels * 20 && seen < levels; i++) {
-    if (game.phase !== 'playing') {
-      game.start();
-      continue;
-    }
-    if (!game.player.onGround) {
-      game.step(STEP);
-      continue;
-    }
-    // Close to the band the run is lost anyway; start fresh rather than
-    // judging geometry the player will never get to use.
-    if (game.player.y - game.camY > game.auditLine * 0.75) {
-      game.start();
-      continue;
-    }
-    seen++;
-    visit(game, levelAbove(game));
+/** Steps until `done` says so, or fails the test after `limit` seconds. */
+function until(game: Game, done: () => boolean, input: Input = idle, limit = 10): void {
+  for (let t = 0; t < limit; t += STEP) {
+    if (done()) return;
+    game.step(STEP, input);
   }
-  return seen;
+  assert.fail('the moment never came');
 }
 
-test('the ledge underfoot survives the rebuild', () => {
-  const game = newGame();
-  let landings = 0;
+test('nothing moves before the run starts', () => {
+  const game = new Game();
+  run(game, 1, hold({ move: 1, jump: true }));
+  assert.equal(game.phase, 'ready');
+  assert.equal(game.time, 0);
+  assert.equal(game.player.x, KELURAHAN.checkpoints[0]?.x);
+});
 
-  for (let i = 0; i < 2000 && landings < 300; i++) {
-    if (game.phase !== 'playing') {
-      game.start();
-      continue;
-    }
-    if (!game.player.onGround) {
-      game.step(STEP);
-      continue;
-    }
+test('a full jump clears one ledge and never two', () => {
+  const apex = jumpApex(0);
+  assert.ok(apex > 46 && apex < 54, `apex ${apex.toFixed(1)}`);
+});
 
-    if (!jumpAndLand(game, false)) continue;
-    landings++;
+test('every envelope shortens the jump, down to the floor', () => {
+  assert.ok(jumpApex(3) < jumpApex(0));
+  assert.ok(jumpApex(6) < jumpApex(3));
+  assert.equal(jumpFactor(1000), PARAMS.minFactor);
+  assert.equal(jumpApex(1000), jumpApex(Math.ceil((1 - PARAMS.minFactor) / PARAMS.weightPenalty)));
+});
 
-    // Regression: the platform being stood on used to be dropped from the
-    // render list, so the player appeared to stand in the air.
-    assert.ok(
-      game.player.onGround && game.platforms.includes(game.player.onGround),
-      'the platform underfoot is missing from the scene',
-    );
+test('letting go early makes a short hop', () => {
+  const game = quietGame();
+  let apex = 0;
+  for (let i = 0; i < 120; i++) {
+    game.step(STEP, hold({ jump: i < 8 }));
+    apex = Math.max(apex, game.player.y);
   }
-
-  assert.ok(landings >= 300, `expected 300 landings, got ${landings}`);
+  assert.ok(apex > 6 && apex < jumpApex(0) * 0.6, `apex ${apex.toFixed(1)}`);
 });
 
-test('every generated ledge is inside the jump envelope', () => {
-  const game = newGame();
-  let checked = 0;
-
-  for (let i = 0; i < 3000 && checked < 400; i++) {
-    if (game.phase !== 'playing') {
-      game.start();
-      continue;
-    }
-    if (!game.player.onGround) {
-      game.step(STEP);
-      continue;
-    }
-
-    // Too close to the audit band and the run is already lost; that is not a
-    // geometry problem, so start a fresh run instead of asserting on it.
-    if (game.player.y - game.camY > game.height * 0.7) {
-      game.start();
-      continue;
-    }
-
-    const anchor = game.player.onGround;
-    const options = levelAbove(game);
-    assert.equal(options.length, 2, 'every level has two ledges');
-
-    const env = envelope(game.jumpFactor());
-    for (const option of options) {
-      const dy = anchor.y - option.y;
-      const dx = Math.abs(option.x - game.player.x);
-
-      assert.ok(dy <= env.h * 0.7, `ledge ${dy.toFixed(1)}px up exceeds the jump rise`);
-      assert.ok(
-        dx <= env.dxAt(dy) + option.w / 2 + 8,
-        `ledge ${dx.toFixed(1)}px away exceeds the jump reach at ${dy.toFixed(1)}px up`,
-      );
-    }
-
-    assert.ok(jumpAndLand(game, false), 'the bot failed to land on a ledge it was told was reachable');
-    checked++;
-  }
-
-  assert.ok(checked >= 400, `expected 400 levels, got ${checked}`);
+test('a held jump does not repeat on landing', () => {
+  const game = quietGame();
+  run(game, 2, hold({ jump: true }));
+  assert.equal(game.player.ground, 0);
+  assert.equal(game.drain().filter((e) => e.type === 'jump').length, 1);
 });
 
-test('every level offers two separate ledges, and each side lands on its own', () => {
-  const counts = { left: 0, right: 0, wall: 0 };
-
-  const seen = eachLevel(3000, (game, options) => {
-    assert.equal(options.length, 2, 'a level must always offer a choice');
-    const [a, b] = [...options].sort((p, q) => p.x - q.x);
-
-    assert.ok(a.x - a.w / 2 >= 0 && b.x + b.w / 2 <= game.width, 'ledges stay inside the world');
-    assert.ok(a.x + a.w / 2 < b.x - b.w / 2, 'the two ledges must not touch');
-
-    const nearWall = game.player.x < PLAYER_EDGE + 40 || game.player.x > game.width - PLAYER_EDGE - 40;
-    if (nearWall) counts.wall++;
-
-    // Pick a side at random and check the jump ends on that side's ledge.
-    const dir = Math.random() < 0.5 ? -1 : 1;
-    const expected = dir < 0 ? a : b;
-    game.jump(dir);
-    land(game);
-    if (game.phase !== 'playing') return;
-    assert.equal(game.player.onGround?.id, expected.id, `jumping ${dir < 0 ? 'left' : 'right'} missed its ledge`);
-    counts[dir < 0 ? 'left' : 'right']++;
-  });
-
-  assert.ok(seen >= 3000, `expected 3000 levels, got ${seen}`);
-  assert.ok(counts.wall > 100, `the walls were barely tested (${counts.wall} levels)`);
-  assert.ok(counts.left > 1000 && counts.right > 1000, 'both sides must be exercised');
+test('a jump pressed just before landing still happens', () => {
+  const game = quietGame();
+  game.step(STEP, hold({ jump: true }));
+  until(game, () => game.player.vy < 0 && game.player.y < 4);
+  game.drain();
+  game.step(STEP, hold({ jump: true }));
+  run(game, 0.2, hold({ jump: true }));
+  assert.equal(game.drain().filter((e) => e.type === 'jump').length, 1, 'the early press was kept for the landing');
 });
 
-test('the safe side is never guarded', () => {
-  let guarded = 0;
+test('a jump just after walking off a ledge still counts', () => {
+  const game = quietGame(YARD);
+  game.placeOn(1, 178);
+  until(game, () => game.player.ground < 0, hold({ move: 1 }));
+  run(game, PARAMS.coyote * 0.5, hold({ move: 1 }));
+  game.step(STEP, hold({ move: 1, jump: true }));
+  assert.ok(game.player.vy > 0, 'coyote time allowed the jump');
 
-  eachLevel(4000, (game, options) => {
-    const safe = options.find((o) => !o.gold) ?? options[0];
-    const hadAuditor = game.auditors.length > 0;
-    game.jump(sideOf(safe, options));
-    land(game);
-    if (!hadAuditor) return;
-    guarded++;
-    assert.notEqual(game.cause, 'auditor', 'the auditor caught a player on the safe side');
-  });
-
-  assert.ok(guarded >= 100, `expected 100 guarded levels, saw ${guarded}`);
+  const late = quietGame(YARD);
+  late.placeOn(1, 178);
+  until(late, () => late.player.ground < 0, hold({ move: 1 }));
+  run(late, PARAMS.coyote * 1.5, hold({ move: 1 }));
+  late.step(STEP, hold({ move: 1, jump: true }));
+  assert.ok(late.player.vy <= 0, 'too late is too late');
 });
 
-test('no auditor before the fifth level', () => {
-  eachLevel(2000, (game, options) => {
-    if (game.level < 5) assert.equal(game.auditors.length, 0, `auditor at level ${game.level}`);
-    jumpAndLand(game, Math.random() < 0.5);
-    void options;
-  });
+test('running reaches top speed and stops quickly', () => {
+  const game = quietGame();
+  run(game, 0.5, hold({ move: 1 }));
+  assert.equal(game.player.vx, PARAMS.runSpeed);
+  assert.equal(game.player.facing, 1);
+  run(game, 0.2);
+  assert.equal(game.player.vx, 0);
 });
 
-test('a level is counted once per new ledge', () => {
-  const game = newGame();
-  assert.equal(game.level, 0);
-  for (let n = 1; n <= 20; n++) {
-    assert.ok(jumpAndLand(game, false), 'the bot failed to land');
-    assert.equal(game.level, n);
-  }
+test('the walls stop the player', () => {
+  const game = quietGame();
+  run(game, 6, hold({ move: -1 }));
+  assert.ok(game.player.x >= 5 && game.player.x < 6);
 });
 
-test('landing back on the same ledge does not reroll the level', () => {
-  const game = newGame();
-  for (let n = 0; n < 6; n++) jumpAndLand(game, false);
+test('a dash is level, faster than a run, and once per time in the air', () => {
+  const game = quietGame();
+  game.step(STEP, hold({ jump: true }));
+  run(game, 0.15, hold({ jump: true }));
+  const y = game.player.y;
+  const x = game.player.x;
 
-  const footing = game.player.onGround;
-  assert.ok(footing);
-  // Nothing above to reach, and a ledge as wide as the world: the jump has
-  // to come back down where it started.
-  // The auditor guarding the old level would still patrol where its ledge was
-  // and catch the jump: that failed about one run in twenty.
-  game.platforms = [footing];
-  game.auditors = [];
-  footing.x = game.width / 2;
-  footing.w = game.width;
-  footing.type = 'solid';
-  const level = game.level;
+  game.step(STEP, hold({ jump: true, dash: true, move: 1 }));
+  run(game, PARAMS.dashTime - 2 * STEP, hold({ jump: true, dash: true, move: 1 }));
+  assert.ok(Math.abs(game.player.y - y) < 0.001, 'a dash does not rise or fall');
+  assert.ok(game.player.x - x > PARAMS.runSpeed * PARAMS.dashTime * 1.8, 'a dash covers ground');
 
-  game.jump(1);
-  land(game);
+  // A second press in the same flight does nothing, even with the cooldown over.
+  run(game, 0.05, hold({ move: 1 }));
+  game.drain();
+  assert.equal(game.player.ground, -1);
+  game.player.dashCool = 0;
+  game.step(STEP, hold({ move: 1, dash: true }));
+  assert.equal(game.drain().filter((e) => e.type === 'dash').length, 0);
 
-  assert.equal(game.player.onGround, footing);
-  assert.equal(game.level, level, 'the level count moved');
-  assert.deepEqual(
-    game.platforms.map((p) => p.id),
-    [footing.id],
-    'new ledges were generated without climbing',
+  until(game, () => game.player.ground >= 0);
+  run(game, PARAMS.dashCooldown);
+  game.step(STEP, hold({ dash: true }));
+  assert.equal(game.drain().filter((e) => e.type === 'dash').length, 1, 'landing gives the dash back');
+});
+
+test('an envelope adds weight and money', () => {
+  const game = quietGame(YARD);
+  run(game, 1, hold({ move: 1 }));
+  assert.equal(game.weight, 2);
+  assert.equal(game.money, 2 * PARAMS.moneyValue);
+  assert.deepEqual(game.taken, [true, true]);
+});
+
+test('an auditor catches a walker, and a dash slips past', () => {
+  const caught = yard();
+  caught.placeOn(0, 270);
+  until(caught, () => caught.deaths > 0, hold({ move: 1 }));
+  assert.equal(caught.cause, 'auditor');
+
+  const slipped = yard();
+  slipped.placeOn(0, 270);
+  until(
+    slipped,
+    () => auditorAt(YARD.auditors[0] as FloorDef['auditors'][number], slipped.worldTime).x - slipped.player.x < 14,
+    hold({ move: 1 }),
   );
+  slipped.step(STEP, hold({ move: 1, dash: true }));
+  run(slipped, 0.5, hold({ move: 1 }));
+  assert.equal(slipped.deaths, 0);
+  assert.ok(slipped.player.x > 340, 'and came out the other side');
 });
 
-test('the run ends where the audit band is drawn', () => {
-  const game = newGame();
-  let lastFeet = 0;
-  for (let i = 0; i < 120 * 120 && game.phase === 'playing'; i++) {
-    lastFeet = game.player.y - game.camY;
-    game.step(STEP);
-  }
+test('the stamp only bites on the way down and on the desk', () => {
+  const def = YARD.stamps[0] as FloorDef['stamps'][number];
 
-  assert.equal(game.phase, 'over');
-  const feet = game.player.y - game.camY;
-  assert.ok(lastFeet <= game.auditLine, 'the run should have ended earlier');
-  assert.ok(feet > game.auditLine, 'the run ended before the feet reached the band');
-  assert.equal(game.auditLine, game.height - PARAMS.bandHeight);
+  const under = yard();
+  under.placeOn(1, def.x);
+  until(under, () => stampAt(def, under.worldTime).phase === 'warn');
+  assert.equal(under.deaths, 0, 'standing under a raised stamp is safe');
+  until(under, () => under.deaths > 0);
+  assert.equal(under.cause, 'stempel');
+  assert.ok(['slam', 'hold'].includes(stampAt(def, under.worldTime).phase));
+
+  const beside = yard();
+  beside.placeOn(1, def.x + STAMP.w / 2 + 8);
+  run(beside, def.period * 2);
+  assert.equal(beside.deaths, 0, 'standing beside it is safe');
 });
 
-test('the band warns once when it closes in, and again on the next run', () => {
-  let warnings = 0;
-  const base = PARAMS.cameraBase;
-  const game = new Game({
-    onEnd() {},
-    onBandWarn() {
-      warnings += 1;
-    },
-  });
-  game.setViewport(780);
+test('being caught sends the player back to the checkpoint with the bag as it was', () => {
+  const game = yard();
+  run(game, 0.3, hold({ move: 1 }));
+  assert.equal(game.weight, 1, 'one envelope before the checkpoint');
 
-  // With the tuned band the starting margin stays comfortable: no warning
-  // in the first second of play.
+  game.placeOn(3, 80);
+  game.step(STEP);
+  assert.equal(game.checkpoint, 1);
+
+  // Pick up the other one, then walk into the stamp.
+  game.placeOn(0, 60);
+  game.step(STEP);
+  assert.equal(game.weight, 2);
+  game.placeOn(1, 150);
+  until(game, () => game.deaths === 1);
+  assert.ok(game.caught > 0);
+
+  const frozen = { ...game.player };
+  run(game, PARAMS.caughtPause / 2, hold({ move: 1, jump: true }));
+  assert.deepEqual({ ...game.player }, frozen, 'caught means held');
+
+  run(game, PARAMS.caughtPause);
+  assert.equal(game.player.ground, 3);
+  assert.equal(game.player.x, 80);
+  assert.equal(game.weight, 1, 'what was taken after clocking in is back on the floor');
+  assert.deepEqual(game.taken, [false, true]);
+  assert.ok(game.drain().some((e) => e.type === 'respawn'));
+});
+
+test('falling far below the last checkpoint is a catch, and not before one', () => {
+  const lobby = yard();
+  lobby.placeOn(1, 178);
+  run(lobby, 1, hold({ move: 1 }));
+  assert.equal(lobby.deaths, 0, 'before the first checkpoint a fall only costs time');
+
+  const game = yard();
+  game.placeOn(3, 80);
+  game.step(STEP);
+  assert.equal(game.auditLine, 120 - PARAMS.auditLine);
+  until(game, () => game.deaths > 0, hold({ move: -1 }));
+  assert.equal(game.cause, 'jatuh');
+  assert.ok(game.player.y < game.auditLine);
+});
+
+test('a fiktif ledge holds for a moment, gives way, and comes back', () => {
+  const game = yard();
+  game.placeOn(2, 240);
+  game.player.y += 4;
+  game.player.ground = -1;
+  until(game, () => game.player.ground === 2);
+  run(game, PARAMS.crumbleDelay - 0.1);
+  assert.equal(game.player.ground, 2, 'it holds at first');
+  run(game, 0.2);
+  assert.equal(game.player.ground, -1, 'then it is gone');
+  assert.ok(!game.ledgeHolds(2));
+  run(game, PARAMS.crumbleReturn + 0.1);
+  assert.ok(game.ledgeHolds(2), 'and it comes back');
+});
+
+test('a troli carries the player', () => {
+  const game = yard();
+  const def = YARD.ledges[4] as FloorDef['ledges'][number];
+  game.placeOn(4);
+  const offset = game.player.x - ledgeX(def, game.worldTime);
+  run(game, 1.3);
+  assert.equal(game.player.ground, 4);
+  assert.ok(Math.abs(game.player.x - ledgeX(def, game.worldTime) - offset) < 0.001);
+});
+
+test('ledges are passed through from below and landed on from above', () => {
+  const game = quietGame(YARD);
+  game.placeOn(0, 140);
+  game.step(STEP, hold({ jump: true }));
+  until(game, () => game.player.ground >= 0, hold({ jump: true }));
+  assert.equal(game.player.ground, 1);
+  assert.equal(game.player.y, 28);
+});
+
+test('reaching the door wins, and keeps the better record', () => {
+  let saved: Best | null = null;
+  const store = { read: () => ({ time: 50, money: 5_000_000 }), write: (best: Best) => (saved = best) };
+  const game = new Game({ floor: YARD, store });
   game.start();
-  for (let i = 0; i < 120; i++) game.step(STEP);
-  assert.equal(warnings, 0, 'no warning while the band is far below');
+  run(game, 0.4, hold({ move: 1 }));
+  game.placeOn(3, 150);
+  run(game, 1, hold({ move: 1 }));
 
-  // A fast band and a stalled player: it closes in, warns once, then kills.
-  PARAMS.cameraBase = 600;
-  game.start();
-  for (let i = 0; i < 120 * 5 && game.phase === 'playing'; i++) game.step(STEP);
-  assert.equal(warnings, 1, 'the warning fires exactly once per run');
-  assert.equal(game.phase, 'over', 'the stalled player is caught after the warning');
+  assert.equal(game.phase, 'won');
+  assert.deepEqual(game.record, { time: true, money: false });
+  assert.deepEqual(saved, { time: game.time, money: 5_000_000 });
+  assert.ok(game.drain().some((e) => e.type === 'win'));
 
-  // A fresh run warns again: the flag is per run, not per page.
+  const frozen = game.time;
+  run(game, 1, hold({ move: 1 }));
+  assert.equal(game.time, frozen, 'the clock stops at the door');
+
   game.start();
-  for (let i = 0; i < 120 * 5 && game.phase === 'playing'; i++) game.step(STEP);
-  assert.equal(warnings, 2, 'the warning is available again on the next run');
-  PARAMS.cameraBase = base;
+  assert.equal(game.phase, 'playing');
+  assert.equal(game.weight, 0);
+  assert.equal(game.checkpoint, 0);
 });
 
-test('resizing mid-run keeps the world and its ledges', () => {
-  const game = newGame();
-  for (let n = 0; n < 5; n++) jumpAndLand(game, false);
-  const before = game.platforms.map((p) => `${p.id}:${p.x}`);
-
-  game.setViewport(400);
-  game.setViewport(1200);
-
-  assert.equal(game.width, WORLD_WIDTH);
-  assert.deepEqual(
-    game.platforms.map((p) => `${p.id}:${p.x}`),
-    before,
-  );
-  assert.ok(jumpAndLand(game, false), 'the level is still playable after a resize');
-});
-
-test('a paused run does not move and its time does not count', () => {
-  const game = newGame();
-  advance(game, 1);
-  const elapsed = game.elapsed;
-  const camY = game.camY;
-
+test('a pause freezes everything, and resuming is not a jump', () => {
+  const game = quietGame();
+  run(game, 0.5, hold({ move: 1 }));
   game.pause();
-  assert.equal(game.phase, 'paused');
-  for (let i = 0; i < 600; i++) game.step(STEP);
-  assert.equal(game.camY, camY);
-  assert.equal(game.elapsed, elapsed);
+  const before = { x: game.player.x, time: game.time, world: game.worldTime };
+  run(game, 1, hold({ move: 1, jump: true }));
+  assert.deepEqual({ x: game.player.x, time: game.time, world: game.worldTime }, before);
 
   game.resume();
-  assert.equal(game.phase, 'playing');
-  advance(game, 0.5);
-  assert.ok(Math.abs(game.elapsed - elapsed - 0.5) < 0.01);
+  game.step(STEP, hold({ jump: true, dash: true }));
+  assert.equal(game.player.ground, 0, 'a button still held from before the pause does nothing');
+  assert.equal(game.drain().filter((e) => e.type === 'jump' || e.type === 'dash').length, 0);
 });
 
-test('standing still ends the run on its own', () => {
-  const game = newGame();
-  advance(game, 120);
-
-  assert.equal(game.phase, 'over');
-  assert.ok(['band', 'fall'].includes(game.cause), `unexpected cause: ${game.cause}`);
+test('the same inputs give the same climb', () => {
+  const play = () => {
+    const game = new Game();
+    game.start();
+    for (let i = 0; i < 1200; i++) {
+      game.step(STEP, { move: i % 400 < 250 ? 1 : -1, jump: i % 90 < 30, dash: i % 200 === 50 });
+    }
+    return JSON.stringify([game.player, game.weight, game.deaths, game.time]);
+  };
+  assert.equal(play(), play());
 });
 
-test('a glance keeps the run, a departure ends it', () => {
-  const game = newGame();
-  game.pause();
-  game.handleAway(AWAY_LIMIT_MS - 1);
-  assert.equal(game.phase, 'paused');
-
-  game.handleAway(AWAY_LIMIT_MS);
-  assert.equal(game.phase, 'over');
-  assert.equal(game.cause, 'abandoned');
-});
-
-test('the best score only goes up', () => {
-  const game = newGame();
-  game.money = 2_000_000;
-  game.maxClimb = 1200;
-  game.endRun('band');
-
-  assert.deepEqual(game.best, { money: 2_000_000, height: 200 });
-
-  game.start();
-  game.money = 500_000;
-  game.maxClimb = 600;
-  game.endRun('auditor');
-
-  assert.deepEqual(game.best, { money: 2_000_000, height: 200 });
-});
-
-test('weight shortens the jump and the floor stops it', () => {
-  const game = newGame();
-  const base = envelope(game.jumpFactor()).h;
-
-  game.weight = 5;
-  const lighter = envelope(game.jumpFactor()).h;
-  game.weight = 40;
-  const floor = envelope(game.jumpFactor()).h;
-
-  assert.ok(lighter < base, 'five envelopes should shorten the jump');
-  assert.ok(floor < lighter, 'more weight should shorten it further');
-  assert.equal(game.jumpFactor(), PARAMS.minFactor, 'the jump factor must stop at the floor');
-  // Height scales with the square of the factor, so the floor is predictable.
-  assert.ok(Math.abs(floor / base - PARAMS.minFactor ** 2) < 0.01, 'the floor must be a real jump');
-  assert.ok(floor > 20, 'the floor must clear the smallest gap the generator can pick');
+test('money and time read the way players write them', () => {
+  assert.equal(rupiah(1_500_000), 'Rp 1.500.000');
+  assert.equal(clock(0), '0:00');
+  assert.equal(clock(83.9), '1:23');
+  assert.equal(clock(600), '10:00');
 });

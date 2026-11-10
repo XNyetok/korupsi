@@ -19,6 +19,16 @@ That only works if we are strict about what gets committed.
 - screenshots containing other people's names, accounts, or messages
 - large binaries. Screenshots and design references belong in an issue, not the tree
 
+## What the game ships today
+
+Nothing third-party. The scenery, the sprites and both pixel fonts are drawn in code
+(`src/view/`) and the sound is synthesised (`src/platform/audio.ts`), so both are part of
+the source and carry its license. The images in `docs/media/` and `public/og.png` are
+screenshots of the game itself.
+
+The art takes its direction, not its pixels, from other pixel-art platformers: no sprite,
+tile, palette file or level layout is copied from another game.
+
 ## Registry
 
 Every third-party asset gets a row. If it is not in this table, it is not shipped.

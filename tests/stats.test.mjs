@@ -28,6 +28,8 @@ test('numbers from the network are clamped', () => {
   });
 
   assert.equal(event.cause, null, 'unknown causes are not stored');
+  assert.equal(normaliseEvent({ type: 'run_ended', cause: 'finished' }).cause, 'finished');
+  assert.equal(normaliseEvent({ type: 'run_ended', cause: 'abandoned' }).cause, 'abandoned');
   assert.equal(event.money, 1_000_000_000);
   assert.equal(event.weight, 0);
   assert.equal(event.height, null);

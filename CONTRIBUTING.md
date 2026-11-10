@@ -38,9 +38,9 @@ file in a later commit is not enough: it stays in the public history.
 
 | Folder | What | May import |
 | --- | --- | --- |
-| `core/` | the simulation: rules, levels, physics, the seeded RNG. No DOM | `core` |
+| `core/` | the simulation: physics, rules and the hand-placed tower. No DOM | `core` |
 | `platform/` | browser APIs: input, the frame loop, storage, audio, telemetry, sharing | `core`, `platform` |
-| `view/` | drawing the canvas | `core`, `view` |
+| `view/` | drawing the canvas: scenery, sprites and effects, all in code | `core`, `view` |
 | `ui/` | the DOM around the canvas: HUD, cards, debug panel, styles | all of the above |
 
 `main.ts` wires them together. `npm run check` compiles `core/` without the DOM library, and

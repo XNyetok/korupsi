@@ -1,40 +1,40 @@
 import { expect, type Page } from '@playwright/test';
 
-/** The parts of `window.__korupsi` (exposed by `?debug=1`) the tests read. */
+/** The parts of `window.__korupsi` (exposed by `?debug=1`) the tests read and drive. */
 export interface Exposed {
-  phase: 'ready' | 'playing' | 'paused' | 'over';
-  seed: number;
-  level: number;
-  money: number;
-  cause: string;
-  player: { x: number; y: number; dir: number; onGround: unknown };
-  params: Record<string, number>;
+  phase: 'ready' | 'playing' | 'paused' | 'won';
+  time: number;
+  deaths: number;
+  weight: number;
+  checkpoint: number;
+  hazards: boolean;
+  player: { x: number; y: number; vx: number; facing: number; ground: number };
+  floor: { exit: { ledge: number; x: number } };
+  placeOn(ledge: number, x?: number): void;
 }
-
-/** A fixed seed, so every run in these tests starts with the same levels. */
-export const SEED = 'e2e1';
 
 /** Opens the page. `debug` adds `?debug=1` (the tests read the exposed state);
  *  pass false to check what a player without it sees. */
-export async function open(page: Page, query = '', debug = true): Promise<string[]> {
+export async function open(page: Page, debug = true): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text());
   });
-  await page.goto(`/${debug ? '?debug=1&' : '?'}seed=${SEED}${query}`);
-  await expect(page.locator('.card.ready')).toBeVisible();
+  await page.goto(debug ? '/?debug=1' : '/');
+  await expect(page.locator('.card.title')).toBeVisible();
   return errors;
 }
 
 export interface State {
   phase: Exposed['phase'];
-  seed: number;
-  level: number;
-  cause: string;
+  time: number;
+  deaths: number;
+  weight: number;
   x: number;
-  dir: number;
-  grounded: boolean;
+  y: number;
+  facing: number;
+  ground: number;
 }
 
 /** A plain copy of the game state, read in the page. */
@@ -43,24 +43,15 @@ export function state(page: Page): Promise<State> {
     const g = (window as unknown as { __korupsi: Exposed }).__korupsi;
     return {
       phase: g.phase,
-      seed: g.seed,
-      level: g.level,
-      cause: g.cause,
+      time: g.time,
+      deaths: g.deaths,
+      weight: g.weight,
       x: g.player.x,
-      dir: g.player.dir,
-      grounded: g.player.onGround !== null,
+      y: g.player.y,
+      facing: g.player.facing,
+      ground: g.player.ground,
     };
   });
-}
-
-/** Changes a tuning number for this page only, like the debug sliders do. */
-export function setParam(page: Page, key: string, value: number): Promise<void> {
-  return page.evaluate(
-    ([k, v]) => {
-      (window as unknown as { __korupsi: Exposed }).__korupsi.params[k as string] = v as number;
-    },
-    [key, value] as const,
-  );
 }
 
 export function waitForPhase(page: Page, phase: Exposed['phase'], timeout = 10_000): Promise<unknown> {
@@ -69,55 +60,54 @@ export function waitForPhase(page: Page, phase: Exposed['phase'], timeout = 10_0
   });
 }
 
-/** Waits until the player stands on a ledge again. */
-export function waitForLanding(page: Page): Promise<unknown> {
-  return page.waitForFunction(() => {
-    const g = (window as unknown as { __korupsi: Exposed }).__korupsi;
-    return g.phase !== 'playing' || g.player.onGround !== null;
-  });
+/** Starts the run from the title card. */
+export async function start(page: Page): Promise<void> {
+  await page.locator('#overlay button.primary').click();
+  await waitForPhase(page, 'playing');
 }
 
-/** A tap or click on the left or right half of the game. */
-export async function tap(page: Page, side: 'left' | 'right'): Promise<void> {
-  const box = await page.locator('#game').boundingBox();
-  if (!box) throw new Error('the canvas has no box');
-  const x = box.x + box.width * (side === 'left' ? 0.25 : 0.75);
-  const y = box.y + box.height * 0.5;
-  const touch = await page.evaluate(() => navigator.maxTouchPoints > 0);
-  if (touch) await page.touchscreen.tap(x, y);
-  else await page.mouse.click(x, y);
-}
-
-/**
- * Pretends the tab went to the background for `awayMs`, then came back. The
- * game measures the absence with performance.now, so the clock is moved too.
- * With `freeze`, the clock then stands still until `unfreeze`, so a check that
- * depends on "just came back" does not race the test's own speed.
- */
-export async function leaveAndReturn(page: Page, awayMs: number, freeze = false): Promise<void> {
-  await page.evaluate(
-    ([ms, frozen]) => {
-      const w = window as unknown as { __shift?: number; __frozenAt?: number | null };
-      if (w.__shift === undefined) {
-        const real = performance.now.bind(performance);
-        w.__shift = 0;
-        w.__frozenAt = null;
-        performance.now = () => w.__frozenAt ?? real() + (w.__shift ?? 0);
-      }
-      let hidden = true;
-      Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
-      document.dispatchEvent(new Event('visibilitychange'));
-      w.__shift = (w.__shift ?? 0) + (ms as number);
-      if (frozen) w.__frozenAt = performance.now();
-      hidden = false;
-      document.dispatchEvent(new Event('visibilitychange'));
+/** Puts the player on a ledge, as `?debug=1` allows from the console. */
+export function placeOn(page: Page, ledge: number, x?: number): Promise<void> {
+  return page.evaluate(
+    ([l, px]) => {
+      (window as unknown as { __korupsi: Exposed }).__korupsi.placeOn(l as number, px as number | undefined);
     },
-    [awayMs, freeze] as const,
+    [ledge, x] as const,
   );
 }
 
-export function unfreeze(page: Page): Promise<void> {
+/** Stands the player next to the door, so a few steps to the right win the floor. */
+export function goToDoor(page: Page): Promise<void> {
   return page.evaluate(() => {
-    (window as unknown as { __frozenAt?: number | null }).__frozenAt = null;
+    const g = (window as unknown as { __korupsi: Exposed }).__korupsi;
+    g.placeOn(g.floor.exit.ledge, g.floor.exit.x - 30);
   });
+}
+
+/** Pretends the tab went to the background and came back. */
+export async function leaveAndReturn(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    let hidden = true;
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+    document.dispatchEvent(new Event('visibilitychange'));
+    hidden = false;
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
+/** Holds a touch control down for `ms`, the way a thumb does. */
+export async function holdTouch(
+  page: Page,
+  selector: string,
+  ms: number,
+  at: 'left' | 'right' | 'centre' = 'centre',
+): Promise<void> {
+  const box = await page.locator(selector).boundingBox();
+  if (!box) throw new Error(`${selector} has no box`);
+  const x = box.x + box.width * (at === 'left' ? 0.25 : at === 'right' ? 0.75 : 0.5);
+  const y = box.y + box.height / 2;
+  const init = { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: x, clientY: y, isPrimary: true };
+  await page.locator(selector).dispatchEvent('pointerdown', init);
+  await page.waitForTimeout(ms);
+  await page.locator(selector).dispatchEvent('pointerup', init);
 }

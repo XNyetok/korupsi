@@ -1,76 +1,118 @@
 import { expect, test } from '@playwright/test';
 
-import { leaveAndReturn, open, SEED, setParam, state, tap, unfreeze, waitForLanding, waitForPhase } from './helpers.ts';
+import { goToDoor, holdTouch, leaveAndReturn, open, placeOn, start, state, waitForPhase } from './helpers.ts';
 
-test.describe('ready screen and input', () => {
-  test('shows the version and the fixed seed', async ({ page }) => {
+test.describe('title and input', () => {
+  test('shows the title card, the version and a crisp canvas', async ({ page }) => {
     const errors = await open(page);
-    const card = page.locator('.card.ready');
-    await expect(card.locator('.eyebrow')).toHaveText(/^v\d+\.\d+\.\d+$/);
-    await expect(card.locator('.seed')).toHaveText(`Seed tetap ${SEED}`);
+    const card = page.locator('.card.title');
+    await expect(card.locator('.logo')).toBeVisible();
+    await expect(card.locator('.version')).toHaveText(/^v\d+\.\d+\.\d+$/);
+    await expect(card.locator('button.primary')).toHaveText('Mulai');
+
+    // The tower is 384 game pixels wide on every screen, scaled without smoothing.
+    const canvas = page.locator('#game');
+    expect(await canvas.evaluate((el: HTMLCanvasElement) => el.width)).toBe(384);
+    expect(await canvas.evaluate((el) => getComputedStyle(el).imageRendering)).toBe('pixelated');
+    const box = await canvas.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box && viewport && box.width <= viewport.width && box.height <= viewport.height).toBe(true);
+
     expect(errors).toEqual([]);
   });
 
-  test('a tap starts the run, and each half of the screen jumps its way', async ({ page }) => {
+  test('the button starts the run and shows the HUD', async ({ page }) => {
     const errors = await open(page);
-
-    await tap(page, 'right');
-    await waitForPhase(page, 'playing');
+    await start(page);
     await expect(page.locator('#overlay')).not.toHaveClass(/is-visible/);
     await expect(page.locator('body')).toHaveClass(/is-playing/);
-
-    const start = await state(page);
-    expect(start.seed.toString(36)).toBe(SEED);
-
-    await tap(page, 'left');
-    await waitForLanding(page);
-    const afterLeft = await state(page);
-    expect(afterLeft.dir).toBe(-1);
-    expect(afterLeft.x).toBeLessThan(start.x);
-
-    await tap(page, 'right');
-    await waitForLanding(page);
-    const afterRight = await state(page);
-    expect(afterRight.dir).toBe(1);
-    expect(afterRight.x).toBeGreaterThan(afterLeft.x);
-    expect(afterRight.level).toBe(2);
-
+    await expect(page.locator('#hud-floor')).toHaveText('01 Kelurahan');
+    await expect(page.locator('#hud-money')).toHaveText('Rp 0');
+    await expect(page.locator('#hud-deaths')).toHaveText('OTT 0');
     expect(errors).toEqual([]);
   });
 
-  test('keys jump, and Space repeats the last direction', async ({ page, isMobile }) => {
+  test('keys run, jump and dash', async ({ page, isMobile }) => {
     test.skip(isMobile, 'keyboard only');
     await open(page);
-
     await page.keyboard.press('Enter');
     await waitForPhase(page, 'playing');
+    const begin = await state(page);
 
-    await page.keyboard.press('ArrowLeft');
-    await waitForLanding(page);
-    expect((await state(page)).dir).toBe(-1);
+    await page.keyboard.down('ArrowLeft');
+    await page.waitForTimeout(300);
+    await page.keyboard.up('ArrowLeft');
+    const left = await state(page);
+    expect(left.x).toBeLessThan(begin.x - 10);
+    expect(left.facing).toBe(-1);
+
+    await page.keyboard.down('d');
+    await page.waitForTimeout(300);
+    await page.keyboard.up('d');
+    const right = await state(page);
+    expect(right.x).toBeGreaterThan(left.x + 10);
+    expect(right.facing).toBe(1);
+
+    await page.keyboard.down(' ');
+    await page.waitForFunction(
+      () => (window as unknown as { __korupsi: { player: { y: number } } }).__korupsi.player.y > 20,
+    );
+    await page.keyboard.up(' ');
+    await page.waitForFunction(
+      () => (window as unknown as { __korupsi: { player: { ground: number } } }).__korupsi.player.ground === 0,
+    );
 
     const before = await state(page);
-    await page.keyboard.press(' ');
-    await waitForLanding(page);
-    const after = await state(page);
-    expect(after.dir).toBe(-1);
-    expect(after.level).toBe(before.level + 1);
-
-    await page.keyboard.press('d');
-    await waitForLanding(page);
-    expect((await state(page)).dir).toBe(1);
+    await page.keyboard.press('Shift');
+    await page.waitForTimeout(250);
+    expect((await state(page)).x).toBeGreaterThan(before.x + 20);
   });
 
-  test('the band warns before it kills', async ({ page }) => {
+  test('the touch controls run and jump', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'touch only');
+    await open(page);
+    await expect(page.locator('#pad')).toBeHidden();
+    await start(page);
+    await expect(page.locator('#pad')).toBeVisible();
+    await expect(page.locator('#btn-jump')).toBeVisible();
+    const begin = await state(page);
+
+    await holdTouch(page, '#pad', 300, 'left');
+    const left = await state(page);
+    expect(left.x).toBeLessThan(begin.x - 10);
+
+    await holdTouch(page, '#pad', 300, 'right');
+    expect((await state(page)).x).toBeGreaterThan(left.x + 10);
+
+    await page.locator('#btn-jump').dispatchEvent('pointerdown', { pointerId: 9, pointerType: 'touch' });
+    await page.waitForFunction(
+      () => (window as unknown as { __korupsi: { player: { y: number } } }).__korupsi.player.y > 20,
+    );
+    await page.locator('#btn-jump').dispatchEvent('pointerup', { pointerId: 9, pointerType: 'touch' });
+  });
+
+  test('an envelope adds money and weight to the HUD', async ({ page }) => {
+    await open(page);
+    await start(page);
+    await placeOn(page, 0, 340);
+    await expect(page.locator('#hud-money')).toHaveText('Rp 500.000');
+    await expect(page.locator('#hud-weight')).toHaveText('Beban 1');
+  });
+
+  test('an auditor means OTT and a trip back to the checkpoint', async ({ page }) => {
     const errors = await open(page);
-    await setParam(page, 'cameraBase', 600);
-    await tap(page, 'right');
-    await expect(page.locator('#toast')).toHaveText('Pita audit menyusul — terus naik');
-    await waitForPhase(page, 'over');
+    await start(page);
+    // The first auditor walks the desk that is ledge 10.
+    await placeOn(page, 10, 336);
+    await expect(page.locator('#hud-deaths')).toHaveText('OTT 1');
+    await page.waitForFunction(
+      () => (window as unknown as { __korupsi: { player: { ground: number } } }).__korupsi.player.ground === 0,
+    );
+    expect((await state(page)).phase).toBe('playing');
     expect(errors).toEqual([]);
   });
 
-  test('Space on the mute button toggles the sound, not a jump', async ({ page, isMobile }) => {
+  test('Space on the sound button toggles the sound, not a jump', async ({ page, isMobile }) => {
     test.skip(isMobile, 'keyboard only');
     await open(page);
     await page.keyboard.press('Enter');
@@ -78,107 +120,101 @@ test.describe('ready screen and input', () => {
 
     const mute = page.locator('#mute');
     await mute.focus();
-    const before = await state(page);
     await page.keyboard.press(' ');
     await expect(mute).toHaveAttribute('aria-pressed', 'true');
-    await page.waitForTimeout(300);
-    expect((await state(page)).level).toBe(before.level);
+    await page.waitForTimeout(200);
+    expect((await state(page)).y).toBe(0);
   });
 });
 
 test.describe('pause', () => {
-  test('a short absence shows the pause card, and a tap resumes', async ({ page }) => {
+  test('leaving the tab pauses, and the button resumes', async ({ page }) => {
     await open(page);
-    await tap(page, 'right');
-    await waitForPhase(page, 'playing');
+    await start(page);
 
-    await leaveAndReturn(page, 5_000, true);
+    await leaveAndReturn(page);
     await waitForPhase(page, 'paused');
     const card = page.locator('#overlay .card');
     await expect(card.locator('.stamp')).toHaveText('dijeda');
-    await expect(card.locator('.cta')).toHaveText('Tap untuk lanjut');
 
-    // The tap that wakes the phone does nothing. The clock is frozen at the
-    // moment of return, so this tap is always inside the 350 ms window.
-    await tap(page, 'left');
-    expect((await state(page)).phase).toBe('paused');
+    const frozen = (await state(page)).time;
+    await page.waitForTimeout(300);
+    expect((await state(page)).time).toBe(frozen);
 
-    await unfreeze(page);
-    await page.waitForTimeout(400);
-    const before = await state(page);
-    await tap(page, 'left');
+    await card.locator('button.primary').click();
     await waitForPhase(page, 'playing');
     await expect(page.locator('#overlay')).not.toHaveClass(/is-visible/);
-    // Resuming is not a jump.
-    expect((await state(page)).level).toBe(before.level);
   });
 
-  test('a minute away ends the run', async ({ page }) => {
+  test('Escape pauses and resumes, and the pause button pauses', async ({ page, isMobile }) => {
     await open(page);
-    await tap(page, 'right');
-    await waitForPhase(page, 'playing');
+    await start(page);
 
-    await leaveAndReturn(page, 61_000);
-    await waitForPhase(page, 'over');
-    expect((await state(page)).cause).toBe('abandoned');
-    await expect(page.locator('#overlay .stamp')).toHaveText('ditinggal');
+    await page.locator('#pause').click();
+    await waitForPhase(page, 'paused');
+
+    if (!isMobile) {
+      await page.keyboard.press('Escape');
+      await waitForPhase(page, 'playing');
+      await page.keyboard.press('Escape');
+      await waitForPhase(page, 'paused');
+    }
+
+    // "Ulang dari lobi" starts over.
+    await page.locator('#overlay button.secondary').click();
+    await waitForPhase(page, 'playing');
+    expect((await state(page)).time).toBeLessThan(1);
   });
 });
 
-test.describe('result screen', () => {
-  async function endRun(page: import('@playwright/test').Page): Promise<void> {
-    // Standing still always ends the run; a fast band makes it quick. The
-    // band speed is read when a run starts, so set it first.
-    await setParam(page, 'cameraBase', 600);
-    await tap(page, 'right');
-    await waitForPhase(page, 'over');
+test.describe('result', () => {
+  async function win(page: import('@playwright/test').Page): Promise<void> {
+    await start(page);
+    await goToDoor(page);
+    await page.evaluate(() => {
+      const g = (window as unknown as { __korupsi: { player: { x: number }; floor: { exit: { x: number } } } })
+        .__korupsi;
+      g.player.x = g.floor.exit.x;
+    });
+    await waitForPhase(page, 'won');
   }
 
-  test('shows the outcome, the seed, and survives the tap that ended the run', async ({ page }) => {
+  test('reaching the door shows the result, and playing again starts over', async ({ page }) => {
     const errors = await open(page);
-    await endRun(page);
+    await win(page);
 
-    const card = page.locator('#overlay .card');
-    await expect(card.locator('.stamp')).toHaveText(/ketinggalan|terjatuh/);
-    await expect(card.locator('.money')).toHaveText('Rp 0');
-    await expect(card.locator('.seed')).toHaveText(`Seed ${SEED}`);
-    await expect(card.locator('.share')).toBeVisible();
+    const card = page.locator('#overlay .card.result');
+    await expect(card.locator('.stamp')).toHaveText('lolos');
+    await expect(card.locator('.big')).toHaveText(/^\d+:\d\d$/);
+    await expect(card.locator('.stats')).toContainText('0/6');
+    await expect(card.locator('.record')).toContainText('Rekor waktu baru');
 
-    // A tap right after the end is ignored, so the result stays readable.
-    await tap(page, 'left');
-    expect((await state(page)).phase).toBe('over');
-
+    // The record survives a reload.
     await page.waitForTimeout(800);
-    await setParam(page, 'cameraBase', 26);
-    await tap(page, 'left');
+    await card.locator('button.primary').click();
     await waitForPhase(page, 'playing');
-    expect((await state(page)).seed.toString(36)).toBe(SEED);
-
+    expect((await state(page)).ground).toBe(0);
     expect(errors).toEqual([]);
-  });
-
-  test('the seed shows only with debug', async ({ page }) => {
-    await open(page, '', false);
-    await tap(page, 'right');
-
-    // Standing still ends the run in about a minute with the default band.
-    await leaveAndReturn(page, 61_000);
-    const card = page.locator('#overlay .card');
-    await expect(card.locator('.stamp')).toHaveText('ditinggal');
-    await expect(card.locator('.seed')).toHaveCount(0);
   });
 
   test('sharing on a desktop copies the result', async ({ page, context, isMobile }) => {
     test.skip(isMobile, 'phones open the native share sheet');
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await open(page);
-    await endRun(page);
+    await win(page);
 
     await page.locator('#overlay .share').click();
     await expect(page.locator('#toast')).toHaveText('Disalin ke papan klip');
     const copied = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copied).toMatch(/^(Ketinggalan|Terjatuh): 0 amplop, Rp 0, \d+ m\.\nhttps:\/\/korupsi\.web\.id\/$/);
-    // The share button must not restart the run underneath.
-    expect((await state(page)).phase).toBe('over');
+    expect(copied).toMatch(
+      /^Lolos dari Kelurahan dalam \d+:\d\d: 0 kali OTT, 0 amplop \(Rp 0\)\.\nhttps:\/\/korupsi\.web\.id\/$/,
+    );
+    expect((await state(page)).phase).toBe('won');
+  });
+
+  test('the debug handle is not there for players', async ({ page }) => {
+    await open(page, false);
+    expect(await page.evaluate(() => '__korupsi' in window)).toBe(false);
+    await expect(page.locator('#debug')).toBeHidden();
   });
 });

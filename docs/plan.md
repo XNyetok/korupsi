@@ -32,41 +32,43 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-Nothing open.
+- [ ] **P2 — Play the Kelurahan and tune it.** The maintainer's call, hands on a keyboard
+  and on a phone: the feel of the jump and the dash, whether the stamp and the auditors
+  are fair, whether three checkpoints are too kind. The questions are listed in
+  `docs/design/game-design.md` (Open questions); the numbers are in `src/core/params.ts`
+  and can be moved live with `?debug=1`. Nothing below starts before this, and no release
+  is cut before it: v0.4.0, the one-tap climb, stays live until the maintainer asks.
 
 ## Next
 
-Nothing queued. The remaining open items are all in *Later*, and each waits on something
-outside the code.
+- [ ] **P3 — Floor 02, Kecamatan.** Its own scenery and one new hazard, built on the
+  spacing rules at the top of `src/core/tower.ts`. Needs: more than one floor in a run
+  (the door leads to the next floor, the bag is paid upwards and the weight resets), a
+  promotion card between floors, and the floor name in the HUD from the floor itself.
+- [ ] **T1 — Count OTT in telemetry.** `run_ended` carries money, weight, height and
+  duration, but not how often the player was caught or where, which is what says whether
+  a hazard is unfair. Needs a column in the collector and a row in the panel.
 
 ## Later
 
-- [!] **V1 — Visual redesign, vertical slice.** Blocked on art: the sprites have to be
-  drawn or commissioned, and licensed per `docs/design/assets.md`; the internal resolution
-  and palette are the maintainer's call. The code side is ready for it: drawing lives in
-  `src/view/` only (#11), so a new renderer does not touch the simulation. One zone
-  (Kelurahan) and the player sprite, in the direction set out in the 2026-11-09 audit:
-  - Pixel art at a low internal resolution, scaled by whole numbers without smoothing,
-    with a three-layer parallax background.
-  - The player: an official in a safari suit and peci. The belly and briefcase grow with
-    weight.
-  - Ledges: safe ones are AC units and window sills; gold ones are envelope stacks; fiktif
-    ones are stalled scaffolding.
-  - The audit band: sirens and press flashes.
-  - The result screen: the player in the orange vest.
-  - Every asset recorded in `docs/design/assets.md`. No state emblems, no real agency
-    logos, no real faces.
-  - Reference for quality, not for copying: poteto.com.
-- [!] **V3 — Loading screen.** Needed once V1 adds sprite sheets (expected 0.5–1 MB).
-  Blocked on V1: there is nothing to load yet. The asset budget part is split out as V4.
-- [!] **V2 — Height zones.** Kelurahan → Kecamatan → Dinas → Kementerian → roof, each with
-  its own facade and a promotion card. Blocked on V1.
+- [ ] **P4 — Floors 03 to 05:** Dinas, Kementerian, the roof and the way out.
+- [ ] **P5 — A mode without checkpoints**, once the tower is whole.
 - [!] **C1 — Remove the service worker kill switch** after 2027-02: delete `public/sw.js`,
   its nginx location, the smoke test line in `ci.yml`, and `tests/sw.test.mjs`. Blocked
   on the date: old installs need the switch until then.
 
 ## Done
 
+- [x] **P1 — Rebuild as a pixel-art platformer, first floor.** Done 2026-11-10 (#28). The
+  brief was a pixel-art platformer; the one-tap endless climb was a different game. Replaced: the simulation, the level
+  generator, the renderer, the balance simulator and the browser tests. Kept: the
+  pipeline, the collector and panel, audio, storage, sharing, telemetry. New: a
+  hand-built Kelurahan floor (21 ledges, two auditors, two stamps, three checkpoints, six
+  envelopes), run, jump and dash with keyboard and touch, pixel art drawn in code at 384
+  pixels wide, and tests that climb the route empty and full and finish the floor with
+  the hazards on. The size budget went from 18 KB to 30 KB (the build is about 22 KB).
+  This is V1 from the old list, done without waiting for drawn sprites; V2 became P3 and
+  P4. Not released: see P2.
 - [x] **v0.4.0** — released and deployed 2026-11-10 (release run 42768702423, deploy run
   42769050232): live as `0.4.0+7f64ff6`, `/api/health` 404, `/panel/` 401, the other sites
   on the host answered 200 after.
@@ -112,6 +114,11 @@ outside the code.
 
 ## Dropped
 
+- **V3 — Loading screen.** It was for sprite sheets of 0.5 to 1 MB. The art is drawn in
+  code (P1), so there is nothing to load.
+- **The one-tap endless climb** (v0.1.0 to v0.4.0), with its seeds, its audit band and
+  `scripts/simulate.mjs`. Replaced by P1; the reasoning is in
+  `docs/design/game-design.md`, Decisions.
 - **H1 — Harden the server.** The maintainer decided (2026-11-10): no changes to SSH or
   the server beyond what Korupsi's own deploy needs.
 - **release-please (R1).** The XNyetok organisation forbids Actions from opening pull
