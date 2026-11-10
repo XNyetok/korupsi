@@ -117,8 +117,10 @@ bureaucratic absurdity, never from a real person or a real institution.
 
 ## What the simulation measures
 
-500 simulated runs per play style with the v0.3.0 numbers and a 0.25 s reaction delay
-after each landing (see the playtest log for how it compared with v0.2.0):
+500 simulated runs per play style with the current numbers and a 0.25 s reaction delay
+after each landing (see the playtest log for how it compared with v0.2.0). Reproduce or
+vary it with `node scripts/simulate.mjs` — `--base`, `--accel`, `--reaction`, `--style`,
+`--runs`; the script header explains the profiles.
 
 | Play style | Median height | Median money | Ends by |
 | --- | --- | --- | --- |
