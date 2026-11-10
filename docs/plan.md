@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-10 · Last tagged release: `v0.3.1`. What is live is the latest
+Last updated: 2026-11-10 · Last tagged release: `v0.4.0`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -67,6 +67,16 @@ outside the code.
 
 ## Done
 
+- [x] **v0.4.0** — released and deployed 2026-11-10 (release run 42768702423, deploy run
+  42769050232): live as `0.4.0+7f64ff6`, `/api/health` 404, `/panel/` 401, the other sites
+  on the host answered 200 after.
+  - The band retuned from real-play data: `cameraBase` 26→12, `cameraAccel` 1.3→0.6
+    (B1, #25), decided from the first telemetry and a reaction-profile sweep with the
+    committed `scripts/simulate.mjs` (#24).
+  - The ready card teaches what pays and what kills, and the band warns once by toast
+    when it closes in, with `band_warned` telemetry (B2, #26).
+  - Ready screen cleanup: the build label is gone and the seed shows only with
+    `?debug=1` (#22, #23).
 - [x] **B2 — Teach the first run.** Done 2026-11-10. The ready card now says what pays
   and what kills (gold pays and is guarded, weight shortens the jump, the band chases
   from below), and the band gives one toast warning per run when it closes in — with a
@@ -92,41 +102,11 @@ outside the code.
   (`docs/deploy.md`). Kept from v0.3.0: collector first with a health check, joint
   rollback, Node check, smoke test with automatic rollback. Release folders are named
   `<UTC time>-<sha7>` like Nyetok's.
-- [x] **v0.3.0** — released and deployed 2026-11-10 (#16, release run 42671488521): the
-  ready screen shows `v0.3.0`, the build label is `0.3.0+4d46b65`.
-  - Server, 2026-11-10 (M1): `korupsi-apply-config` and its sudoers rule installed; the
-    collector moved into `releases/legacy` and the unit runs `current`. The first release
-    deploy applied the nginx rules, so `/api/health` now answers 404 publicly (H3 done).
-    The other sites on the host answered 200 before and after. The apply script and its
-    sudoers rule were removed again on 2026-11-10, with D4.
-  - Release process (R1, #7, #14): release-please, deploys only from a release behind the
-    `production` environment, one version identity (`X.Y.Z+<sha7>`). The XNyetok
-    organisation forbids Actions from opening pull requests, so the release PR was opened
-    with `release-please release-pr`. Replaced by D4, then D5. `production` environment
-    created 2026-11-10.
-  - Collector deployed before the site, with release folders and joint rollback (D1, #7).
-  - Node 22.13 pinned in `engines` and checked on the server by the deploy (D3, #7).
-  - nginx and systemd config applied from the release, restored on failure (D2, #8);
-    installed by hand again since D4.
-  - Seeded runs and `?seed=` replay (S1, #9).
-  - Browser smoke tests (S3, #10); a required check of `main` since 2026-11-10.
-  - Source split into `core/`, `platform/`, `view/`, `ui/`, behaviour unchanged (S2, #11).
-  - Lint and format in CI, Dependabot on npm (H2, #12); Dependabot security updates
-    turned on 2026-11-10.
-  - Size budget in CI, 18 KB gzipped (V4, #13).
-  - A test that failed one run in twenty, because the old level's auditor still
-    patrolled, fixed (#15).
-  - Earlier in this release:
-    - Service worker replaced by a kill switch; manifest and install metadata removed (#2).
-    - The deploy validates its settings; the smoke test checks the live build (#2).
-    - The server address is out of the docs; `DEPLOY_HOST` is a secret (#2).
-    - Gameplay fixes, with 12 new tests (#3): two ledges on every level, the safe path
-      never guarded, no reroll by landing on the same ledge, fixed world width, the run
-      ends at the drawn audit line, Space follows the last jump, result lock, pause card.
-    - Stale docs, comments and the unused `installed` event cleaned up (#5).
-    - 2026-11-09, outside PRs: history rewritten to remove the server address; old Actions
-      logs deleted; `main` protected; v0.2.0 release notes cleaned; nginx config
-      reinstalled from #2.
+- [x] **v0.3.0** — released and deployed 2026-11-10 (#16): seeded runs with `?seed=`,
+  browser smoke tests as a required check, the `core`/`platform`/`view`/`ui` split, lint
+  plus the 18 KB size budget in CI, telemetry redaction, and the release-please pipeline
+  that D4 then D5 replaced. The first release deploy applied the nginx rules, so
+  `/api/health` answers 404 publicly (H3); the server's apply script went away with D4.
 - [x] **v0.2.0** — telemetry collector and private panel.
 - [x] **v0.1.0** — first playable release.
 
