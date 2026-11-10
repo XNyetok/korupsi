@@ -14,6 +14,7 @@ test('unknown event types are dropped', () => {
   assert.equal(normaliseEvent({}), null);
   assert.equal(normaliseEvent(null), null);
   assert.equal(normaliseEvent({ type: 'visit' }).type, 'visit');
+  assert.equal(normaliseEvent({ type: 'band_warned' }).type, 'band_warned');
 });
 
 test('numbers from the network are clamped', () => {

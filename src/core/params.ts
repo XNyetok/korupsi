@@ -25,6 +25,9 @@ export const PARAMS = {
   // docs/design/game-design.md.
   cameraBase: 12,
   cameraAccel: 0.6,
+  /** World units of gap at which the one-time band warning fires: about one
+   *  full jump of margin, so the death reads as warned, not sudden. */
+  bandWarnAt: 150,
   /** Height of the audit band. Its top edge is where the run ends. */
   bandHeight: 40,
 

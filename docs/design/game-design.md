@@ -25,7 +25,8 @@ kamu bawa sebelum tim audit menyusul.
    often patrolled by an auditor. Landing on it pays, and adds weight.
 3. Weight lowers the jump, so the climb slows while the audit team keeps climbing from
    below. Money is a loan against your own escape route.
-4. A run ends when an auditor is touched or the audit band reaches the player. The result
+4. A run ends when an auditor is touched or the audit band reaches the player. The band
+   warns once, by toast, when it closes in on a player who is stalling. The result
    screen shows the money carried, the height reached, and one dry sentence about how it
    ended.
 
@@ -114,6 +115,7 @@ bureaucratic absurdity, never from a real person or a real institution.
 | 2026-11-09 | The run ends at the top of the audit band, not the bottom of the screen (v0.3.0) | What is drawn is what kills. The band shrank from 68 to 40 px so the room to recover barely changed |
 | 2026-11-09 | Every run has a seed, shown on the result screen with `?debug=1` (players see none) | A bug report or a playtest note can name the run, and `?seed=` replays its levels exactly. Levels depend only on the seed and the left/right choices; dust has its own stream, so how long a player waits never changes a level |
 | 2026-11-09 | Coming back shows a pause card (v0.3.0) | The band no longer starts moving the moment the tab is visible; a tap resumes, and the first 350 ms are ignored |
+| 2026-11-10 | The ready card teaches what pays and what kills, and the band warns once by toast when it closes in (B2) | The first telemetry runs died to a band the ready card never mentioned, and the maintainer's first session went to working out what to do; a death should read as warned, not sudden |
 
 ## What the simulation measures
 

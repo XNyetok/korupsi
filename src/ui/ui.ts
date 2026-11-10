@@ -77,8 +77,9 @@ export class Ui {
         <div>
           <p class="eyebrow">v${__VERSION__}</p>
           <h1>Korupsi</h1>
-          <p class="lede">Dua pijakan tiap jenjang. Ambil yang bergaris emas untuk skor,
-            tapi makin berat, makin pendek lompatanmu.</p>
+          <p class="lede">Dua pijakan tiap jenjang. Yang bergaris emas membayar — dan dijaga
+            auditor; makin banyak diambil, makin pendek lompatanmu. Pita audit menyusul
+            dari bawah: jangan berdiri diam.</p>
           <div class="legend">
             <span><i class="dot aman"></i>aman</span>
             <span><i class="dot amplop"></i>amplop</span>

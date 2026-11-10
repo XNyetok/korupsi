@@ -41,6 +41,8 @@ export interface GameEvents {
   onJump?(): void;
   onLand?(): void;
   onCollect?(): void;
+  /** Once per run, when the audit band closes in on a player who is stalling. */
+  onBandWarn?(): void;
 }
 
 export class Game {
@@ -75,6 +77,8 @@ export class Game {
   private nextId = 1;
   /** The last ledge the player stood on. */
   private footing: Platform | null = null;
+  /** The one-time band warning has fired this run. */
+  private bandWarned = false;
   private readonly events: GameEvents;
   private readonly fixedSeed: number | null;
   private readonly store: BestStore;
@@ -166,6 +170,7 @@ export class Game {
     this.nextId = 1;
     this.level = 0;
     this.elapsed = 0;
+    this.bandWarned = false;
 
     const ground = groundLedge(this.width, this.nextId++);
     this.platforms.push(ground);
@@ -368,6 +373,10 @@ export class Game {
     }
     this.dust = this.dust.filter((d) => d.t < d.life);
 
+    if (!this.bandWarned && this.auditLine - (p.y - this.camY) < PARAMS.bandWarnAt) {
+      this.bandWarned = true;
+      this.events.onBandWarn?.();
+    }
     if (p.y - this.camY > this.auditLine) this.endRun(bandCause(p, this.lastFooting));
   }
 }
