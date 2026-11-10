@@ -83,7 +83,7 @@ prune() {
 
 activate() {
   local site=$1 collector=$2 release=$3 old_site old_collector
-  [[ "$release" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?-[0-9a-f]{7}$ ]] || die "bad release name: $release"
+  [[ "$release" =~ ^[0-9]{14}-[0-9a-f]{7}$ ]] || die "bad release name: $release"
   check_root "$site"
   check_root "$collector"
   [ -f "$site/releases/$release/index.html" ] || die "site release $release was not uploaded"

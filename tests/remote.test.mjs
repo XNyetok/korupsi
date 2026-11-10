@@ -106,12 +106,12 @@ test('activate switches the collector, then the site, and records previous', { s
     symlinkSync('releases/legacy', join(s.site, 'current'));
     symlinkSync('releases/legacy', join(s.collector, 'current'));
 
-    s.release('v0.3.0-abcdef1');
-    const result = s.activate('v0.3.0-abcdef1');
+    s.release('20261110000000-abcdef1');
+    const result = s.activate('20261110000000-abcdef1');
     assert.equal(result.status, 0, result.stderr);
 
-    assert.equal(s.link(s.site, 'current'), 'releases/v0.3.0-abcdef1');
-    assert.equal(s.link(s.collector, 'current'), 'releases/v0.3.0-abcdef1');
+    assert.equal(s.link(s.site, 'current'), 'releases/20261110000000-abcdef1');
+    assert.equal(s.link(s.collector, 'current'), 'releases/20261110000000-abcdef1');
     assert.equal(s.link(s.site, 'previous'), 'releases/legacy');
     assert.equal(s.link(s.collector, 'previous'), 'releases/legacy');
     assert.deepEqual(s.restarts(), ['/usr/bin/systemctl restart korupsi-stats']);
@@ -123,16 +123,16 @@ test('activate switches the collector, then the site, and records previous', { s
 test('a collector that fails its health check leaves the site alone', { skip }, () => {
   const s = server();
   try {
-    s.release('v0.3.0-abcdef1');
-    assert.equal(s.activate('v0.3.0-abcdef1').status, 0);
+    s.release('20261110000000-abcdef1');
+    assert.equal(s.activate('20261110000000-abcdef1').status, 0);
 
-    s.release('v0.3.1-1234567', { collectorRelease: 'broken' });
-    const result = s.activate('v0.3.1-1234567');
+    s.release('20261110010000-1234567', { collectorRelease: 'broken' });
+    const result = s.activate('20261110010000-1234567');
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /failed its health check/);
 
-    assert.equal(s.link(s.site, 'current'), 'releases/v0.3.0-abcdef1', 'the site moved');
-    assert.equal(s.link(s.collector, 'current'), 'releases/v0.3.0-abcdef1', 'the collector was not restored');
+    assert.equal(s.link(s.site, 'current'), 'releases/20261110000000-abcdef1', 'the site moved');
+    assert.equal(s.link(s.collector, 'current'), 'releases/20261110000000-abcdef1', 'the collector was not restored');
     assert.equal(s.restarts().length, 3, 'deploy, failed restart, restore');
   } finally {
     s.cleanup();
@@ -142,19 +142,19 @@ test('a collector that fails its health check leaves the site alone', { skip }, 
 test('rollback swaps current and previous, and a second rollback undoes it', { skip }, () => {
   const s = server();
   try {
-    s.release('v0.3.0-abcdef1');
-    s.release('v0.3.1-1234567');
-    assert.equal(s.activate('v0.3.0-abcdef1').status, 0);
-    assert.equal(s.activate('v0.3.1-1234567').status, 0);
+    s.release('20261110000000-abcdef1');
+    s.release('20261110010000-1234567');
+    assert.equal(s.activate('20261110000000-abcdef1').status, 0);
+    assert.equal(s.activate('20261110010000-1234567').status, 0);
 
     let result = s.rollback();
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(s.link(s.site, 'current'), 'releases/v0.3.0-abcdef1');
-    assert.equal(s.link(s.collector, 'current'), 'releases/v0.3.0-abcdef1');
+    assert.equal(s.link(s.site, 'current'), 'releases/20261110000000-abcdef1');
+    assert.equal(s.link(s.collector, 'current'), 'releases/20261110000000-abcdef1');
 
     result = s.rollback();
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(s.link(s.site, 'current'), 'releases/v0.3.1-1234567');
+    assert.equal(s.link(s.site, 'current'), 'releases/20261110010000-1234567');
   } finally {
     s.cleanup();
   }
@@ -163,12 +163,12 @@ test('rollback swaps current and previous, and a second rollback undoes it', { s
 test('rollback without a previous release refuses and changes nothing', { skip }, () => {
   const s = server();
   try {
-    s.release('v0.3.0-abcdef1');
-    assert.equal(s.activate('v0.3.0-abcdef1').status, 0);
+    s.release('20261110000000-abcdef1');
+    assert.equal(s.activate('20261110000000-abcdef1').status, 0);
     const result = s.rollback();
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /no previous release/);
-    assert.equal(s.link(s.site, 'current'), 'releases/v0.3.0-abcdef1');
+    assert.equal(s.link(s.site, 'current'), 'releases/20261110000000-abcdef1');
   } finally {
     s.cleanup();
   }
@@ -177,23 +177,26 @@ test('rollback without a previous release refuses and changes nothing', { skip }
 test('pruning keeps five releases plus whatever current and previous point at', { skip }, () => {
   const s = server();
   try {
-    // Oldest first, so modification times put "v0.1.0" at the bottom.
-    const names = ['v0.1.0-0000000', ...Array.from({ length: 7 }, (_, i) => `v0.2.${i}-000000${i}`)];
+    // Oldest first, so modification times put the first one at the bottom.
+    const names = [
+      '20260101000000-0000000',
+      ...Array.from({ length: 7 }, (_, i) => `2026010${i + 2}000000-000000${i}`),
+    ];
     names.forEach((name, i) => {
       s.release(name);
       const when = new Date(Date.UTC(2026, 0, 1 + i));
       utimesSync(join(s.site, 'releases', name), when, when);
       utimesSync(join(s.collector, 'releases', name), when, when);
     });
-    symlinkSync('releases/v0.1.0-0000000', join(s.site, 'current'));
-    symlinkSync('releases/v0.1.0-0000000', join(s.collector, 'current'));
+    symlinkSync('releases/20260101000000-0000000', join(s.site, 'current'));
+    symlinkSync('releases/20260101000000-0000000', join(s.collector, 'current'));
 
-    s.release('v0.3.0-abcdef1');
-    assert.equal(s.activate('v0.3.0-abcdef1').status, 0);
+    s.release('20261110000000-abcdef1');
+    assert.equal(s.activate('20261110000000-abcdef1').status, 0);
 
     const left = readdirSync(join(s.site, 'releases')).sort();
-    assert.ok(left.includes('v0.3.0-abcdef1'), 'the new release was pruned');
-    assert.ok(left.includes('v0.1.0-0000000'), 'the previous release was pruned');
+    assert.ok(left.includes('20261110000000-abcdef1'), 'the new release was pruned');
+    assert.ok(left.includes('20260101000000-0000000'), 'the previous release was pruned');
     assert.equal(left.length, 6, `kept: ${left.join(', ')}`);
   } finally {
     s.cleanup();
@@ -203,20 +206,20 @@ test('pruning keeps five releases plus whatever current and previous point at', 
 test('bad input and an old Node are refused before anything moves', { skip }, () => {
   const s = server();
   try {
-    s.release('v0.3.0-abcdef1');
-    assert.match(s.activate('v0.3.0-abcdef1; rm -rf /').stderr, /bad release name/);
-    assert.match(s.run(['activate', '/', s.collector, 'v0.3.0-abcdef1']).stderr, /bad root/);
-    assert.match(s.activate('v9.9.9-abcdef1').stderr, /was not uploaded/);
+    s.release('20261110000000-abcdef1');
+    assert.match(s.activate('20261110000000-abcdef1; rm -rf /').stderr, /bad release name/);
+    assert.match(s.run(['activate', '/', s.collector, '20261110000000-abcdef1']).stderr, /bad root/);
+    assert.match(s.activate('20261231000000-abcdef1').stderr, /was not uploaded/);
 
     const oldNode = join(s.dir, 'bin', 'old-node');
     writeFileSync(oldNode, '#!/usr/bin/env bash\necho "node 20.11.0 is older than 22.13" >&2\nexit 1\n');
     chmodSync(oldNode, 0o755);
-    const result = s.activate('v0.3.0-abcdef1', { KORUPSI_NODE: oldNode });
+    const result = s.activate('20261110000000-abcdef1', { KORUPSI_NODE: oldNode });
     assert.match(result.stderr, /needs Node 22\.13/);
 
     // The old unit still runs the code from the collector root itself.
     writeFileSync(join(s.dir, 'unit'), `ExecStart=/usr/bin/node ${s.collector}/index.mjs\n`);
-    assert.match(s.activate('v0.3.0-abcdef1').stderr, /one-time migration/);
+    assert.match(s.activate('20261110000000-abcdef1').stderr, /one-time migration/);
 
     assert.equal(s.link(s.site, 'current'), null);
     assert.equal(s.link(s.collector, 'current'), null);

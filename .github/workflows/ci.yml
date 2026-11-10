@@ -1,38 +1,19 @@
-name: CI
+name: Build & deploy
 
-# Builds and tests every push and pull request. Nothing here deploys: production
-# is deployed from a release, by release.yml and deploy.yml.
+# Every push and pull request is checked. A push to main that passes every
+# check is deployed, like Nyetok: no release step in between (docs/deploy.md).
 on:
   push:
     branches: [main]
   pull_request:
-  # release.yml dispatches this on the release PR branch, because a PR opened
-  # with GITHUB_TOKEN does not trigger workflows on its own.
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      ref:
-        description: Git ref to build, for example a release tag
-        type: string
-        required: true
-      release:
-        description: Label the build as a release (X.Y.Z+sha) instead of a dev build
-        type: boolean
-        default: false
-    outputs:
-      version:
-        value: ${{ jobs.build.outputs.version }}
-      sha:
-        value: ${{ jobs.build.outputs.sha }}
-      label:
-        value: ${{ jobs.build.outputs.label }}
 
 # Least privilege: the jobs only need to read the repository.
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ inputs.ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -44,7 +25,6 @@ jobs:
       - name: Checkout (full history)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -71,7 +51,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - name: Reject environment and key files
@@ -132,13 +111,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
-      version: ${{ steps.label.outputs.version }}
       sha: ${{ steps.label.outputs.sha }}
-      label: ${{ steps.label.outputs.label }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -161,15 +137,14 @@ jobs:
       - name: Name the build
         id: label
         env:
-          RELEASE_BUILD: ${{ inputs.release && 'true' || 'false' }}
+          ON_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
         run: |
           set -euo pipefail
           version=$(node -p "require('./package.json').version")
           sha=$(git rev-parse --short=7 HEAD)
-          # One identity everywhere: the ready screen, telemetry, release folders.
-          if [ "$RELEASE_BUILD" = "true" ]; then label="${version}+${sha}"; else label="${version}-dev+${sha}"; fi
+          # What main deploys is "X.Y.Z+sha"; anything else is a "-dev" build.
+          if [ "$ON_MAIN" = "true" ]; then label="${version}+${sha}"; else label="${version}-dev+${sha}"; fi
           {
-            echo "version=$version"
             echo "sha=$sha"
             echo "label=$label"
           } >>"$GITHUB_OUTPUT"
@@ -205,7 +180,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -231,3 +205,152 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  deploy:
+    name: Deploy to VPS
+    # Every check has to pass; DEPLOY_ENABLED=false pauses deploying.
+    needs: [secrets, hygiene, build, browser]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://korupsi.web.id
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      COLLECTOR_PATH: /opt/korupsi-stats
+      SITE: https://korupsi.web.id
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: deploy
+          path: repo
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: dist
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: collector
+          path: server
+
+      - name: Check deploy settings
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          HAS_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY != '' }}
+          HAS_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS != '' }}
+        run: |
+          set -euo pipefail
+          # A variable missing from GitHub arrives as an empty string, and an empty
+          # path would point rsync and the cleanup at the wrong directory.
+          failed=0
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_PORT DEPLOY_PATH; do
+            if [ -z "${!name}" ]; then echo "::error::$name is not set"; failed=1; fi
+          done
+          [ "$HAS_SSH_KEY" = "true" ] || { echo "::error::secret DEPLOY_SSH_KEY is not set"; failed=1; }
+          [ "$HAS_KNOWN_HOSTS" = "true" ] || { echo "::error::secret DEPLOY_KNOWN_HOSTS is not set"; failed=1; }
+          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]] || { echo "::error::DEPLOY_PORT must be a number"; failed=1; }
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo "::error::DEPLOY_USER has unexpected characters"; failed=1; }
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9.:-]+$ ]] || { echo "::error::DEPLOY_HOST has unexpected characters"; failed=1; }
+          # Absolute, at least two levels deep, no "..", no spaces or shell characters.
+          [[ "$DEPLOY_PATH" =~ ^/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+$ ]] && [[ "$DEPLOY_PATH" != *..* ]] \
+            || { echo "::error::DEPLOY_PATH must be an absolute path like /www/wwwroot/site"; failed=1; }
+          exit "$failed"
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # One place for the connection settings, so every step uses the same ones.
+          cat > ~/.ssh/config <<EOF
+          Host production
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            Port $DEPLOY_PORT
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            BatchMode yes
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Name the release
+        id: release
+        env:
+          SHA: ${{ needs.build.outputs.sha }}
+        run: |
+          set -euo pipefail
+          # Same folder names as Nyetok: UTC time, then the commit.
+          release="$(date -u +%Y%m%d%H%M%S)-${SHA}"
+          echo "name=$release" >>"$GITHUB_OUTPUT"
+          # The collector reports this in its health answer, so the deploy can
+          # tell the new code from the old after a restart.
+          printf '%s\n' "$release" > server/RELEASE
+          echo "Release folder: $release"
+
+      - name: Upload the site and the collector
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          RELEASE: ${{ steps.release.outputs.name }}
+        run: |
+          set -euo pipefail
+          # Fresh folders: what is live is untouched while this runs.
+          rsync -rlptz --delete --mkpath dist/ "production:$DEPLOY_PATH/releases/$RELEASE/"
+          rsync -rlptz --delete --mkpath server/ "production:$COLLECTOR_PATH/releases/$RELEASE/"
+
+      - name: Switch the collector, then the site
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          RELEASE: ${{ steps.release.outputs.name }}
+        run: |
+          set -euo pipefail
+          # Checks Node, restarts the collector and waits for it to report this
+          # release before the site moves. See deploy/remote.sh.
+          ssh production bash -s -- activate "$DEPLOY_PATH" "$COLLECTOR_PATH" "$RELEASE" < repo/deploy/remote.sh
+
+      - name: Smoke test
+        id: smoke
+        run: |
+          set -euo pipefail
+          for path in / /og.png /sw.js; do
+            code=$(curl -fsS --retry 5 --retry-delay 3 -o /dev/null -w '%{http_code}' "${SITE}${path}")
+            echo "$code $path"
+            [ "$code" = "200" ]
+          done
+
+          # The page that is live must be the one this run built, not just any page.
+          expected=$(grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -n1)
+          live=$(curl -fsS -H 'Cache-Control: no-cache' "${SITE}/?smoke=${GITHUB_RUN_ID}")
+          grep -qF "$expected" <<<"$live" || { echo "::error::live page does not load $expected"; exit 1; }
+          echo "live page loads $expected"
+
+          # Old installs only stop caching once they fetch the kill switch.
+          worker=$(curl -fsS "${SITE}/sw.js")
+          grep -qF 'registration.unregister' <<<"$worker" \
+            || { echo "::error::/sw.js is not the kill switch"; exit 1; }
+
+      - name: Roll back after a failed smoke test
+        if: failure() && steps.smoke.conclusion == 'failure'
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          echo "::error::the smoke test failed, going back to the previous release"
+          ssh production bash -s -- rollback "$DEPLOY_PATH" "$COLLECTOR_PATH" < repo/deploy/remote.sh
