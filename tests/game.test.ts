@@ -251,6 +251,37 @@ test('the run ends where the audit band is drawn', () => {
   assert.equal(game.auditLine, game.height - PARAMS.bandHeight);
 });
 
+test('the band warns once when it closes in, and again on the next run', () => {
+  let warnings = 0;
+  const base = PARAMS.cameraBase;
+  const game = new Game({
+    onEnd() {},
+    onBandWarn() {
+      warnings += 1;
+    },
+  });
+  game.setViewport(780);
+
+  // With the tuned band the starting margin stays comfortable: no warning
+  // in the first second of play.
+  game.start();
+  for (let i = 0; i < 120; i++) game.step(STEP);
+  assert.equal(warnings, 0, 'no warning while the band is far below');
+
+  // A fast band and a stalled player: it closes in, warns once, then kills.
+  PARAMS.cameraBase = 600;
+  game.start();
+  for (let i = 0; i < 120 * 5 && game.phase === 'playing'; i++) game.step(STEP);
+  assert.equal(warnings, 1, 'the warning fires exactly once per run');
+  assert.equal(game.phase, 'over', 'the stalled player is caught after the warning');
+
+  // A fresh run warns again: the flag is per run, not per page.
+  game.start();
+  for (let i = 0; i < 120 * 5 && game.phase === 'playing'; i++) game.step(STEP);
+  assert.equal(warnings, 2, 'the warning is available again on the next run');
+  PARAMS.cameraBase = base;
+});
+
 test('resizing mid-run keeps the world and its ledges', () => {
   const game = newGame();
   for (let n = 0; n < 5; n++) jumpAndLand(game, false);

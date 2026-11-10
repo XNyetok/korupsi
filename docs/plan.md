@@ -36,14 +36,8 @@ Nothing open.
 
 ## Next
 
-- [ ] **B2 — Teach the first run.** From the 2026-11-10 playtest: the maintainer's first
-  session was spent working out what to do, and the first telemetry runs died to the band
-  before they could learn (median 16 s). Make the first seconds teach the game: ready-card
-  copy that says what pays and what kills, and a first band approach that reads as a
-  warning rather than a surprise.
-
-Nothing else queued. The remaining open items are all in *Later*, and each waits on
-something outside the code.
+Nothing queued. The remaining open items are all in *Later*, and each waits on something
+outside the code.
 
 ## Later
 
@@ -73,6 +67,11 @@ something outside the code.
 
 ## Done
 
+- [x] **B2 — Teach the first run.** Done 2026-11-10. The ready card now says what pays
+  and what kills (gold pays and is guarded, weight shortens the jump, the band chases
+  from below), and the band gives one toast warning per run when it closes in — with a
+  `band_warned` telemetry event, so the next batch of data shows whether players still
+  die right after being warned.
 - [x] **B1 — Retune the band from real play.** Done 2026-11-10. The maintainer found the
   first session confusing and delegated the judgement to data (their call): the six real
   runs in telemetry died to the band at a median of 16 s against the "about a minute"
@@ -80,7 +79,7 @@ something outside the code.
   values only suited a bot that never hesitates. `cameraBase` 26→12, `cameraAccel`
   1.3→0.6: a hesitating player now lasts ~37 s, a casual one dies to the auditor first,
   and the idle catch stays quick. Re-judge when the next release has gathered more
-  telemetry; onboarding continues as B2.
+  telemetry.
 - [x] **D5 — Release like Havus** (#20; first release v0.3.1, published and deployed
   2026-11-10, live as `0.3.1+2340aef`; the other sites on the host answered 200 after). Merging to `main` runs
   the checks only. A pushed `vX.Y.Z` tag runs them again and makes a draft GitHub Release

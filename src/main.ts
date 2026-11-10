@@ -59,6 +59,10 @@ const game = new Game(
     onCollect() {
       audio.play('collect');
     },
+    onBandWarn() {
+      ui.toast('Pita audit menyusul — terus naik');
+      track('band_warned');
+    },
   },
   { seed: fixedSeed, store: bestStore },
 );

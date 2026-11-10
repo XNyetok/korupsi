@@ -61,6 +61,15 @@ test.describe('ready screen and input', () => {
     expect((await state(page)).dir).toBe(1);
   });
 
+  test('the band warns before it kills', async ({ page }) => {
+    const errors = await open(page);
+    await setParam(page, 'cameraBase', 600);
+    await tap(page, 'right');
+    await expect(page.locator('#toast')).toHaveText('Pita audit menyusul — terus naik');
+    await waitForPhase(page, 'over');
+    expect(errors).toEqual([]);
+  });
+
   test('Space on the mute button toggles the sound, not a jump', async ({ page, isMobile }) => {
     test.skip(isMobile, 'keyboard only');
     await open(page);
