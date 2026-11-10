@@ -1,13 +1,20 @@
 # Deploy
 
-The game is a static site plus a small telemetry collector. It deploys the way Nyetok does:
-a push to `main` that passes every check is built by GitHub Actions and copied to the VPS
-over SSH, into a fresh release folder, and `current` is switched to it. The VPS runs nginx
-through aaPanel; the panel owns the vhost and the certificate.
+The game is a static site plus a small telemetry collector. It is released the way Havus
+is: merging to `main` only runs the checks, and players get a change when a maintainer
+pushes a version tag and publishes the draft release it creates. Publishing copies that
+release to the VPS over SSH, into a fresh release folder, and switches `current` to it. The
+VPS runs nginx through aaPanel; the panel owns the vhost and the certificate.
 
 ```
-push to main ─► GitHub Actions: secret scan, file checks, lint, type-check, tests,
-                build, size budget, browser smoke tests
+PR, merge to main ─► CI: secret scan, file checks, lint, type-check, tests, build,
+                     size budget, browser smoke tests          (no deploy)
+
+git tag vX.Y.Z, push ─► Release: the same checks on the tag, then a DRAFT GitHub
+                        Release with the site, the collector and SHA256SUMS
+                     │
+                     ▼  a maintainer reviews the notes and publishes
+                  Deploy: download the release files, check their sums
                      │
                      ▼  rsync over SSH (user "deploy")
 VPS  /www/wwwroot/korupsi.web.id/releases/20261110000000-a1b2c3d/   the site
@@ -29,8 +36,8 @@ VPS  /www/wwwroot/korupsi.web.id/releases/20261110000000-a1b2c3d/   the site
 Three files on the server come from this repository but are installed by hand, like
 Nyetok's: `deploy/nginx/korupsi-rewrite.conf` as the site's rewrite rules,
 `deploy/nginx/korupsi-limits.conf` as the rate limit zones, and
-`deploy/systemd/korupsi-stats.service` as the collector's unit. A push never touches the
-server's nginx or systemd config (see *Changing the server config*).
+`deploy/systemd/korupsi-stats.service` as the collector's unit. A release never touches
+the server's nginx or systemd config (see *Changing the server config*).
 
 ## One-time setup
 
@@ -65,8 +72,9 @@ server's nginx or systemd config (see *Changing the server config*).
 | `DEPLOY_PATH` | variable | site root, for example `/www/wwwroot/korupsi.web.id` |
 | `DEPLOY_ENABLED` | variable | `true`, or `false` to pause deploys |
 
-The deploy job runs in the GitHub environment `production`, which allows deploys from
-protected branches only, so only `main` can deploy.
+The deploy job runs in the GitHub environment `production`, which accepts only tags
+matching `v*.*.*`, like Havus's `release` environment. A branch, a pull request or a fork
+cannot deploy.
 
 A variable missing from GitHub is an empty string in the workflow, not an error. The first
 step of the deploy job ("Check deploy settings") fails the run when any of them is empty or
@@ -76,34 +84,62 @@ remote script also refuses to switch `current` unless the new release directory 
 The actual values live only in the repository settings and in the operator's notes, not
 in this public file.
 
-## Deploying
+## Releasing
 
-- **Change the game:** merge to `main`. When every check passes, it is live about two
-  minutes later. Pull requests get every check but no deploy.
-- **Deploy again without a change:** Actions → Build & deploy → Run workflow, on `main`.
-- **Pause deploying:** set the repository variable `DEPLOY_ENABLED` to `false`.
-- **Version number:** `package.json` holds it and the ready screen shows it. Change it by
-  hand in a PR when a version is worth naming; a tag and a GitHub Release are optional.
+Day to day, open a pull request and merge it when CI is green. Nothing reaches players
+yet. When `main` has something worth shipping:
+
+1. Make sure `main` is green in CI.
+2. Create and push a version tag on the latest `main`:
+
+   ```sh
+   git switch main && git pull --ff-only
+   git tag -a vX.Y.Z -m "Korupsi X.Y.Z"
+   git push origin vX.Y.Z
+   ```
+
+3. The **Release** workflow checks that the tag is `vX.Y.Z` and on `main`, runs every CI
+   check on it, builds it with version `X.Y.Z`, and creates a **draft release** with
+   `korupsi-site-X.Y.Z.tar.gz`, `korupsi-collector-X.Y.Z.tar.gz` and `SHA256SUMS`, plus
+   notes generated from the merged pull requests.
+4. Review the draft (GitHub → Releases): rewrite the notes for players, what changed in the
+   game rather than how. Then **Publish**.
+5. Publishing starts the **Deploy** workflow, which deploys exactly those files. It is
+   live about a minute later.
+
+Drafts never reach players, and deleting a draft and its tag cancels a release. The GitHub
+Releases page is the changelog; there is no `CHANGELOG.md`.
+
+The version comes from the tag, like Havus: `package.json` stays at `0.0.0` and is not
+bumped. Patch (`0.3.1`) for fixes, minor (`0.4.0`) for anything a player notices.
+
+- **Deploy a release again:** `gh workflow run deploy.yml --ref vX.Y.Z` (or Actions → Deploy
+  → Run workflow, choosing the tag).
+- **Pause deploying:** set the repository variable `DEPLOY_ENABLED` to `false`. Publishing
+  then deploys nothing.
 
 The build stamps its identity into the ready screen and telemetry:
 
 | Build | Label | Example |
 | --- | --- | --- |
-| Deployed from `main` | `X.Y.Z+<sha7>` | `0.3.0+a1b2c3d` |
-| Any other CI build | `X.Y.Z-dev+<sha7>` | `0.3.0-dev+9f8e7d6` |
-| Local build or dev server | `X.Y.Z-dev` | `0.3.0-dev` |
+| Release | `X.Y.Z+<sha7>` | `0.3.1+a1b2c3d` |
+| Any other CI build | `0.0.0-dev+<sha7>` | `0.0.0-dev+9f8e7d6` |
+| Local build or dev server | `0.0.0-dev` | `0.0.0-dev` |
 
 `package.json` declares the Node versions it supports in `engines` (22.13 or newer, for
 `node:sqlite`); CI builds with the version in `.nvmrc`.
 
 ## What a deploy does
 
-The `deploy` job in `.github/workflows/ci.yml`, after every other job has passed:
+`.github/workflows/deploy.yml`, given a published release:
 
-1. Check the deploy settings, then `rsync` the site into `releases/<release>/` under the
-   site root and the collector into `releases/<release>/` under `/opt/korupsi-stats`.
-   Nothing live changes during the upload.
-2. Run `deploy/remote.sh activate` over SSH. It refuses to continue unless the server's
+1. Download the release's site and collector files and check them against `SHA256SUMS`.
+   A draft, or a release without those files, stops here.
+2. Check the deploy settings, then `rsync` the site into `releases/<release>/` under the
+   site root and the collector into `releases/<release>/` under `/opt/korupsi-stats`. The
+   folder is new on every deploy (`<UTC time>-<sha7>`), so nothing live changes during the
+   upload.
+3. Run `deploy/remote.sh activate` over SSH. It refuses to continue unless the server's
    Node is 22.13 or newer with `node:sqlite`, and the unit runs the collector through
    `current`. Then:
    - switch the collector's `current`, restart it, and wait until `/api/health` on
@@ -112,8 +148,8 @@ The `deploy` job in `.github/workflows/ci.yml`, after every other job has passed
    - switch the site's `current` with `mv -Tf`, so no request sees a half switch;
    - record both old targets as `previous`, and keep the five newest releases plus
      whatever `current` and `previous` point at.
-3. Smoke test: `/`, `/og.png` and `/sw.js` answer 200, the live page loads the script this
-   run built, and `/sw.js` is the kill switch. If the smoke test fails, the job runs
+4. Smoke test: `/`, `/og.png` and `/sw.js` answer 200, the live page loads the script of
+   this release, and `/sw.js` is the kill switch. If the smoke test fails, the job runs
    `deploy/remote.sh rollback` and fails.
 
 ## Telemetry collector
@@ -180,8 +216,11 @@ bash deploy/remote.sh rollback /www/wwwroot/korupsi.web.id /opt/korupsi-stats
 ```
 
 It swaps `current` and `previous` in both roots and restarts the collector, so running it
-a second time undoes it. No rebuild, no downtime. The next push deploys `main` again, so
-revert the bad commit too.
+a second time undoes it. No rebuild, no downtime.
+
+Through CI instead, deploy the previous release again:
+`gh workflow run deploy.yml --ref v<previous>`. Releases made before `release.yml` existed
+have no files to deploy. Then fix the problem on `main` and release a new version.
 
 ## Notes
 

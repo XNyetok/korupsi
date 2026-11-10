@@ -72,6 +72,8 @@ documentation stay in English so the repository stays readable to outside contri
 - Describe the behaviour change and how you checked it.
 - Keep the branch up to date with `main` and squash fixup commits before review.
 - Update `docs/plan.md` in the same pull request: the item it starts or finishes.
+- Merging does not deploy. Players get a change when the maintainer publishes a release
+  (`docs/deploy.md`, Releasing).
 - Design changes need a note in `docs/design/` explaining the tradeoff, not just code.
 
 ## Reporting bugs and ideas
