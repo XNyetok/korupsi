@@ -228,15 +228,6 @@
 
   .stats b { color: var(--paper); font-weight: 600; font-size: 13px; }
 
-  .rev {
-    margin: 10px 0 0;
-    font-size: 9px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #5b6472;
-    font-variant-numeric: tabular-nums;
-  }
-
   /* The seed is for bug reports: easy to read off a screenshot, never loud. */
   .seed {
     margin: 12px 0 0;

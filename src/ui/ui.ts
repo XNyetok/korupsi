@@ -6,11 +6,6 @@ import { shareResult } from '../platform/share.ts';
 import { track } from '../platform/telemetry.ts';
 import { PALETTE as C } from '../view/palette.ts';
 
-declare const __BUILD_LABEL__: string;
-
-const buildLabel = () =>
-  typeof __BUILD_LABEL__ === 'string' && __BUILD_LABEL__ ? __BUILD_LABEL__ : `${__VERSION__}-dev`;
-
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
   if (!node) throw new Error(`missing element #${id}`);
@@ -92,7 +87,6 @@ export class Ui {
         <div>
           <p class="cta">Tap untuk mulai</p>
           ${replay}
-          <p class="rev">build ${buildLabel()}</p>
         </div>
       </div>`;
     this.overlay.classList.add('is-visible');
