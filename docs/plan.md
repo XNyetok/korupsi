@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-10 · Last tagged release: `v0.3.0`. What is live is the latest
+Last updated: 2026-11-10 · Last tagged release: `v0.3.1`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -72,12 +72,12 @@ code.
 
 ## Done
 
-- [~] **D5 — Release like Havus** (#20). Merging to `main` runs
+- [x] **D5 — Release like Havus** (#20; first release v0.3.1, published and deployed
+  2026-11-10, live as `0.3.1+2340aef`; the other sites on the host answered 200 after). Merging to `main` runs
   the checks only. A pushed `vX.Y.Z` tag runs them again and makes a draft GitHub Release
   with the built site and collector; publishing it deploys exactly those files. The
   version comes from the tag (`package.json` stays `0.0.0`), and GitHub Releases replace
-  `CHANGELOG.md`. The server side is unchanged. Done when the first release made this way
-  is published and live.
+  `CHANGELOG.md`. The server side is unchanged.
 - [x] **D4 — Deploy like Nyetok** (2026-11-10, #19). Replaced by D5 the same day. A green push
   to `main` deploys, as in the Nyetok repository; release-please, the tag-driven deploy and
   the root apply script are gone, and server config is installed by hand again
