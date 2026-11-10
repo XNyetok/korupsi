@@ -8,7 +8,9 @@
  * switch, which players do not download to play.
  *
  * Raising a budget is fine when it is a decision: change the number here, and
- * say why in the pull request. V1 (sprite sheets) is expected to.
+ * say why in the pull request. The budget went from 18 KB to 30 KB when the
+ * game became a pixel-art platformer: the art is drawn in code, so the tower,
+ * the sprites and the fonts are all JavaScript.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -17,11 +19,11 @@ import { gzipSync } from 'node:zlib';
 
 const KB = 1024;
 const BUDGET = {
-  js: 14 * KB,
-  css: 3 * KB,
+  js: 26 * KB,
+  css: 3.5 * KB,
   html: 1.5 * KB,
   other: 4 * KB,
-  total: 18 * KB,
+  total: 30 * KB,
 };
 
 const dist = process.argv[2] ?? 'dist';

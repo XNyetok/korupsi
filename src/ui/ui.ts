@@ -1,11 +1,9 @@
-import type { Game } from '../core/game.ts';
-import { formatSeed } from '../core/rng.ts';
-import { rupiah } from '../core/rules.ts';
+import { clock, type Game, rupiah } from '../core/game.ts';
 import { audio } from '../platform/audio.ts';
 import { shareResult } from '../platform/share.ts';
 import { track } from '../platform/telemetry.ts';
-import { PALETTE as C } from '../view/palette.ts';
-import { debugOn } from './debug.ts';
+import { C } from '../view/palette.ts';
+import { paintLogo } from '../view/pixel.ts';
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -13,22 +11,32 @@ function el<T extends HTMLElement>(id: string): T {
   return node as T;
 }
 
+export interface UiHooks {
+  start(): void;
+  resume(): void;
+  restart(): void;
+  pause(): void;
+}
+
 /**
- * Owns the DOM: HUD numbers, the ready, pause and result cards, the mute
- * switch, and the toast. The canvas only draws the world.
+ * Owns the DOM: the HUD, the title, pause and result cards, the sound switch
+ * and the toast. The canvas only draws the world.
  */
 export class Ui {
   private overlay = el<HTMLDivElement>('overlay');
+  private floor = el<HTMLSpanElement>('hud-floor');
   private money = el<HTMLSpanElement>('hud-money');
-  private height = el<HTMLSpanElement>('hud-height');
   private weight = el<HTMLSpanElement>('hud-weight');
-  private bar = el<HTMLElement>('hud-bar');
+  private deaths = el<HTMLSpanElement>('hud-deaths');
+  private time = el<HTMLSpanElement>('hud-time');
   private mute = el<HTMLButtonElement>('mute');
+  private pause = el<HTMLButtonElement>('pause');
   private toastEl = el<HTMLDivElement>('toast');
   private toastTimer = 0;
   private cache = '';
+  private lockedUntil = 0;
 
-  constructor() {
+  constructor(hooks: UiHooks) {
     this.mute.addEventListener('click', (event) => {
       // A mouse click leaves focus on the button, and Space would then toggle
       // the sound instead of jumping. Keyboard activation keeps focus.
@@ -38,6 +46,20 @@ export class Ui {
       this.renderMute();
     });
     this.renderMute();
+
+    this.pause.addEventListener('click', (event) => {
+      if (event.detail > 0) this.pause.blur();
+      hooks.pause();
+    });
+
+    this.overlay.addEventListener('click', (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('button[data-do]');
+      if (!button || performance.now() < this.lockedUntil) return;
+      const action = button.dataset.do;
+      if (action === 'start') hooks.start();
+      else if (action === 'resume') hooks.resume();
+      else if (action === 'restart') hooks.restart();
+    });
   }
 
   private renderMute(): void {
@@ -46,18 +68,25 @@ export class Ui {
     this.mute.setAttribute('aria-label', muted ? 'Nyalakan suara' : 'Matikan suara');
   }
 
+  /** Enter, or the jump key while a card is up: the same as its main button. */
+  confirm(): void {
+    if (!this.overlay.classList.contains('is-visible')) return;
+    this.overlay.querySelector<HTMLButtonElement>('button.primary')?.click();
+  }
+
   update(game: Game): void {
-    const key = `${game.money}|${game.heightMetres}|${game.weight}`;
+    const seconds = Math.floor(game.time);
+    const key = `${game.weight}|${game.deaths}|${seconds}`;
     if (key === this.cache) return;
     this.cache = key;
 
+    this.floor.textContent = `01 ${game.floor.name}`;
     this.money.textContent = rupiah(game.money);
-    this.height.textContent = `${game.heightMetres} m`;
     this.weight.textContent = `Beban ${game.weight}`;
-
-    const pct = Math.max(0, Math.min(100, (game.weight / 12) * 100));
-    this.bar.style.width = `${pct}%`;
-    this.bar.style.background = game.weight >= 8 ? C.red : game.weight >= 5 ? C.gold : 'rgba(227, 176, 75, 0.65)';
+    this.weight.hidden = game.weight === 0;
+    this.weight.classList.toggle('is-heavy', game.weight >= game.floor.amplop.length - 1);
+    this.deaths.textContent = `OTT ${game.deaths}`;
+    this.time.textContent = clock(game.time);
   }
 
   toast(message: string): void {
@@ -69,113 +98,93 @@ export class Ui {
     }, 1900);
   }
 
-  /** `fixedSeed` is set when the page was opened with `?seed=`. */
-  showReady(fixedSeed: number | null = null): void {
-    const replay = fixedSeed === null ? '' : `<p class="seed">Seed tetap <b>${formatSeed(fixedSeed)}</b></p>`;
-    this.overlay.innerHTML = `
-      <div class="card ready">
-        <div>
-          <p class="eyebrow">v${__VERSION__}</p>
-          <h1>Korupsi</h1>
-          <p class="lede">Dua pijakan tiap jenjang. Yang bergaris emas membayar — dan dijaga
-            auditor; makin banyak diambil, makin pendek lompatanmu. Pita audit menyusul
-            dari bawah: jangan berdiri diam.</p>
-          <div class="legend">
-            <span><i class="dot aman"></i>aman</span>
-            <span><i class="dot amplop"></i>amplop</span>
-            <span><i class="dot auditor"></i>auditor</span>
-          </div>
-        </div>
-        <div>
-          <p class="cta">Tap untuk mulai</p>
-          ${replay}
-        </div>
-      </div>`;
+  private show(html: string, lockMs = 0): void {
+    this.overlay.innerHTML = html;
     this.overlay.classList.add('is-visible');
     document.body.classList.remove('is-playing');
+    this.lockedUntil = performance.now() + lockMs;
+  }
+
+  showTitle(): void {
+    this.show(`
+      <div class="card title">
+        <canvas class="logo" aria-label="Korupsi" role="img"></canvas>
+        <p class="lede">Tim audit sudah di lobi. Jalan keluar cuma satu: naik.</p>
+        <ul class="rules">
+          <li><i class="dot amplop"></i><span><b>Amplop</b> itu uang, juga beban: makin banyak dibawa, makin pendek lompatanmu.</span></li>
+          <li><i class="dot bahaya"></i><span><b>Auditor</b> dan <b>stempel</b> berarti OTT. Kamu balik ke mesin absen terakhir.</span></li>
+          <li><i class="dot ngeles"></i><span><b>Ngeles</b> menembus auditor dan menyeberangi celah yang terlalu lebar.</span></li>
+        </ul>
+        <button class="primary" type="button" data-do="start">Mulai</button>
+        <p class="keys"><kbd>←</kbd><kbd>→</kbd> jalan <kbd>Spasi</kbd> lompat <kbd>Shift</kbd> ngeles <kbd>Esc</kbd> jeda</p>
+        <p class="version">v${__VERSION__}</p>
+      </div>`);
+    const logo = this.overlay.querySelector<HTMLCanvasElement>('.logo');
+    if (logo) paintLogo(logo, C.gold, C.redDark);
   }
 
   showPaused(game: Game): void {
-    this.overlay.innerHTML = `
+    this.show(`
       <div class="card">
         <p class="stamp">dijeda</p>
-        <h1 class="money">${rupiah(game.money)}</h1>
-        <p class="lede">Berkasmu menunggu. Pergi lebih dari semenit, dianggap kabur.</p>
-        <p class="cta">Tap untuk lanjut</p>
-      </div>`;
-    this.overlay.classList.add('is-visible');
-    document.body.classList.remove('is-playing');
+        <h1 class="big">${clock(game.time)}</h1>
+        <p class="lede">Berkasmu menunggu di meja. Auditornya juga.</p>
+        <button class="primary" type="button" data-do="resume">Lanjut</button>
+        <button class="secondary" type="button" data-do="restart">Ulang dari lobi</button>
+      </div>`);
   }
 
-  showResult(game: Game): void {
-    const cause = game.cause;
-    const eyebrow =
-      cause === 'auditor'
-        ? 'tertangkap'
-        : cause === 'fall'
-          ? 'terjatuh'
-          : cause === 'abandoned'
-            ? 'ditinggal'
-            : 'ketinggalan';
+  /** `lockMs` keeps the buttons dead for a moment, so the press that won the floor does not restart it. */
+  showResult(game: Game, lockMs: number): void {
+    const total = game.floor.amplop.length;
+    const { weight, deaths } = game;
 
     let line: string;
-    if (cause === 'auditor') {
-      line = game.weight
-        ? `Ditangkap dengan ${game.weight} amplop di dalam tas.`
-        : 'Ditangkap tanpa membawa apa pun. Tetap diperiksa.';
-    } else if (cause === 'fall') {
-      line = game.weight
-        ? `Jatuh, ${game.weight} amplop ikut berhamburan.`
-        : 'Jatuh dari pijakan yang belum diresmikan.';
-    } else if (cause === 'abandoned') {
-      line = game.weight
-        ? `Kamu pergi. ${game.weight} amplop, berkasnya tetap diproses.`
-        : 'Kamu pergi. Berkasnya diproses tanpa kamu.';
-    } else {
-      line = game.weight ? `${game.weight} amplop, semuanya tercatat di berkas.` : 'Tangan kosong, tetap dicurigai.';
-    }
+    if (weight === total && deaths === 0) line = 'Semua amplop terbawa, tanpa sekali pun tertangkap. Bakat.';
+    else if (weight === 0) line = 'Naik tanpa membawa apa-apa. Tidak ada yang percaya.';
+    else if (deaths === 0) line = 'Tidak sekali pun tertangkap. Rapi.';
+    else if (deaths >= 10) line = `${deaths} kali OTT, dan tetap naik jabatan.`;
+    else line = `${weight} amplop sampai ke atas. Sisanya urusan kecamatan.`;
 
-    this.overlay.innerHTML = `
-      <div class="card">
-        <p class="stamp">${eyebrow}</p>
-        <h1 class="money">${rupiah(game.money)}</h1>
+    const records = [
+      game.record.time ? 'Rekor waktu baru' : game.best.time ? `Rekor waktu ${clock(game.best.time)}` : '',
+      game.record.money ? 'Rekor uang baru' : game.best.money ? `Rekor uang ${rupiah(game.best.money)}` : '',
+    ].filter(Boolean);
+
+    this.show(
+      `
+      <div class="card result">
+        <p class="stamp lolos">lolos</p>
+        <h1 class="big">${clock(game.time)}</h1>
         <p class="lede">${line}</p>
         <div class="stats">
-          <span><i>Amplop</i><b>${game.weight}</b></span>
-          <span><i>Tinggi</i><b>${game.heightMetres} m</b></span>
+          <span class="stat"><i>OTT</i><b>${deaths}</b></span>
+          <span class="stat"><i>Amplop</i><b>${weight}/${total}</b></span>
+          <span class="stat"><i>Uang</i><b class="gold">${rupiah(game.money)}</b></span>
         </div>
-        <p class="record">Rekor ${rupiah(game.best.money)}</p>
-        <button class="share" type="button">Bagikan hasil</button>
-        <p class="cta">Tap untuk ulang</p>
-        ${debugOn ? `<p class="seed">Seed <b>${formatSeed(game.seed)}</b></p>` : ''}
-      </div>`;
+        <p class="record">${records.join(' · ')}</p>
+        <button class="primary" type="button" data-do="restart">Main lagi</button>
+        <button class="secondary share" type="button">Bagikan hasil</button>
+        <p class="version">Lantai berikutnya, Kecamatan, masih dibangun.</p>
+      </div>`,
+      lockMs,
+    );
 
     const share = this.overlay.querySelector<HTMLButtonElement>('.share');
     if (share) {
-      const label =
-        eyebrow === 'tertangkap'
-          ? 'Ditangkap'
-          : eyebrow === 'terjatuh'
-            ? 'Terjatuh'
-            : eyebrow === 'ditinggal'
-              ? 'Ditinggal'
-              : 'Ketinggalan';
-      const text = `${label}: ${game.weight} amplop, ${rupiah(game.money)}, ${game.heightMetres} m.`;
-      share.addEventListener('click', async (event) => {
-        event.stopPropagation();
+      const text = `Lolos dari ${game.floor.name} dalam ${clock(game.time)}: ${deaths} kali OTT, ${weight} amplop (${rupiah(game.money)}).`;
+      share.addEventListener('click', async () => {
         const outcome = await shareResult(text);
         if (outcome !== 'failed') track('shared', { via: outcome });
         if (outcome === 'copied') this.toast('Disalin ke papan klip');
         if (outcome === 'failed') this.toast('Tidak bisa membagikan');
       });
     }
-
-    this.overlay.classList.add('is-visible');
-    document.body.classList.remove('is-playing');
   }
 
   hideOverlay(): void {
     this.overlay.classList.remove('is-visible');
+    this.overlay.innerHTML = '';
     document.body.classList.add('is-playing');
   }
 }

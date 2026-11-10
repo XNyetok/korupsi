@@ -3,56 +3,55 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0A0E14">
-<meta name="description" content="Panjat birokrasi satu lompatan sekaligus. Ambil amplop untuk skor; makin berat, makin pendek lompatanmu.">
+<meta name="theme-color" content="#0D1418">
+<meta name="description" content="Panjat kantor kelurahan dari lobi sampai pintu kecamatan. Ambil amplop, ngeles dari auditor, dan jangan sampai kena OTT.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta property="og:title" content="Korupsi">
-<meta property="og:description" content="Panjat birokrasi satu lompatan sekaligus. Makin berat, makin pendek lompatanmu.">
+<meta property="og:description" content="Platformer pixel art: panjat birokrasi, ambil amplop, ngeles dari auditor.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://korupsi.web.id/">
 <meta property="og:image" content="https://korupsi.web.id/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Korupsi: dua pijakan, satu bergaris emas, dan tim audit di bawah.">
+<meta property="og:image:alt" content="Korupsi: seorang pejabat bersafari memanjat kantor kelurahan sambil menghindari auditor.">
 <meta property="og:site_name" content="Korupsi">
 <meta name="twitter:card" content="summary_large_image">
 <title>Korupsi</title>
 </head>
 <body>
 <div id="stage">
-  <canvas id="game" tabindex="0" role="application" aria-label="Korupsi: ketuk kiri atau kanan layar untuk melompat"></canvas>
+  <div id="screen">
+    <canvas id="game" width="384" height="216" tabindex="0" role="application" aria-label="Korupsi: jalan, lompat dan ngeles sampai ke pintu kecamatan"></canvas>
 
-  <div id="scrim" aria-hidden="true"></div>
-
-  <button id="mute" class="mute" type="button" aria-pressed="false" aria-label="Matikan suara">
-    <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 9.5h3.2L12 5.6v12.8L7.2 14.5H4z"/>
-      <path d="M15.5 9a4 4 0 0 1 0 6"/>
-      <path d="M18 6.5a7.5 7.5 0 0 1 0 11"/>
-    </svg>
-    <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 9.5h3.2L12 5.6v12.8L7.2 14.5H4z"/>
-      <path d="M16 9.8l4.4 4.9M20.4 9.8L16 14.7"/>
-    </svg>
-  </button>
-
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-  <div id="hud" aria-hidden="true">
-    <div class="row">
-      <div class="stat">
-        <span class="label">Dibawa</span>
-        <span class="value gold" id="hud-money">Rp 0</span>
-      </div>
-      <div class="stat right">
-        <span class="label">Tinggi</span>
-        <span class="value" id="hud-height">0 m</span>
+    <div id="hud" aria-hidden="true">
+      <span class="chip" id="hud-floor">01 Kelurahan</span>
+      <div class="group">
+        <span class="chip gold" id="hud-money">Rp 0</span>
+        <span class="chip" id="hud-weight" hidden>Beban 0</span>
+        <span class="chip" id="hud-deaths">OTT 0</span>
+        <span class="chip" id="hud-time">0:00</span>
       </div>
     </div>
-    <div class="weight">
-      <span id="hud-weight">Beban 0</span>
-      <div class="bar"><i id="hud-bar"></i></div>
+
+    <div class="tools">
+      <button id="pause" class="tool" type="button" aria-label="Jeda">
+        <svg viewBox="0 0 8 8" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 1h1v6H2zM5 1h1v6H5z"/></svg>
+      </button>
+      <button id="mute" class="tool" type="button" aria-pressed="false" aria-label="Matikan suara">
+        <svg class="icon-on" viewBox="0 0 8 8" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 3h2v2H1zM3 2h1v4H3zM4 1h1v6H4zM6 2h1v1H6zM6 5h1v1H6zM7 3h1v2H7z"/></svg>
+        <svg class="icon-off" viewBox="0 0 8 8" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 3h2v2H1zM3 2h1v4H3zM4 1h1v6H4zM6 2h1v1H6zM7 3h1v1H7zM6 4h1v1H6zM7 5h1v1H7z"/></svg>
+      </button>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <div id="touch" aria-hidden="true">
+    <div id="pad" class="pad"><span>◀</span><span>▶</span></div>
+    <div class="actions">
+      <div id="btn-dash" class="action dash">Ngeles</div>
+      <div id="btn-jump" class="action jump">Lompat</div>
     </div>
   </div>
 

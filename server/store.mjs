@@ -4,7 +4,9 @@ import { redactMessage } from './redact.mjs';
 
 export const EVENT_TYPES = new Set(['visit', 'run_started', 'run_ended', 'shared', 'error', 'band_warned']);
 
-const CAUSES = new Set(['auditor', 'band', 'fall', 'abandoned']);
+// `finished` is a floor cleared, `abandoned` a run the player left. The others
+// are how runs of the first version of the game ended; its rows are still stored.
+const CAUSES = new Set(['finished', 'abandoned', 'auditor', 'band', 'fall']);
 
 /** Numbers arrive from the network, so every one of them is bounded here. */
 const clampInt = (value, min, max) => {

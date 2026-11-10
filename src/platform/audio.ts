@@ -7,7 +7,17 @@ import { readItem, writeItem } from './storage.ts';
 
 const MUTE_KEY = 'korupsi.muted';
 
-export type Cue = 'jump' | 'land' | 'collect' | 'caught' | 'start';
+export type Cue =
+  | 'jump'
+  | 'land'
+  | 'dash'
+  | 'collect'
+  | 'caught'
+  | 'checkpoint'
+  | 'stamp'
+  | 'crumble'
+  | 'win'
+  | 'start';
 
 function readMuted(): boolean {
   return readItem(MUTE_KEY) === '1';
@@ -107,6 +117,27 @@ class AudioEngine {
         break;
       case 'start':
         this.tone({ freq: 380, to: 620, dur: 0.16, gain: 0.1 });
+        break;
+      case 'dash':
+        this.tone({ freq: 900, to: 320, dur: 0.12, type: 'square', gain: 0.05 });
+        this.noise(0.09, 0.06);
+        break;
+      case 'checkpoint':
+        this.tone({ freq: 660, dur: 0.08, type: 'square', gain: 0.06 });
+        this.tone({ freq: 990, dur: 0.14, type: 'square', gain: 0.06, delay: 0.08 });
+        break;
+      case 'stamp':
+        this.tone({ freq: 90, to: 48, dur: 0.16, type: 'sine', gain: 0.2 });
+        this.noise(0.12, 0.12);
+        break;
+      case 'crumble':
+        this.noise(0.15, 0.1);
+        this.tone({ freq: 180, to: 70, dur: 0.2, type: 'square', gain: 0.04 });
+        break;
+      case 'win':
+        [523, 659, 784, 1047].forEach((freq, i) => {
+          this.tone({ freq, dur: 0.16, type: 'square', gain: 0.07, delay: i * 0.11 });
+        });
         break;
     }
   }

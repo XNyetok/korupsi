@@ -13,7 +13,8 @@ export interface LoopTarget {
   /** True while the simulation should advance. */
   running(): boolean;
   step(dt: number): void;
-  draw(): void;
+  /** Called once per frame with the seconds since the last one. */
+  draw(dt: number): void;
 }
 
 export interface Loop {
@@ -43,7 +44,7 @@ export function startLoop(target: LoopTarget): Loop {
       acc = 0;
     }
 
-    target.draw();
+    target.draw(dt);
     requestAnimationFrame(frame);
   }
 

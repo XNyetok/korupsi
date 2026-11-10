@@ -1,46 +1,65 @@
 # Korupsi — game design
 
-**Status:** playable. The loop lives in [`../../src/core/game.ts`](../../src/core/game.ts) and runs at
-[korupsi.web.id](https://korupsi.web.id). Balance is still expected to move.
+**Status:** the first floor is playable. The simulation lives in
+[`../../src/core/game.ts`](../../src/core/game.ts), the tower in
+[`../../src/core/tower.ts`](../../src/core/tower.ts). The feel has been checked by tests
+and a scripted climb, not yet by a person with a controller in hand: expect the numbers
+to move after the first playtests.
 
 ## One line
 
-Panjat birokrasi satu lompatan sekaligus, dan putuskan berapa banyak amplop yang sanggup
-kamu bawa sebelum tim audit menyusul.
+Tim audit sudah di lobi. Panjat kantor demi kantor, bawa amplop sebanyak yang berani kamu
+bawa, dan jangan sampai kena OTT.
 
 ## Pillars
 
-1. **Satu jari, satu detik.** Every action is one tap. No menus, no reading, no pause
-   button inside a run.
-2. **Greed has weight.** Money raises the score and shortens your jump. The theme lives in
+1. **A tower you can learn.** Every ledge and hazard is placed by hand and is in the same
+   place on every run. Nothing is random, so a death is a lesson.
+2. **Greed has weight.** Money is the score and it shortens your jump. The theme lives in
    the mechanic, not in the copy.
-3. **Fair, not generous.** Every death can be explained by the player's last decision.
-   Nothing is decided by a hidden roll.
+3. **Fair, not generous.** Hazards show themselves before they bite: the stamp shakes
+   before it falls, the auditor only walks his desk, the tape shows where a fall is fatal.
+4. **It looks like the place.** Pixel art of an Indonesian government office at dusk, with
+   the jokes on the walls rather than in dialogue.
 
 ## Core loop
 
-1. The player stands on a ledge. Above it, two ledges sit at the same height: one plain,
-   one carrying an envelope. One tap on the left or right half of the screen picks a side.
-2. The plain ledge is wide and safe. The envelope ledge is narrower, sometimes fake, and
-   often patrolled by an auditor. Landing on it pays, and adds weight.
-3. Weight lowers the jump, so the climb slows while the audit team keeps climbing from
-   below. Money is a loan against your own escape route.
-4. A run ends when an auditor is touched or the audit band reaches the player. The band
-   warns once, by toast, when it closes in on a player who is stalling. The result
-   screen shows the money carried, the height reached, and one dry sentence about how it
-   ended.
+1. The player runs, jumps and dashes up a floor of the building: desks, shelves, filing
+   cabinets, air-conditioners.
+2. Envelopes sit a little off the safe path. Each is money on the result card and weight
+   on the jump, so the climb gets tighter the richer the player is.
+3. Auditors walk some desks and stamps come down on others. Touching either is an OTT:
+   the player goes back to the last clock-in machine, and the envelopes picked up since
+   then go back to where they were.
+4. The floor ends at a door. The result card shows the time, the number of OTT and the
+   money carried out, and keeps the best time and the most money.
+
+## The floors
+
+The building is the bureaucracy: each office sits on top of the one that answers to it.
+
+| Floor | State | What it teaches |
+| --- | --- | --- |
+| 01 Kelurahan | playable | jump, the troli, proyek fiktif, the first auditor, the stamp, the dash |
+| 02 Kecamatan | planned | |
+| 03 Dinas | planned | |
+| 04 Kementerian | planned | |
+| Atap | planned | the way out |
+
+The Kelurahan has three stretches, each ending at a clock-in machine or the door:
+
+- **The lobby.** Nothing here ends a life. Fixed ledges, then a filing cart on a rail.
+- **Fiktif and the first auditor.** Two ledges that give way, then a desk an auditor
+  walks. The player only has to touch its near end; the envelope is at the far end.
+- **Stamp, gap, auditor, stamp.** A desk under a stamp, a gap that needs a dash, a cart,
+  a desk where the auditor is in the way, and a last stamp with an envelope under it.
 
 ## Sessions
 
-The game is played in gaps between other things, so leaving is normal, not an edge case.
-
-- **Switching apps pauses the run.** Coming back within a minute shows a pause card; a tap
-  resumes exactly where the run stopped, including mid-jump. Presses in the first 350 ms
-  are ignored, so a tap that only wakes the phone does nothing.
-- **Staying away longer than a minute ends the run** and banks the score. The audit does not
-  pause for anyone; a pause that lasts forever would quietly become a save button.
-- **Closing the tab loses the run.** A minute-long game can afford an arcade contract, and it
-  keeps the best score honest: only runs that actually ended are recorded.
+- **Switching apps pauses the run.** Coming back shows a pause card; nothing moves until
+  the player presses Lanjut. The clock is the score now, and a paused clock is honest.
+- **Closing the tab loses the run.** A floor is a minute or two; there is nothing to save
+  but the records, and those are only written at the door.
 - **System gestures are not fought.** The edge-swipe is the operating system's, not ours.
 
 ## Player fantasy
@@ -53,32 +72,58 @@ bureaucratic absurdity, never from a real person or a real institution.
 
 | Mechanic | Purpose | Behaviour |
 | --- | --- | --- |
-| Two ledges per level | The only real decision | Same height, one usually gold; tapping picks the side |
-| One-tap two-zone jump | Whole control scheme on one thumb | Tap left half to go left, right half to go right |
-| Constant horizontal impulse | Deterministic, learnable jumps | Landing spot is fixed for a given rise, so ledges are placed around it |
-| Weight from money | Risk and reward on the same button | Jump velocity falls 3% per envelope, floored at 45% |
-| Fake ledges | Tension inside the reward | "Proyek fiktif" crumbles 0.45 s after it is touched |
-| Auditor on the money | Immediate, visible risk | Patrols only around the gold ledge, never the safe side |
-| Audit band | Ends every run | A 40 px band at the bottom of the view, rising and accelerating; feet past its top edge end the run |
-| Rebuild after landing | Keeps the path honest | The next pair is generated from where the player actually landed, at the current weight |
+| Run and jump | The core verb | Quick to top speed, quick to stop; the jump is higher the longer the button is held |
+| One-way ledges | A vertical climb without bumped heads | Landed on from above, passed through from below |
+| Ngeles (dash) | A second verb with a joke in it | A short level burst, once per time in the air; it crosses the wide gap and slips through an auditor |
+| Weight from money | Risk and reward on the same button | Jump velocity falls 2% per envelope; the route is built to work at 80% |
+| Auditor | A moving thing to time | Walks his desk at a constant pace; touching him is an OTT, dashing through him is not |
+| Stamp | A fixed thing to time | Rests raised, shakes, slams, holds, rises; only the slam and the hold bite |
+| Proyek fiktif | Tension inside the path | Gives way 0.5 s after it is landed on, and is back 2.5 s later |
+| Troli | Patience | A cart on a rail; it carries whoever stands on it |
+| Mesin absen | Checkpoints | Touching one saves the place and the bag |
+| Audit tape | Makes a checkpoint a floor | Falling 80 px below the last checkpoint is an OTT; before the first one a fall only costs time |
+
+Two forgiving details are standard for the genre and are there on purpose: a jump still
+counts for a tenth of a second after walking off a ledge, and a jump pressed slightly
+early waits for the landing.
+
+## Art direction
+
+- **Resolution.** The tower is 384 pixels wide on every screen and at least 216 tall. The
+  page scales the canvas by a whole number of device pixels whenever that costs less than
+  15% of the screen, so every game pixel is the same size; an upright phone uses its full
+  width instead.
+- **Drawn in code.** Scenery, sprites and both fonts are rectangles placed a pixel at a
+  time (`src/view/`). There are no image files, so there is nothing to license and
+  nothing to load.
+- **Palette.** A dark, cool office wall, so what can be stood on reads first. Gold is
+  what pays, red is what catches, and nothing else in the scene uses either.
+- **Layers.** A dusk sky and the roofs next door scroll slower than the wall and show
+  through its louvred windows, so the town sinks as the player climbs.
+- **The jokes are on the walls.** "Zona Integritas", "Stop Pungli", a service window that
+  is always closed, a lunch break from 10 to 14. No state emblem, no agency logo, no real
+  face: the official portraits are silhouettes.
+- **People.** The player wears a safari suit and a peci; the belly and the bag grow with
+  the envelopes, and an OTT puts him in the orange vest. Auditors wear a white shirt, a
+  red lanyard and a clipboard.
 
 ## Scope
 
 **What exists**
 
-- One endless climb, one difficulty curve, one high score in `localStorage`
-- Portrait-first layout that also works on desktop; shapes and colour drawn in code, no
-  image assets in the game itself
+- One floor with three checkpoints. The scripted player in the tests finishes it clean in
+  about 20 seconds; a first climb, with its OTTs, will take several times that
+- Keyboard and touch controls; a phone held either way
+- Best time and most money per floor in `localStorage`
 - Synthesised sound, sharing, anonymous telemetry to the game's own server
-- Runs of roughly 45 to 120 seconds
 
 **Planned** (tracked in [`../plan.md`](../plan.md), not here)
 
-- A pixel-art redesign with height zones
+- The remaining floors, each with its own scenery and one new hazard
+- A harder mode without checkpoints
 
-**Out of scope until the loop is proven**
+**Out of scope until the first floor has been played by people**
 
-- Deposit checkpoints that shed weight mid-run
 - Accounts, leaderboards, multiplayer, daily challenges
 - Narration, cutscenes
 
@@ -86,82 +131,74 @@ bureaucratic absurdity, never from a real person or a real institution.
 
 | Question | Decide when | Owner |
 | --- | --- | --- |
-| Does the weight penalty feel like a choice or a punishment? | After 10 playtests | Debi |
-| Are runs too short for a curious player and too long for an honest one? | After 10 playtests | Debi |
+| Does the jump feel right in the hand: height, hang time, how fast the run stops? | First hands-on session | Debi |
+| Is 2% per envelope felt at all, or should a full bag bite harder? | After 10 playtests | Debi |
+| Is dashing through an auditor too generous once it is learned? | After 10 playtests | Debi |
+| Are three checkpoints on the first floor too kind? | After 10 playtests | Debi |
 | Should content be Indonesian only, or Indonesian and English? | Before writing final copy | Debi |
-| Is there room for a daily seeded run? | After the loop survives a week of play | Debi |
-| Final title: keep "Korupsi" as the game, or add a mode name? | Before v1.0.0 | Debi |
+| Final title: keep "Korupsi" as the game, or add a subtitle? | Before v1.0.0 | Debi |
 
 ## Decisions
 
 | Date | Decision | Why |
 | --- | --- | --- |
 | 2026-11-09 | Repository is public and MIT licensed | Concept benefits from being built in the open |
-| 2026-11-09 | One-tap vertical climb, not a horizontal runner | Portrait screens and a single thumb; matches the brief |
 | 2026-11-09 | Money adds weight and shortens the jump | Makes the theme load-bearing instead of decorative |
-| 2026-11-09 | Comedic failure tone | A 90-second run cannot carry a grim tone |
-| 2026-11-09 | No deposit checkpoints in the MVP | One tension per run; add a second lever only after playtests |
-| 2026-11-09 | Prototype first, production stack later | The game lives or dies on jump feel, so tune that before scaffolding |
-| 2026-11-09 | Two ledges per level instead of money scattered on the path | With a fixed arc the player cannot aim at a spot on a ledge, so the choice has to be which side, not where to land |
-| 2026-11-09 | The auditor only guards the money | The safe side has to be reliably safe, or the decision is a lie |
-| 2026-11-09 | Plays offline, installs to the home screen | The game is meant for a spare minute, which is often a spare minute without signal |
-| 2026-11-09 | Offline play removed again (v0.3.0) | The service worker kept serving a stale build after deploys and cached the private panel. A one-minute game loads fast enough without it; a kill switch at `/sw.js` cleans up old installs |
-| 2026-11-09 | Sound is synthesised, not sampled | Keeps binary assets out of the repository and the download under 10 KB gzipped |
-| 2026-11-09 | The build has a size budget checked in CI | 18 KB gzipped for everything a first visit loads (13 KB today). Growth should be a decision, not a drift; V1's sprite sheets will raise it on purpose, together with a loading screen |
-| 2026-11-09 | The share text never names the run | The joke is the choice; the next player should walk into it cold |
-| 2026-11-09 | A run survives a glance, not a departure | 60 s of absence ends it; anything shorter resumes. Otherwise pausing is saving |
-| 2026-11-09 | Every level has two ledges, even against a wall (v0.3.0) | 43% of levels used to show a single ledge, because the ledge on the wall side was dropped. A jump into a wall ends at the wall, so that side's ledge now sits there; the choice never disappears |
-| 2026-11-09 | The world is 360 units wide on every screen (v0.3.0) | The renderer scales it. Rotating or resizing no longer strands ledges, and phones and desktops play the same geometry |
-| 2026-11-09 | The run ends at the top of the audit band, not the bottom of the screen (v0.3.0) | What is drawn is what kills. The band shrank from 68 to 40 px so the room to recover barely changed |
-| 2026-11-09 | Every run has a seed, shown on the result screen with `?debug=1` (players see none) | A bug report or a playtest note can name the run, and `?seed=` replays its levels exactly. Levels depend only on the seed and the left/right choices; dust has its own stream, so how long a player waits never changes a level |
-| 2026-11-09 | Coming back shows a pause card (v0.3.0) | The band no longer starts moving the moment the tab is visible; a tap resumes, and the first 350 ms are ignored |
-| 2026-11-10 | The ready card teaches what pays and what kills, and the band warns once by toast when it closes in (B2) | The first telemetry runs died to a band the ready card never mentioned, and the maintainer's first session went to working out what to do; a death should read as warned, not sudden |
+| 2026-11-09 | Comedic failure tone | A short run cannot carry a grim tone |
+| 2026-11-09 | Offline play removed (v0.3.0) | The service worker kept serving a stale build after deploys and cached the private panel. A kill switch at `/sw.js` cleans up old installs |
+| 2026-11-09 | Sound is synthesised, not sampled | Keeps binary assets out of the repository |
+| 2026-11-09 | The build has a size budget checked in CI | Growth should be a decision, not a drift |
+| 2026-11-09 | The world is a fixed width on every screen | The renderer scales it, so phones and desktops play the same geometry |
+| 2026-11-10 | **Rebuilt as a hand-built platformer.** The one-tap endless climb (v0.1.0 to v0.4.0) is retired | The brief was a pixel-art platformer. The one-tap climb was a different game: no direct control of the character, random levels, flat shapes. Its simulation, renderer and balance simulator were replaced; the pipeline, the collector and the platform layer were kept |
+| 2026-11-10 | Landscape first, 384 pixels wide | A platformer needs room to the sides. A phone held upright still works, with the controls under the tower |
+| 2026-11-10 | Pixel art drawn in code, no image files | The art was the item that blocked the redesign. Drawing it in code removes the licensing question, keeps the download small, and lets the scenery be changed in a pull request |
+| 2026-11-10 | The tower is placed by hand and has no randomness | A precision platformer is learned by repetition. Seeds, `?seed=` and the seeded generator went with the endless climb |
+| 2026-11-10 | The weight penalty is 2% per envelope with a floor at 80% | In a hand-built level every required jump has to stay possible. The tests climb the route with a full bag |
+| 2026-11-10 | Every ledge on the route is one jump up, and the one after is out of reach | About 28 px against a jump of 51 px empty and 40 px full, with the next-but-one at 54 px or more: the route cannot be skipped, and weight never makes it impossible |
+| 2026-11-10 | A dash passes through an auditor | Ngeles is the verb. It also gives the dash a use before the gap that requires it |
+| 2026-11-10 | Falling below the last checkpoint is an OTT | Otherwise a fall costs more than a death: the climb back takes longer than the respawn. The tape makes the rule visible |
+| 2026-11-10 | A pause no longer ends the run after a minute | That rule protected a score that could be farmed by waiting. The score is a clock now, and a paused clock is stopped |
+| 2026-11-10 | The size budget is 30 KB (was 18 KB) | The art is code. The build is about 22 KB gzipped |
+| 2026-11-10 | A press shorter than a simulation step is kept until it is read | A quick tap on a touch button could begin and end between two steps and never jump |
 
-## What the simulation measures
+## What the tests check
 
-500 simulated runs per play style with the current numbers and a 0.25 s reaction delay
-after each landing (see the playtest log for how it compared with v0.2.0). Reproduce or
-vary it with `node scripts/simulate.mjs` — `--base`, `--accel`, `--reaction`, `--style`,
-`--runs`; the script header explains the profiles.
+`npm test` climbs the tower without a browser (`tests/tower.test.ts`):
 
-| Play style | Median height | Median money | Ends by |
-| --- | --- | --- | --- |
-| Always takes the envelope | 133 m | Rp 3 jt | Auditor (100%) |
-| Takes the envelope half the time | 248 m | Rp 2,5 jt | Auditor (97%) |
-| Never takes an envelope | 1697 m | 0 | Audit band (100%) |
+- every ledge on the route can be reached from the one before it, with an empty bag and
+  with all six envelopes;
+- the envelope branches can be taken and left with a full bag;
+- no ledge on the route can be reached from two ledges below it;
+- the gap after the first stamp cannot be crossed without a dash, and can with one at
+  full weight;
+- a scripted careful player, with every hazard on, reaches the door without an OTT.
 
-The honest run is the control: a player who refuses the mechanic survives longer and
-scores nothing. That is the joke, and it needs a playtest to confirm it reads as a choice.
-
-The band is also judged on hesitation, not just on the reference bot: with a 1 s
-hesitation the half-greedy bot lasts 36 s (215 m, Rp 2 jt) and dies to the auditor first
-(65%); with 2 s it lasts 38 s (142 m, Rp 1,5 jt), the band taking 69%. Before the
-2026-11-10 retune both died to the band inside 22 s — and the first six real runs, read
-from telemetry, ended by the band at a median of 16 s.
+That last one is a bot that waits for a safe moment and tries a grid of timings. It says
+the floor is possible and that no landing spot is a trap. It says nothing about whether
+the floor is fun.
 
 ## Playtest log
 
 | Date | Build | What was tried | What came out of it |
 | --- | --- | --- | --- |
-| 2026-11-09 | `20261109135951` | First hands-on run on a phone, at `korupsi.web.id` | The jump arc reads well at first contact. Real bug found: the ledge under the player was dropped from the render list on every landing, so the character stood in the air and the ledge seemed to vanish. Fixed, then verified by tracing every frame: 29 disappearing ledges in 30 jumps before, 0 after. |
-| 2026-11-09 | `20261109140812` | Re-test after the fix | The ledge stays visible, the path behind dims with distance instead of vanishing, and the pair above reads as a left/right choice. Weight and the cost of greed are still unjudged. |
-| 2026-11-09 | v0.3.0 branch | Simulated 500 runs per play style (always safe, half greedy, always greedy) before and after the bug fixes, with a 0.25 s reaction delay | Single-ledge levels: 43–45% → 0%. Median height 738 → 716 m (safe), 279 → 237 m (half greedy), 161 → 134 m (greedy); median money 2 → 2.5 and 3 jt. Slightly harder, because the band line sits higher and greed has more chances. Worth a hands-on check before retuning |
-| 2026-11-10 | v0.3.1 live and `main` | First real-play telemetry: the six finished runs (the maintainer's own sessions), read from the collector read-only; the maintainer found the game hard to pick up and delegated the judgement to the simulator. A sweep of reaction profiles (0.25–3 s) × cameraBase 8–30 × cameraAccel 0.3–1.6, with `scripts/simulate.mjs` | The band was tuned for a bot that never hesitates: the real runs died to the band at a median of 16 s against the "about a minute" intent, and hesitation, not greed, was the killer. Retuned cameraBase 26→12, cameraAccel 1.3→0.6: a hesitating player now lasts ~37 s, a casual one dies to the auditor first, the idle catch stays quick (~15 s). What is left open is onboarding, not the band — see B2 in the plan |
+| 2026-11-09 to 10 | v0.1.0 to v0.4.0 | The one-tap endless climb: hands-on on a phone, simulated runs, and the first six real runs from telemetry | The maintainer found it hard to pick up, and it was not the game that was asked for. Retired on 2026-11-10; the details are in the git history of this file |
+| 2026-11-10 | `feat/platformer-kelurahan` | The Kelurahan floor, by tests and by screenshots on a desktop, an upright phone and a phone on its side. No hands-on session yet | The floor is climbable empty and full, cannot be skipped, and a scripted player finishes it clean. The feel of the jump and the difficulty are unjudged |
 
 ## Tuning
 
-Numbers live in [`src/core/params.ts`](../../src/core/params.ts). Distances are world units: the
-world is 360 units wide on every screen, so a unit is a CSS pixel on a 360 px phone.
+Numbers live in [`src/core/params.ts`](../../src/core/params.ts). Distances are game
+pixels; the player is 10 wide and 24 tall.
 
 | Parameter | Value | Effect |
 | --- | --- | --- |
-| Gravity | 1900 /s² | Snappy fall, no float |
-| Jump velocity | 700 /s | About 129 units of rise at zero weight |
-| Horizontal impulse | 115 /s | About 70 units of travel per ledge |
-| Weight penalty | 3% per envelope | Noticeable after five, fatal after fifteen |
-| Minimum jump factor | 0.45 | A heavy player is slow, never stuck |
-| Audit band | 12 /s, +0.6 /s² | Catches an idle player in about 15 s, a cautious climber in about a minute; greed is punished by the auditor first |
-| Audit band height | 40 | Its top edge is the line the feet must not cross |
-| Crumble delay | 0.45 s | Enough to react, not enough to relax |
-| Gold chance | 45% of levels | Roughly one decision every two jumps |
-| Envelope value | Rp 500.000 | Score is money, so nothing else needs to be scored |
+| Run speed | 96 /s | Crosses the tower in four seconds |
+| Jump velocity | 320 /s | About 51 px of rise at zero weight |
+| Gravity | 1000 /s² up, 1300 /s² down | A jump lands sooner than it took off |
+| Jump cut | 0.5 | Letting go early halves the remaining rise |
+| Coyote time, jump buffer | 0.10 s, 0.12 s | Forgive a press that is slightly late or early |
+| Dash | 220 /s for 0.14 s | About 31 px, level; one per time in the air |
+| Weight penalty | 2% per envelope, floor 0.8 | Six envelopes on the first floor: 0.88 |
+| Stamp | 0.45 s warning, 0.55 s down | Rests raised for the remainder of its period |
+| Crumble | 0.5 s, back after 2.5 s | Enough to jump from, not enough to wait on |
+| Audit tape | 80 px below the checkpoint | Two ledges of forgiveness |
+| Envelope value | Rp 500.000 | Score is money and time, so nothing else needs to be scored |
