@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-10 · Last tagged release: `v0.4.0`. What is live is the latest
+Last updated: 2026-11-10 · Last tagged release: `v0.5.0`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -53,6 +53,11 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
+- [x] **v0.5.0** — released and deployed 2026-11-10 (release run 42782895974, deploy run
+  42783163447): live as `0.5.0+7c5a32a`, `/api/health` 404, `/panel/` 401. The first
+  player-facing release of the platformer: the Kelurahan floor, run, jump and ngeles with
+  keyboard and touch, pixel art drawn in code. The one-tap climb is retired. P2 was closed
+  first (#29).
 - [x] **P2 — Play the Kelurahan and tune it.** Done 2026-11-10 (#29). The maintainer played
   the merged floor hands on and judged it good enough to build the next one on; no change
   was asked for, so nothing was tuned. The questions that need ten playtests — the weight,
@@ -67,7 +72,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   pixels wide, and tests that climb the route empty and full and finish the floor with
   the hazards on. The size budget went from 18 KB to 30 KB (the build is about 22 KB).
   This is V1 from the old list, done without waiting for drawn sprites; V2 became P3 and
-  P4. Not released: see P2.
+  P4. Released as v0.5.0.
 - [x] **v0.4.0** — released and deployed 2026-11-10 (release run 42768702423, deploy run
   42769050232): live as `0.4.0+7f64ff6`, `/api/health` 404, `/panel/` 401, the other sites
   on the host answered 200 after.
