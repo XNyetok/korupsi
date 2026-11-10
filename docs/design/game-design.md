@@ -112,7 +112,7 @@ bureaucratic absurdity, never from a real person or a real institution.
 | 2026-11-09 | Every level has two ledges, even against a wall (v0.3.0) | 43% of levels used to show a single ledge, because the ledge on the wall side was dropped. A jump into a wall ends at the wall, so that side's ledge now sits there; the choice never disappears |
 | 2026-11-09 | The world is 360 units wide on every screen (v0.3.0) | The renderer scales it. Rotating or resizing no longer strands ledges, and phones and desktops play the same geometry |
 | 2026-11-09 | The run ends at the top of the audit band, not the bottom of the screen (v0.3.0) | What is drawn is what kills. The band shrank from 68 to 40 px so the room to recover barely changed |
-| 2026-11-09 | Every run has a seed, shown on the result screen | A bug report or a playtest note can name the run, and `?seed=` replays its levels exactly. Levels depend only on the seed and the left/right choices; dust has its own stream, so how long a player waits never changes a level |
+| 2026-11-09 | Every run has a seed, shown on the result screen with `?debug=1` (players see none) | A bug report or a playtest note can name the run, and `?seed=` replays its levels exactly. Levels depend only on the seed and the left/right choices; dust has its own stream, so how long a player waits never changes a level |
 | 2026-11-09 | Coming back shows a pause card (v0.3.0) | The band no longer starts moving the moment the tab is visible; a tap resumes, and the first 350 ms are ignored |
 
 ## What the simulation measures
