@@ -32,19 +32,13 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [ ] **P2 — Play the Kelurahan and tune it.** The maintainer's call, hands on a keyboard
-  and on a phone: the feel of the jump and the dash, whether the stamp and the auditors
-  are fair, whether three checkpoints are too kind. The questions are listed in
-  `docs/design/game-design.md` (Open questions); the numbers are in `src/core/params.ts`
-  and can be moved live with `?debug=1`. Nothing below starts before this, and no release
-  is cut before it: v0.4.0, the one-tap climb, stays live until the maintainer asks.
-
-## Next
-
 - [ ] **P3 — Floor 02, Kecamatan.** Its own scenery and one new hazard, built on the
   spacing rules at the top of `src/core/tower.ts`. Needs: more than one floor in a run
   (the door leads to the next floor, the bag is paid upwards and the weight resets), a
   promotion card between floors, and the floor name in the HUD from the floor itself.
+
+## Next
+
 - [ ] **T1 — Count OTT in telemetry.** `run_ended` carries money, weight, height and
   duration, but not how often the player was caught or where, which is what says whether
   a hazard is unfair. Needs a column in the collector and a row in the panel.
@@ -59,6 +53,11 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
+- [x] **P2 — Play the Kelurahan and tune it.** Done 2026-11-10 (#29). The maintainer played
+  the merged floor hands on and judged it good enough to build the next one on; no change
+  was asked for, so nothing was tuned. The questions that need ten playtests — the weight,
+  the dash through an auditor, three checkpoints — stay open in
+  `docs/design/game-design.md`, and the numbers are still in `src/core/params.ts`.
 - [x] **P1 — Rebuild as a pixel-art platformer, first floor.** Done 2026-11-10 (#28). The
   brief was a pixel-art platformer; the one-tap endless climb was a different game. Replaced: the simulation, the level
   generator, the renderer, the balance simulator and the browser tests. Kept: the

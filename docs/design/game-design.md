@@ -1,10 +1,10 @@
 # Korupsi — game design
 
-**Status:** the first floor is playable. The simulation lives in
-[`../../src/core/game.ts`](../../src/core/game.ts), the tower in
-[`../../src/core/tower.ts`](../../src/core/tower.ts). The feel has been checked by tests
-and a scripted climb, not yet by a person with a controller in hand: expect the numbers
-to move after the first playtests.
+**Status:** the first floor is playable and has been played by a person. The simulation
+lives in [`../../src/core/game.ts`](../../src/core/game.ts), the tower in
+[`../../src/core/tower.ts`](../../src/core/tower.ts). Tests and a scripted climb prove the
+floor is possible; the first hands-on session asked for no change. The three questions
+that need ten playtests are still open.
 
 ## One line
 
@@ -131,7 +131,6 @@ early waits for the landing.
 
 | Question | Decide when | Owner |
 | --- | --- | --- |
-| Does the jump feel right in the hand: height, hang time, how fast the run stops? | First hands-on session | Debi |
 | Is 2% per envelope felt at all, or should a full bag bite harder? | After 10 playtests | Debi |
 | Is dashing through an auditor too generous once it is learned? | After 10 playtests | Debi |
 | Are three checkpoints on the first floor too kind? | After 10 playtests | Debi |
@@ -160,6 +159,7 @@ early waits for the landing.
 | 2026-11-10 | A pause no longer ends the run after a minute | That rule protected a score that could be farmed by waiting. The score is a clock now, and a paused clock is stopped |
 | 2026-11-10 | The size budget is 30 KB (was 18 KB) | The art is code. The build is about 22 KB gzipped |
 | 2026-11-10 | A press shorter than a simulation step is kept until it is read | A quick tap on a touch button could begin and end between two steps and never jump |
+| 2026-11-10 | The jump and the dash stay as they are after the first hands-on session | The maintainer played the Kelurahan floor of the merged build and asked for no change. The weight, the dash through an auditor and the three checkpoints still need ten playtests before they can be judged |
 
 ## What the tests check
 
@@ -183,6 +183,7 @@ the floor is fun.
 | --- | --- | --- | --- |
 | 2026-11-09 to 10 | v0.1.0 to v0.4.0 | The one-tap endless climb: hands-on on a phone, simulated runs, and the first six real runs from telemetry | The maintainer found it hard to pick up, and it was not the game that was asked for. Retired on 2026-11-10; the details are in the git history of this file |
 | 2026-11-10 | `feat/platformer-kelurahan` | The Kelurahan floor, by tests and by screenshots on a desktop, an upright phone and a phone on its side. No hands-on session yet | The floor is climbable empty and full, cannot be skipped, and a scripted player finishes it clean. The feel of the jump and the difficulty are unjudged |
+| 2026-11-10 | merged into `main` as `fa63b0a` (PR #28) | The Kelurahan floor, hands on: the first session played by a person rather than by a script | Good enough to build the next floor on. Nothing was asked to change, so the jump, the dash and the three checkpoints stay; the questions that need ten playtests are still open |
 
 ## Tuning
 
