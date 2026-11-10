@@ -33,8 +33,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [ ] **H1 — Harden the server.** Restrict the deploy key to what the deploy needs, review
-  SSH settings. Operator work outside the repository. Record only "done" and the date here.
+Nothing open.
 
 ## Next
 
@@ -69,11 +68,17 @@ code.
 - [!] **V2 — Height zones.** Kelurahan → Kecamatan → Dinas → Kementerian → roof, each with
   its own facade and a promotion card. Blocked on V1.
 - [!] **C1 — Remove the service worker kill switch** after 2027-02: delete `public/sw.js`,
-  its nginx location, the smoke test line in `deploy.yml`, and `tests/sw.test.mjs`. Blocked
+  its nginx location, the smoke test line in `ci.yml`, and `tests/sw.test.mjs`. Blocked
   on the date: old installs need the switch until then.
 
 ## Done
 
+- [x] **D4 — Deploy like Nyetok** (2026-11-10, branch `ci/deploy-on-push`). A green push
+  to `main` deploys, as in the Nyetok repository; release-please, the tag-driven deploy and
+  the root apply script are gone, and server config is installed by hand again
+  (`docs/deploy.md`). Kept from v0.3.0: collector first with a health check, joint
+  rollback, Node check, smoke test with automatic rollback. Release folders are named
+  `<UTC time>-<sha7>` like Nyetok's.
 - [x] **v0.3.0** — released and deployed 2026-11-10 (#16, release run 42671488521): the
   ready screen shows `v0.3.0`, the build label is `0.3.0+4d46b65`.
   - Server, 2026-11-10 (M1): `korupsi-apply-config` and its sudoers rule installed; the
@@ -111,6 +116,11 @@ code.
 - [x] **v0.1.0** — first playable release.
 
 ## Dropped
+
+- **H1 — Harden the server.** The maintainer decided (2026-11-10): no changes to SSH or
+  the server beyond what Korupsi's own deploy needs.
+- **Release-driven deploys (R1).** Replaced by D4: deploying from a push to `main` is
+  simpler and matches the other sites on the server.
 
 - **PWA / offline play.** It served stale builds and cached the private panel; removed in
   #2. Reasoning in `docs/design/game-design.md`, Decisions.
