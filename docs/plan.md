@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-10 · Last tagged release: `v0.2.0`. What is live is whatever the
+Last updated: 2026-11-10 · Last tagged release: `v0.3.0`. What is live is whatever the
 latest successful deploy run on `main` shipped: check `gh run list --branch main`, not
 this line.
 
@@ -33,25 +33,6 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [!] **M1 — Server steps before the v0.3.0 deploy.** Blocked on server access: they need
-  root on the VPS, which only the maintainer has. Commands in `docs/deploy.md`.
-  1. Install `korupsi-apply-config` and its sudoers rule (Server config). The first
-     release deploy then installs the nginx files and the unit itself, including the
-     `/api/health` change from H3.
-  2. Optional: move the running collector into `releases/legacy` (One-time migration),
-     so the first release has something to roll back to.
-  Until step 1 is done, a release deploy uploads its files and stops before switching
-  anything, because the unit does not run `current` yet. The live site is not touched.
-- [ ] **R2 — Cut v0.3.0** through R1. Release PR #16 is open (`chore(main): release
-  0.3.0`). Merge it after M1: that tags v0.3.0, publishes the release, and deploys.
-  Done when the tag exists and the ready screen shows `v0.3.0`; until then the live build
-  says `v0.2.0`. Then remove `release-as: 0.3.0` from `release-please-config.json`, which
-  only exists because the commits since v0.2.0 alone would make 0.2.1.
-- [~] **H3 — Keep addresses out of telemetry** (split from H1, #6). The redaction in the
-  page and the collector is live: #6 was deployed by the old pipeline on 2026-11-10. The
-  nginx part (`/api/health` and unlisted `/api/` paths answer 404) is not: on 2026-11-10
-  `https://korupsi.web.id/api/health` still answered 200. It lands with the first release
-  deploy after M1.
 - [ ] **H1 — Harden the server.** Restrict the deploy key to what the deploy needs, review
   SSH settings. Operator work outside the repository. Record only "done" and the date here.
 
@@ -93,7 +74,12 @@ code.
 
 ## Done
 
-- [x] **v0.3.0 work (merged, release pending: R2)**
+- [x] **v0.3.0** — released and deployed 2026-11-10 (#16, release run 42671488521): the
+  ready screen shows `v0.3.0`, the build label is `0.3.0+4d46b65`.
+  - Server, 2026-11-10 (M1): `korupsi-apply-config` and its sudoers rule installed; the
+    collector moved into `releases/legacy` and the unit runs `current`. The first release
+    deploy applied the nginx rules, so `/api/health` now answers 404 publicly (H3 done).
+    The other sites on the host answered 200 before and after.
   - Release process (R1, #7, #14): release-please, deploys only from a release behind the
     `production` environment, one version identity (`X.Y.Z+<sha7>`). The XNyetok
     organisation forbids Actions from opening pull requests, so the release PR is opened
