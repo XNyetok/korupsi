@@ -43,7 +43,7 @@ resumes. Staying away longer ends it and banks the score. Closing the tab loses 
 | Stack | TypeScript and Canvas 2D, bundled by Vite |
 | Audio | WebAudio oscillators, no audio files |
 | Caching | none beyond HTTP: every visit loads the live build |
-| Hosting | nginx on a VPS; every green push to `main` is deployed by GitHub Actions |
+| Hosting | nginx on a VPS; a published GitHub Release is deployed by GitHub Actions |
 
 The simulation has no DOM in it, so a run can be stepped in a test without a browser. That
 is how balance changes get compared before they ship.

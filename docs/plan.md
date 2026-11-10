@@ -5,9 +5,8 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-10 · Last tagged release: `v0.3.0`. What is live is whatever the
-latest successful deploy run on `main` shipped: check `gh run list --branch main`, not
-this line.
+Last updated: 2026-11-10 · Last tagged release: `v0.3.0`. What is live is the latest
+published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
 
@@ -73,7 +72,13 @@ code.
 
 ## Done
 
-- [x] **D4 — Deploy like Nyetok** (2026-11-10, branch `ci/deploy-on-push`). A green push
+- [~] **D5 — Release like Havus** (branch `ci/release-like-havus`). Merging to `main` runs
+  the checks only. A pushed `vX.Y.Z` tag runs them again and makes a draft GitHub Release
+  with the built site and collector; publishing it deploys exactly those files. The
+  version comes from the tag (`package.json` stays `0.0.0`), and GitHub Releases replace
+  `CHANGELOG.md`. The server side is unchanged. Done when the first release made this way
+  is published and live.
+- [x] **D4 — Deploy like Nyetok** (2026-11-10, #19). Replaced by D5 the same day. A green push
   to `main` deploys, as in the Nyetok repository; release-please, the tag-driven deploy and
   the root apply script are gone, and server config is installed by hand again
   (`docs/deploy.md`). Kept from v0.3.0: collector first with a health check, joint
@@ -84,15 +89,17 @@ code.
   - Server, 2026-11-10 (M1): `korupsi-apply-config` and its sudoers rule installed; the
     collector moved into `releases/legacy` and the unit runs `current`. The first release
     deploy applied the nginx rules, so `/api/health` now answers 404 publicly (H3 done).
-    The other sites on the host answered 200 before and after.
+    The other sites on the host answered 200 before and after. The apply script and its
+    sudoers rule were removed again on 2026-11-10, with D4.
   - Release process (R1, #7, #14): release-please, deploys only from a release behind the
     `production` environment, one version identity (`X.Y.Z+<sha7>`). The XNyetok
-    organisation forbids Actions from opening pull requests, so the release PR is opened
-    with `release-please release-pr` (`docs/deploy.md`, Releases); tagging and deploying
-    still run in Actions. `production` environment created 2026-11-10.
+    organisation forbids Actions from opening pull requests, so the release PR was opened
+    with `release-please release-pr`. Replaced by D4, then D5. `production` environment
+    created 2026-11-10.
   - Collector deployed before the site, with release folders and joint rollback (D1, #7).
   - Node 22.13 pinned in `engines` and checked on the server by the deploy (D3, #7).
-  - nginx and systemd config applied from the release, restored on failure (D2, #8).
+  - nginx and systemd config applied from the release, restored on failure (D2, #8);
+    installed by hand again since D4.
   - Seeded runs and `?seed=` replay (S1, #9).
   - Browser smoke tests (S3, #10); a required check of `main` since 2026-11-10.
   - Source split into `core/`, `platform/`, `view/`, `ui/`, behaviour unchanged (S2, #11).
@@ -119,8 +126,11 @@ code.
 
 - **H1 — Harden the server.** The maintainer decided (2026-11-10): no changes to SSH or
   the server beyond what Korupsi's own deploy needs.
-- **Release-driven deploys (R1).** Replaced by D4: deploying from a push to `main` is
-  simpler and matches the other sites on the server.
+- **release-please (R1).** The XNyetok organisation forbids Actions from opening pull
+  requests, so its release PR had to be opened by hand. D5 tags by hand instead, like
+  Havus.
+- **Deploy on every push to `main` (D4).** For an open source project, a merged pull
+  request should not go live by itself; D5 makes shipping a deliberate step.
 
 - **PWA / offline play.** It served stale builds and cached the private panel; removed in
   #2. Reasoning in `docs/design/game-design.md`, Decisions.
