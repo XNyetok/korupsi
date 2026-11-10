@@ -72,7 +72,7 @@ code.
 
 ## Done
 
-- [~] **D5 — Release like Havus** (branch `ci/release-like-havus`). Merging to `main` runs
+- [~] **D5 — Release like Havus** (#20). Merging to `main` runs
   the checks only. A pushed `vX.Y.Z` tag runs them again and makes a draft GitHub Release
   with the built site and collector; publishing it deploys exactly those files. The
   version comes from the tag (`package.json` stays `0.0.0`), and GitHub Releases replace
