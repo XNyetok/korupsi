@@ -19,8 +19,12 @@ export const PARAMS = {
   doubleGoldChance: 0,
 
   // pressure
-  cameraBase: 26,
-  cameraAccel: 1.3,
+  // Retuned on 2026-11-10 from real-play telemetry and a reaction-profile
+  // sweep: the old values were tuned for a player who never hesitates, and
+  // real runs died to the band at a median of 16 s. See the playtest log in
+  // docs/design/game-design.md.
+  cameraBase: 12,
+  cameraAccel: 0.6,
   /** Height of the audit band. Its top edge is where the run ends. */
   bandHeight: 40,
 
