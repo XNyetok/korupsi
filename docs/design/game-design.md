@@ -124,12 +124,18 @@ vary it with `node scripts/simulate.mjs` — `--base`, `--accel`, `--reaction`, 
 
 | Play style | Median height | Median money | Ends by |
 | --- | --- | --- | --- |
-| Always takes the envelope | 134 m | Rp 3 jt | Auditor (94%) |
-| Takes the envelope half the time | 237 m | Rp 2,5 jt | Auditor (83%) |
-| Never takes an envelope | 716 m | 0 | Audit band (100%) |
+| Always takes the envelope | 133 m | Rp 3 jt | Auditor (100%) |
+| Takes the envelope half the time | 248 m | Rp 2,5 jt | Auditor (97%) |
+| Never takes an envelope | 1697 m | 0 | Audit band (100%) |
 
 The honest run is the control: a player who refuses the mechanic survives longer and
 scores nothing. That is the joke, and it needs a playtest to confirm it reads as a choice.
+
+The band is also judged on hesitation, not just on the reference bot: with a 1 s
+hesitation the half-greedy bot lasts 36 s (215 m, Rp 2 jt) and dies to the auditor first
+(65%); with 2 s it lasts 38 s (142 m, Rp 1,5 jt), the band taking 69%. Before the
+2026-11-10 retune both died to the band inside 22 s — and the first six real runs, read
+from telemetry, ended by the band at a median of 16 s.
 
 ## Playtest log
 
@@ -138,6 +144,7 @@ scores nothing. That is the joke, and it needs a playtest to confirm it reads as
 | 2026-11-09 | `20261109135951` | First hands-on run on a phone, at `korupsi.web.id` | The jump arc reads well at first contact. Real bug found: the ledge under the player was dropped from the render list on every landing, so the character stood in the air and the ledge seemed to vanish. Fixed, then verified by tracing every frame: 29 disappearing ledges in 30 jumps before, 0 after. |
 | 2026-11-09 | `20261109140812` | Re-test after the fix | The ledge stays visible, the path behind dims with distance instead of vanishing, and the pair above reads as a left/right choice. Weight and the cost of greed are still unjudged. |
 | 2026-11-09 | v0.3.0 branch | Simulated 500 runs per play style (always safe, half greedy, always greedy) before and after the bug fixes, with a 0.25 s reaction delay | Single-ledge levels: 43–45% → 0%. Median height 738 → 716 m (safe), 279 → 237 m (half greedy), 161 → 134 m (greedy); median money 2 → 2.5 and 3 jt. Slightly harder, because the band line sits higher and greed has more chances. Worth a hands-on check before retuning |
+| 2026-11-10 | v0.3.1 live and `main` | First real-play telemetry: the six finished runs (the maintainer's own sessions), read from the collector read-only; the maintainer found the game hard to pick up and delegated the judgement to the simulator. A sweep of reaction profiles (0.25–3 s) × cameraBase 8–30 × cameraAccel 0.3–1.6, with `scripts/simulate.mjs` | The band was tuned for a bot that never hesitates: the real runs died to the band at a median of 16 s against the "about a minute" intent, and hesitation, not greed, was the killer. Retuned cameraBase 26→12, cameraAccel 1.3→0.6: a hesitating player now lasts ~37 s, a casual one dies to the auditor first, the idle catch stays quick (~15 s). What is left open is onboarding, not the band — see B2 in the plan |
 
 ## Tuning
 
@@ -151,7 +158,7 @@ world is 360 units wide on every screen, so a unit is a CSS pixel on a 360 px ph
 | Horizontal impulse | 115 /s | About 70 units of travel per ledge |
 | Weight penalty | 3% per envelope | Noticeable after five, fatal after fifteen |
 | Minimum jump factor | 0.45 | A heavy player is slow, never stuck |
-| Audit band | 26 /s, +1.3 /s² | Catches a resting player quickly, a climbing one in about a minute |
+| Audit band | 12 /s, +0.6 /s² | Catches an idle player in about 15 s, a cautious climber in about a minute; greed is punished by the auditor first |
 | Audit band height | 40 | Its top edge is the line the feet must not cross |
 | Crumble delay | 0.45 s | Enough to react, not enough to relax |
 | Gold chance | 45% of levels | Roughly one decision every two jumps |

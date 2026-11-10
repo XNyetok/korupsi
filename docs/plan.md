@@ -36,17 +36,17 @@ Nothing open.
 
 ## Next
 
-Nothing queued. The open items are all in *Later*, and each waits on something outside the
-code.
+- [ ] **B2 — Teach the first run.** From the 2026-11-10 playtest: the maintainer's first
+  session was spent working out what to do, and the first telemetry runs died to the band
+  before they could learn (median 16 s). Make the first seconds teach the game: ready-card
+  copy that says what pays and what kills, and a first band approach that reads as a
+  warning rather than a surprise.
+
+Nothing else queued. The remaining open items are all in *Later*, and each waits on
+something outside the code.
 
 ## Later
 
-- [!] **B1 — Retune after a hands-on playtest.** #3 made the game slightly harder (see the
-  playtest log). Retune `cameraBase` / `cameraAccel` only from real play, and log it.
-  Blocked on a person playing: the simulation already says what it can (game-design.md),
-  and the open question is how the band feels. Note the seed of each playtest run (S1,
-  #9) — open the page with `?debug=1` to see it — so a run that felt wrong can be
-  replayed with `?seed=`.
 - [!] **V1 — Visual redesign, vertical slice.** Blocked on art: the sprites have to be
   drawn or commissioned, and licensed per `docs/design/assets.md`; the internal resolution
   and palette are the maintainer's call. The code side is ready for it: drawing lives in
@@ -73,6 +73,14 @@ code.
 
 ## Done
 
+- [x] **B1 — Retune the band from real play.** Done 2026-11-10. The maintainer found the
+  first session confusing and delegated the judgement to data (their call): the six real
+  runs in telemetry died to the band at a median of 16 s against the "about a minute"
+  intent, and a reaction-profile sweep with `scripts/simulate.mjs` (#24) showed the old
+  values only suited a bot that never hesitates. `cameraBase` 26→12, `cameraAccel`
+  1.3→0.6: a hesitating player now lasts ~37 s, a casual one dies to the auditor first,
+  and the idle catch stays quick. Re-judge when the next release has gathered more
+  telemetry; onboarding continues as B2.
 - [x] **D5 — Release like Havus** (#20; first release v0.3.1, published and deployed
   2026-11-10, live as `0.3.1+2340aef`; the other sites on the host answered 200 after). Merging to `main` runs
   the checks only. A pushed `vX.Y.Z` tag runs them again and makes a draft GitHub Release
