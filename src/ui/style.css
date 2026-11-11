@@ -378,6 +378,16 @@ body.is-touch .keys { display: none; }
   font-variant-numeric: tabular-nums;
 }
 
+/* The title the climb earned, the way the decree prints it. */
+.card .gelar {
+  margin: 2px 0 6px;
+  color: var(--gold);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .stats {
   display: flex;
   justify-content: center;

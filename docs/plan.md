@@ -35,10 +35,18 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 - [~] **P2 — Play the Kelurahan and tune it.** Waiting on the maintainer. Two sessions on
   an iPhone so far, both about how the game sits on a phone rather than how it plays:
   the notes are in Done under v0.6.0 and v0.6.1. Confirmed on the phone: the double-tap
-  zoom is gone, and the tune and the effects are good. Still to try, in v0.6.1: whether
-  the share sheet now offers a story, in Safari, and sharing in Chrome on Android. The
-  questions that need more than one session are in `docs/design/game-design.md` (Open
-  questions). P3 waits for this.
+  zoom is gone, the tune and the effects are good, and in v0.6.1 the share sheet lists
+  Instagram (the story is chosen inside that app; a web page cannot open it directly).
+  One more note from the third session:
+  - [x] The shared picture should be something people want to post: funny, and
+    different with the result. Done 2026-11-11 (#39): it is now a surat keputusan that
+    appoints the player to one of ten titles, from Raja Amplop to Oknum, decided by the
+    time, the OTT count and the envelopes. The portrait, the decree's number and the
+    envelopes on the desk change with the result too, and the result screen shows the
+    title. Not released yet.
+
+  Still untried: sharing in Chrome on Android. The questions that need more than one
+  session are in `docs/design/game-design.md` (Open questions). P3 waits for this.
 
 ## Next
 

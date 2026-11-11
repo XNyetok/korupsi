@@ -1,4 +1,5 @@
 import { clock, type Game, rupiah } from '../core/game.ts';
+import { gelarFor } from '../core/gelar.ts';
 import { audio } from '../platform/audio.ts';
 import { canFullscreen, isFullscreen, onFullscreenChange, toggleFullscreen } from '../platform/fullscreen.ts';
 import { shareResult } from '../platform/share.ts';
@@ -157,12 +158,8 @@ export class Ui {
     const total = game.floor.amplop.length;
     const { weight, deaths } = game;
 
-    let line: string;
-    if (weight === total && deaths === 0) line = 'Semua amplop terbawa, tanpa sekali pun tertangkap. Bakat.';
-    else if (weight === 0) line = 'Naik tanpa membawa apa-apa. Tidak ada yang percaya.';
-    else if (deaths === 0) line = 'Tidak sekali pun tertangkap. Rapi.';
-    else if (deaths >= 10) line = `${deaths} kali OTT, dan tetap naik jabatan.`;
-    else line = `${weight} amplop sampai ke atas. Sisanya urusan kecamatan.`;
+    // What the climb earned: the same title the shared decree carries.
+    const gelar = gelarFor({ time: game.time, deaths, weight, total });
 
     const records = [
       game.record.time ? 'Rekor waktu baru' : game.best.time ? `Rekor waktu ${clock(game.best.time)}` : '',
@@ -174,7 +171,8 @@ export class Ui {
       <div class="card result">
         <p class="stamp lolos">lolos</p>
         <h1 class="big">${clock(game.time)}</h1>
-        <p class="lede">${line}</p>
+        <p class="gelar">${gelar.title}</p>
+        <p class="lede">${gelar.line}</p>
         <div class="stats">
           <span class="stat"><i>OTT</i><b>${deaths}</b></span>
           <span class="stat"><i>Amplop</i><b>${weight}/${total}</b></span>
@@ -190,7 +188,7 @@ export class Ui {
 
     const share = this.overlay.querySelector<HTMLButtonElement>('.share');
     if (share) {
-      const text = `Lolos dari ${game.floor.name} dalam ${clock(game.time)}: ${deaths} kali OTT, ${weight} amplop (${rupiah(game.money)}).`;
+      const text = `${gelar.title}: lolos dari ${game.floor.name} dalam ${clock(game.time)}, ${deaths} kali OTT, ${weight} amplop (${rupiah(game.money)}).`;
       const filename = `korupsi-${game.floor.name.toLowerCase()}.png`;
 
       // The picture is painted right after the card appears, not on the press.
