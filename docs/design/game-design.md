@@ -1,11 +1,12 @@
 # Korupsi — game design
 
-**Status:** the first floor is playable, live as v0.6.0, and has been played by a
+**Status:** the first floor is playable, live as v0.6.1, and has been played by a
 person. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts), the
 tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). Tests and a scripted climb
 prove the floor is possible. The first hands-on session, on a phone, asked for four
 things around the game rather than in it; all four are in v0.6.0. The second session
-confirmed three of them and sent the fourth, sharing, back: see the playtest log.
+confirmed three of them and sent the fourth, sharing, back; that fix is in v0.6.1 and has
+not been tried on a phone yet: see the playtest log.
 
 ## One line
 
@@ -229,6 +230,7 @@ in CI. Whether the tune is any good is for ears.
 | 2026-11-10 | v0.5.0 | The Kelurahan floor, hands on, on a phone in Safari: the first session played by a person rather than by a script | Four notes, none about the jump or the hazards: a double tap on a control zoomed the page; the game should fill the phone's screen; the result should be shared as an image; the sound had no punch and there was no music. Tracked as P2 in the plan |
 | 2026-11-11 | v0.6.0 | The four notes, by tests, by screenshots at phone sizes, by rendering the sound offline, and by a headless browser on the live site. Not on a real phone, and not by ear | All four behave as intended in a browser. What a browser cannot say: whether Safari on an iPhone still zooms, whether its share sheet takes the picture, and whether the tune is any good |
 | 2026-11-11 | v0.6.0 | The maintainer, in Safari on an iPhone | The double tap no longer zooms. The tune and the effects are good. Sharing opened a menu that offered a save and no story: the picture was being sent with a caption. Sharing in Chrome on Android is still untried |
+| 2026-11-11 | v0.6.1 | The share fix, by tests and by a headless browser on the live site with a stand-in share sheet. Not on a real phone | The sheet is handed the picture alone, and a sheet that refuses it leads to the picture on screen. Whether the iPhone's sheet now lists a story is the maintainer's to see; that the caption was the cause is an inference from the symptom, not something measured |
 
 ## Tuning
 

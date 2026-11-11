@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-11 · Last tagged release: `v0.6.0`. What is live is the latest
+Last updated: 2026-11-11 · Last tagged release: `v0.6.1`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -32,18 +32,13 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P2 — Play the Kelurahan and tune it.** The maintainer played v0.6.0 in Safari on
-  an iPhone on 2026-11-11. The double-tap zoom is gone, and the tune and the effects are
-  good. One thing was still off:
-  - [x] Sharing the result offered a save but no way to a story. Fixed 2026-11-11 (#37):
-    the share sheet now gets the picture alone, without the caption that made apps which
-    only take pictures drop out of it, and is asked for straight from the press. A phone
-    whose sheet will not take the picture shows it for a long press instead of
-    downloading it. Not released yet, and not tried on the phone.
-
-  Next: release it, and the maintainer tries the share sheet again. The questions that
-  need more than one session are in `docs/design/game-design.md` (Open questions). P3
-  waits for this.
+- [~] **P2 — Play the Kelurahan and tune it.** Waiting on the maintainer. Two sessions on
+  an iPhone so far, both about how the game sits on a phone rather than how it plays:
+  the notes are in Done under v0.6.0 and v0.6.1. Confirmed on the phone: the double-tap
+  zoom is gone, and the tune and the effects are good. Still to try, in v0.6.1: whether
+  the share sheet now offers a story, in Safari, and sharing in Chrome on Android. The
+  questions that need more than one session are in `docs/design/game-design.md` (Open
+  questions). P3 waits for this.
 
 ## Next
 
@@ -65,20 +60,16 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
-- [x] **v0.6.0** — released and deployed 2026-11-11 (release run 42955077519, deploy run
-  42955274412): live as `0.6.0+f3db541`, `/api/health` 404, `/panel/` 401; the game
-  starts, plays its tune and saves a result picture on the live site. The four notes from
-  the maintainer's first session on a phone:
-  - A double tap on a control no longer zooms the page in Safari on iOS: touches on the
-    game are cancelled, and the page declares `touch-action: none` (#32).
-  - On a touch screen the game fills the screen, upright or sideways, with a camera that
-    follows sideways when the view is narrower than the tower, the controls over a cellar
-    drawn under the lobby, and a full-screen button where the browser has one (#33).
-  - "Bagikan hasil" shares a 1080 x 1920 picture of the result: the share sheet on a
-    phone, a saved file anywhere else (#34).
-  - A 16-bar tune in a pelog-like scale, footsteps, a warning before a stamp falls, and
-    effects about 20 dB louder, all still synthesised; the sound button works on the
-    cards too (#35).
+- [x] **v0.6.1** — released and deployed 2026-11-11 (release run 42957553708, deploy run
+  42957741901): live as `0.6.1+8a97b15`, `/api/health` 404, `/panel/` 401; on the live
+  site a phone with a stand-in share sheet is handed the picture and nothing else, and
+  one that refuses it is shown the picture. The note from the maintainer's second
+  session, in Safari on an iPhone: sharing offered a save but no way to a story. The
+  share sheet now gets the picture alone, asked for straight from the press, and a phone
+  whose sheet will not take it shows it for a long press instead of downloading it (#37).
+- [x] **v0.6.0** — 2026-11-11: the four notes from the first session on a phone. No
+  double-tap zoom in Safari (#32), the game fills a phone's screen (#33), the result
+  shared as a story-sized picture (#34), a tune and louder effects (#35).
 - [x] **v0.5.0** — 2026-11-10: the game rebuilt as a pixel-art platformer with its first
   floor, the Kelurahan (P1, #28); the one-tap climb retired.
 - [x] **v0.4.0** — 2026-11-10: the audit band retuned from real play and the first run
