@@ -68,6 +68,15 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
+- [x] **D6 — A panel that can be read.** Done 2026-11-11 (#40), not released yet. The
+  maintainer asked for a cleaner panel whose numbers explain themselves. It now leads
+  with four figures (visits, runs started, finished, shared) and what share each is of
+  the one before, shows the days as one chart with a table behind it, and measures the
+  runs that reached the door apart from the runs that were left: the old panel averaged
+  them together, and counted a run that was walked away from as "finished". New from the
+  collector: finished runs per day, medians per outcome, and how high abandoned runs got,
+  in ten-metre bands. Light and dark, and readable on a phone. Checked against a seeded
+  database on a local collector, not against the live data.
 - [x] **v0.6.1** — released and deployed 2026-11-11 (release run 42957553708, deploy run
   42957741901): live as `0.6.1+8a97b15`, `/api/health` 404, `/panel/` 401; on the live
   site a phone with a stand-in share sheet is handed the picture and nothing else, and

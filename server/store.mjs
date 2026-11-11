@@ -56,6 +56,10 @@ export function normaliseEvent(input) {
   return event;
 }
 
+/** How far up abandoned runs got is reported in bands this many metres tall; the last band is open-ended. */
+const QUIT_BAND = 10;
+const QUIT_BANDS = 5;
+
 const median = (values) => {
   if (!values.length) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -126,6 +130,7 @@ export function openStore(path) {
                   SUM(type = 'visit')     AS visits,
                   SUM(type = 'run_started') AS runs,
                   SUM(type = 'run_ended')   AS ended,
+                  SUM(type = 'run_ended' AND cause = 'finished') AS finished,
                   SUM(type = 'shared')    AS shared,
                   SUM(type = 'error')     AS errors
              FROM events
@@ -140,11 +145,12 @@ export function openStore(path) {
           acc.visits += row.visits;
           acc.runs += row.runs;
           acc.ended += row.ended;
+          acc.finished += row.finished;
           acc.shared += row.shared;
           acc.errors += row.errors;
           return acc;
         },
-        { visits: 0, runs: 0, ended: 0, shared: 0, errors: 0 },
+        { visits: 0, runs: 0, ended: 0, finished: 0, shared: 0, errors: 0 },
       );
 
       const causes = db
@@ -159,13 +165,26 @@ export function openStore(path) {
 
       const runs = db
         .prepare(
-          `SELECT money, height, duration
+          `SELECT cause, money, weight, height, duration
              FROM events
             WHERE type = 'run_ended' AND day >= ?
             ORDER BY id DESC
             LIMIT 50000`,
         )
         .all(since);
+
+      // A run that reached the door and a run the player walked away from
+      // answer different questions, so they are never averaged together.
+      const finished = runs.filter((r) => r.cause === 'finished');
+      const abandoned = runs.filter((r) => r.cause === 'abandoned');
+      const middle = (rows, field) => median(rows.map((r) => r[field]).filter((v) => v != null));
+
+      // Where the players who left had got to, in bands of QUIT_BAND metres.
+      const bands = new Array(QUIT_BANDS).fill(0);
+      for (const run of abandoned) {
+        if (run.height == null) continue;
+        bands[Math.min(QUIT_BANDS - 1, Math.floor(run.height / QUIT_BAND))] += 1;
+      }
 
       const errors = db
         .prepare(
@@ -195,12 +214,22 @@ export function openStore(path) {
         daily,
         totals,
         causes,
-        medians: {
-          money: median(runs.map((r) => r.money).filter((v) => v != null)),
-          height: median(runs.map((r) => r.height).filter((v) => v != null)),
-          duration: median(runs.map((r) => r.duration).filter((v) => v != null)),
-          samples: runs.length,
+        finished: {
+          n: finished.length,
+          duration: middle(finished, 'duration'),
+          money: middle(finished, 'money'),
+          weight: middle(finished, 'weight'),
         },
+        abandoned: {
+          n: abandoned.length,
+          duration: middle(abandoned, 'duration'),
+          height: middle(abandoned, 'height'),
+        },
+        quit: bands.map((n, i) => ({
+          from: i * QUIT_BAND,
+          to: i === QUIT_BANDS - 1 ? null : (i + 1) * QUIT_BAND - 1,
+          n,
+        })),
         errors,
         revs,
       };

@@ -4,60 +4,108 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
 <title>Korupsi — panel</title>
 <link rel="stylesheet" href="/panel/panel.css">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
-<header>
+<header class="top">
   <div>
-    <p class="eyebrow">panel</p>
     <h1>Korupsi</h1>
-  </div>
-  <div class="controls">
-    <div class="range" role="group" aria-label="Rentang">
-      <button type="button" data-days="7">7 hari</button>
-      <button type="button" data-days="30" class="on">30 hari</button>
-      <button type="button" data-days="90">90 hari</button>
-    </div>
-    <button type="button" id="refresh">Muat ulang</button>
+    <p class="sub">Panel statistik: apa yang terjadi di game, tanpa tahu siapa pemainnya.</p>
   </div>
 </header>
 
-<main>
-  <section class="totals" id="totals"></section>
+<!-- One row of filters, above everything it scopes. -->
+<div class="filters">
+  <div class="range" role="group" aria-label="Rentang waktu">
+    <button type="button" data-days="7" aria-pressed="false">7 hari</button>
+    <button type="button" data-days="30" aria-pressed="true">30 hari</button>
+    <button type="button" data-days="90" aria-pressed="false">90 hari</button>
+  </div>
+  <button type="button" id="refresh" class="ghost">Muat ulang</button>
+  <p id="period" class="period" role="status" aria-live="polite"></p>
+</div>
 
-  <section class="grid">
-    <article class="card">
-      <h2>Harian</h2>
-      <table id="daily">
-        <thead><tr><th>Tanggal</th><th>Kunjungan</th><th>Run</th><th>Share</th><th>Error</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </article>
+<main id="main">
+  <p id="failure" class="failure" hidden></p>
 
-    <article class="card">
-      <h2>Cara berakhir</h2>
-      <div id="causes" class="bars"></div>
-      <h2 class="mt">Median run</h2>
-      <dl id="medians" class="stats"></dl>
-    </article>
-
-    <article class="card wide">
-      <h2>Error</h2>
-      <ul id="errors" class="list"></ul>
-    </article>
-
-    <article class="card">
-      <h2>Versi yang dipakai</h2>
-      <ul id="revs" class="list"></ul>
-    </article>
+  <section aria-labelledby="h-summary">
+    <h2 id="h-summary">Ringkasan</h2>
+    <div class="tiles" id="tiles"></div>
   </section>
+
+  <section class="card" aria-labelledby="h-daily">
+    <div class="card-head">
+      <div>
+        <h2 id="h-daily">Per hari</h2>
+        <p class="hint">Naik turunnya kunjungan, permainan yang dimulai, dan yang tamat dari hari ke hari.</p>
+      </div>
+      <ul class="legend" id="legend" aria-label="Keterangan warna"></ul>
+    </div>
+    <div class="chart" id="chart"></div>
+    <details class="table-view">
+      <summary>Lihat sebagai tabel</summary>
+      <div class="scroll">
+        <table id="daily">
+          <thead>
+            <tr><th scope="col">Tanggal</th><th scope="col">Kunjungan</th><th scope="col">Mulai main</th><th scope="col">Tamat</th><th scope="col">Dibagikan</th><th scope="col">Error</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <div class="columns">
+    <section class="card" aria-labelledby="h-ends">
+      <h2 id="h-ends">Bagaimana permainan berakhir</h2>
+      <p class="hint">Tiap permainan berakhir dengan tamat (sampai pintu kecamatan) atau ditinggal (halaman ditutup atau mulai ulang sebelum tamat).</p>
+      <div id="ends" class="bars"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-finished">
+      <h2 id="h-finished">Permainan yang tamat</h2>
+      <p class="hint" id="finished-hint"></p>
+      <div class="tiles small" id="finished"></div>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="h-abandoned">
+    <h2 id="h-abandoned">Permainan yang ditinggal</h2>
+    <p class="hint" id="abandoned-hint"></p>
+    <div class="split">
+      <div class="tiles small" id="abandoned"></div>
+      <div>
+        <h3>Berhenti di ketinggian berapa</h3>
+        <p class="hint">Lobi ada di 0 m dan pintu kecamatan di sekitar 42 m. Baris yang paling panjang adalah tempat pemain paling sering menyerah.</p>
+        <div id="quit" class="bars"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="columns">
+    <section class="card" aria-labelledby="h-errors">
+      <h2 id="h-errors">Error di browser pemain</h2>
+      <p class="hint">Kesalahan JavaScript yang terjadi saat game berjalan. Idealnya kosong.</p>
+      <ul id="errors" class="list"></ul>
+    </section>
+
+    <section class="card" aria-labelledby="h-revs">
+      <h2 id="h-revs">Versi yang dipakai</h2>
+      <p class="hint">Dari versi game mana data ini datang. Setelah rilis, versi baru seharusnya segera di atas.</p>
+      <div id="revs" class="bars"></div>
+    </section>
+  </div>
 </main>
 
 <footer>
-  <p>Tanpa cookie, tanpa alamat IP, tanpa ID pengunjung. Data mentah disimpan 90 hari.</p>
+  <p>Tanpa cookie, tanpa alamat IP, tanpa ID pengunjung. Data mentah disimpan 90 hari. Pemain yang menyalakan Do Not Track tidak tercatat.</p>
+  <p>Korupsi dibuat oleh <a href="https://nyetok.id" rel="noopener">nyetok.id</a>.</p>
 </footer>
+
+<div id="tip" class="tip" role="tooltip" hidden></div>
 
 <script src="/panel/panel.js" type="module"></script>
 </body>
