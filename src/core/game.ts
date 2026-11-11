@@ -190,9 +190,10 @@ export class Game {
     for (let i = 0; i < stamps.length; i++) {
       const def = stamps[i] as FloorDef['stamps'][number];
       const phase = stampAt(def, this.worldTime).phase;
-      if (phase === 'hold' && this.stampPhases[i] !== 'hold') {
-        this.emit('stamp', def.x, ledges[def.ledge]?.y ?? 0);
-      }
+      const before = this.stampPhases[i];
+      // The rattle before the fall, then the fall itself.
+      if (phase === 'warn' && before !== 'warn') this.emit('warn', def.x, ledges[def.ledge]?.y ?? 0);
+      if (phase === 'hold' && before !== 'hold') this.emit('stamp', def.x, ledges[def.ledge]?.y ?? 0);
       this.stampPhases[i] = phase;
     }
   }

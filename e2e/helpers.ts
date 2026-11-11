@@ -11,6 +11,7 @@ export interface Exposed {
   player: { x: number; y: number; vx: number; facing: number; ground: number };
   floor: { exit: { ledge: number; x: number } };
   placeOn(ledge: number, x?: number): void;
+  audio: { state: string; musicOn: boolean; muted: boolean };
 }
 
 /** Opens the page. `debug` adds `?debug=1` (the tests read the exposed state);
@@ -57,6 +58,14 @@ export function state(page: Page): Promise<State> {
 export function waitForPhase(page: Page, phase: Exposed['phase'], timeout = 10_000): Promise<unknown> {
   return page.waitForFunction((want) => (window as unknown as { __korupsi: Exposed }).__korupsi.phase === want, phase, {
     timeout,
+  });
+}
+
+/** What the sound engine is doing: whether it may play, and whether the tune is on. */
+export function sound(page: Page): Promise<{ state: string; musicOn: boolean; muted: boolean }> {
+  return page.evaluate(() => {
+    const { audio } = (window as unknown as { __korupsi: Exposed }).__korupsi;
+    return { state: audio.state, musicOn: audio.musicOn, muted: audio.muted };
   });
 }
 

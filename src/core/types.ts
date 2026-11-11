@@ -104,6 +104,7 @@ export type GameEventType =
   | 'respawn'
   | 'checkpoint'
   | 'crumble'
+  | 'warn'
   | 'stamp'
   | 'win';
 

@@ -50,10 +50,10 @@ page to the home screen and open it from there.
 
 | | |
 | --- | --- |
-| Build size | about 24 KB gzipped, no runtime dependencies; CI enforces a 30 KB budget |
+| Build size | about 27 KB gzipped, no runtime dependencies; CI enforces a 30 KB budget |
 | Stack | TypeScript and Canvas 2D, bundled by Vite |
 | Art | pixel art drawn in code, a tower 384 pixels wide, scaled up without smoothing; no image files |
-| Audio | WebAudio oscillators, no audio files |
+| Audio | a tune and effects synthesised with WebAudio; no audio files |
 | Caching | none beyond HTTP: every visit loads the live build |
 | Hosting | nginx on a VPS; a published GitHub Release is deployed by GitHub Actions |
 

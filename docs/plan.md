@@ -51,9 +51,14 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     picture in it; anything else saves the file. Checked in a browser with a stand-in
     share sheet, not yet on the maintainer's phone.
 
-  All three are merged and none is released. What is left of this item is the
-  maintainer's: try them on the phone after the next release, in Safari and in Chrome,
-  and say what is still off. The questions that need more than one session are in
+  - [x] The sound has no punch, and there is no music. Done 2026-11-11 (#35): a 16-bar
+    tune in a pelog-like scale, footsteps, a rattle before a stamp falls, a different
+    sound for each way of being caught, and effects about 20 dB louder than they were,
+    with the tune kept about 10 dB under them. Still synthesised, still no audio files.
+    Measured by rendering the mix offline; nobody has heard it yet.
+
+  All four are merged. What is left of this item is the maintainer's: try them on the
+  phone after the next release, in Safari and in Chrome, and say what is still off. The questions that need more than one session are in
   `docs/design/game-design.md` (Open questions). P3 waits for that.
 
 ## Next

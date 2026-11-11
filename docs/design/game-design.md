@@ -114,6 +114,23 @@ early waits for the landing.
   the envelopes, and an OTT puts him in the orange vest. Auditors wear a white shirt, a
   red lanyard and a clipboard.
 
+## Sound
+
+- **Synthesised, like the art.** Every effect and every note is made from oscillators
+  and filtered noise (`src/platform/synth.ts`). There are no audio files.
+- **The tune** (`src/platform/music.ts`) is a 16-bar loop at 120 beats a minute, in a
+  five-note pelog-like scale on E, played on two pulse waves, a triangle bass and noise
+  drums. The first eight bars are sparse; the second eight add an interlocking second
+  voice. It starts with the run, fades for a pause, ducks when the player is caught, and
+  stops at the door.
+- **Effects say what happened.** Running has footsteps. A stamp rattles before it falls
+  and thuds when it lands, quieter the further away it is. An auditor is a patrol car's
+  two notes; a stamp is a buzzer. An envelope is two bright notes.
+- **The mix.** Effects peak between -8 and -12 dB of full scale and the tune averages
+  about -21 dB, so the tune never covers what the player needs to hear. One compressor on
+  the output keeps the worst case, every loud effect on the same beat, below clipping.
+- **One switch.** The sound button silences everything and is remembered.
+
 ## Scope
 
 **What exists**
@@ -122,7 +139,7 @@ early waits for the landing.
   about 20 seconds; a first climb, with its OTTs, will take several times that
 - Keyboard and touch controls; on a phone the game fills the screen, held either way
 - Best time and most money per floor in `localStorage`
-- Synthesised sound, anonymous telemetry to the game's own server
+- A synthesised tune and effects, anonymous telemetry to the game's own server
 - The result shared as a story-sized picture
 
 **Planned** (tracked in [`../plan.md`](../plan.md), not here)
@@ -170,6 +187,9 @@ early waits for the landing.
 | 2026-11-10 | A press shorter than a simulation step is kept until it is read | A quick tap on a touch button could begin and end between two steps and never jump |
 | 2026-11-11 | On a touch screen the game fills the screen; the box with bars is for a mouse and keyboard only | The maintainer's note from the first session on a phone. A box wasted a third of an upright phone and put the controls on bare background. Filling the screen means an upright phone cannot show the tower's full width at a readable size, so the camera follows sideways there; the slice is never narrower than 216 pixels, which keeps the next ledge in view |
 | 2026-11-11 | A cellar is drawn under the lobby | The touch controls cover the bottom of the picture. Without something below the ground floor they would cover the first ledge of the climb |
+| 2026-11-11 | A tune, footsteps and louder effects, all still synthesised | The maintainer's note: the sound had no punch. Measured, the old effects peaked around -30 dB of full scale, there was no music, running was silent and a stamp gave no warning to the ear. Synthesis was kept over recorded or generated audio because it costs a few kilobytes instead of a megabyte, needs no license entry, and starts with the page. If the tune does not hold up to listening, a produced track is the fallback, at the price of a loading step |
+| 2026-11-11 | The tune is in a pelog-like scale | The game is about an Indonesian office; five notes are enough to say so without quoting any song |
+| 2026-11-11 | The sound and pause buttons sit above the cards | They were under the title, pause and result cards, so the sound could not be switched off there. Found by a browser test |
 | 2026-11-11 | The result is shared as a picture, 1080 x 1920 | The maintainer's note: a picture goes into a story or a chat, a line of text does not, and every share is the game's advertising. The card is painted by the game itself, so it needs no image file, and what matters sits clear of the top and bottom that story apps cover. A phone gets its share sheet; anything else gets the file, because a desktop share sheet is rarely where a picture is wanted |
 | 2026-11-11 | A full-screen button only where the browser has full screen; an iPhone uses the home screen | Safari on an iPhone has no full-screen API. The page declares itself a home-screen app, which is the one way to lose the browser's bars there. No manifest and no service worker: nothing is cached |
 | 2026-11-11 | Touches on the game are cancelled, and the page has `touch-action: none` | Safari on iOS ignores `user-scalable=no` and zooms on a double tap, which is exactly what tapping jump twice is. Real buttons and the cards keep their touches, or they would never be clicked or scrolled |
@@ -189,6 +209,13 @@ early waits for the landing.
 That last one is a bot that waits for a safe moment and tries a grid of timings. It says
 the floor is possible and that no landing spot is a trap. It says nothing about whether
 the floor is fun.
+
+The sound is checked in two ways, and neither is listening. `tests/music.test.ts` reads
+the score: every note is in the scale, each voice plays one note at a time, the loop is
+sixteen bars. And because the synthesiser runs on any audio context, the tune and every
+effect can be rendered with an `OfflineAudioContext` and their levels read off; that is
+how the mix in the Sound section was set. It is done by hand when the mix changes, not
+in CI. Whether the tune is any good is for ears.
 
 ## Playtest log
 
