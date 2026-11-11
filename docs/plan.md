@@ -45,11 +45,16 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     Where the browser has a full screen of its own there is a button for it; an iPhone
     gets there from the home screen. Checked at phone sizes in a browser, not yet on the
     maintainer's phone.
-  - [ ] "Bagikan hasil" should share an image of the result, fit for a story, not a line
-    of text.
+  - [x] "Bagikan hasil" should share an image of the result, fit for a story, not a line
+    of text. Done 2026-11-11 (#34): the result is painted as a 1080 x 1920 picture (the
+    door, the time, the money, the address). A phone opens its share sheet with the
+    picture in it; anything else saves the file. Checked in a browser with a stand-in
+    share sheet, not yet on the maintainer's phone.
 
-  The questions that need more than one session are in `docs/design/game-design.md` (Open
-  questions). P3 does not start before these three are done.
+  All three are merged and none is released. What is left of this item is the
+  maintainer's: try them on the phone after the next release, in Safari and in Chrome,
+  and say what is still off. The questions that need more than one session are in
+  `docs/design/game-design.md` (Open questions). P3 waits for that.
 
 ## Next
 

@@ -5,6 +5,7 @@ import { shareResult } from '../platform/share.ts';
 import { track } from '../platform/telemetry.ts';
 import { C } from '../view/palette.ts';
 import { paintLogo } from '../view/pixel.ts';
+import { paintShareCard } from '../view/sharecard.ts';
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -190,9 +191,27 @@ export class Ui {
     const share = this.overlay.querySelector<HTMLButtonElement>('.share');
     if (share) {
       const text = `Lolos dari ${game.floor.name} dalam ${clock(game.time)}: ${deaths} kali OTT, ${weight} amplop (${rupiah(game.money)}).`;
+      const filename = `korupsi-${game.floor.name.toLowerCase()}.png`;
+
+      // The picture is painted right after the card appears, not on the press:
+      // a share sheet only opens from a press, and must not wait for a drawing.
+      const image = new Promise<Blob | null>((resolve) => {
+        window.setTimeout(() => {
+          try {
+            paintShareCard(game).toBlob((blob) => resolve(blob), 'image/png');
+          } catch {
+            resolve(null);
+          }
+        }, 30);
+      });
+
       share.addEventListener('click', async () => {
-        const outcome = await shareResult(text);
-        if (outcome !== 'failed') track('shared', { via: outcome });
+        if (share.disabled) return;
+        share.disabled = true;
+        const outcome = await shareResult({ text, image: await image, filename });
+        share.disabled = false;
+        if (outcome === 'shared' || outcome === 'saved' || outcome === 'copied') track('shared', { via: outcome });
+        if (outcome === 'saved') this.toast('Gambar hasil disimpan');
         if (outcome === 'copied') this.toast('Disalin ke papan klip');
         if (outcome === 'failed') this.toast('Tidak bisa membagikan');
       });

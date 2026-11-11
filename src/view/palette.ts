@@ -3,6 +3,7 @@
 export const C = {
   ink: '#0d1418',
   white: '#f4f1e4',
+  card: '#16242a',
 
   // the wall behind everything: dark and cool, so what can be stood on reads first
   wall: '#2a3f45',

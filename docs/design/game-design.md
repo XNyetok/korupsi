@@ -122,7 +122,8 @@ early waits for the landing.
   about 20 seconds; a first climb, with its OTTs, will take several times that
 - Keyboard and touch controls; on a phone the game fills the screen, held either way
 - Best time and most money per floor in `localStorage`
-- Synthesised sound, sharing, anonymous telemetry to the game's own server
+- Synthesised sound, anonymous telemetry to the game's own server
+- The result shared as a story-sized picture
 
 **Planned** (tracked in [`../plan.md`](../plan.md), not here)
 
@@ -169,6 +170,7 @@ early waits for the landing.
 | 2026-11-10 | A press shorter than a simulation step is kept until it is read | A quick tap on a touch button could begin and end between two steps and never jump |
 | 2026-11-11 | On a touch screen the game fills the screen; the box with bars is for a mouse and keyboard only | The maintainer's note from the first session on a phone. A box wasted a third of an upright phone and put the controls on bare background. Filling the screen means an upright phone cannot show the tower's full width at a readable size, so the camera follows sideways there; the slice is never narrower than 216 pixels, which keeps the next ledge in view |
 | 2026-11-11 | A cellar is drawn under the lobby | The touch controls cover the bottom of the picture. Without something below the ground floor they would cover the first ledge of the climb |
+| 2026-11-11 | The result is shared as a picture, 1080 x 1920 | The maintainer's note: a picture goes into a story or a chat, a line of text does not, and every share is the game's advertising. The card is painted by the game itself, so it needs no image file, and what matters sits clear of the top and bottom that story apps cover. A phone gets its share sheet; anything else gets the file, because a desktop share sheet is rarely where a picture is wanted |
 | 2026-11-11 | A full-screen button only where the browser has full screen; an iPhone uses the home screen | Safari on an iPhone has no full-screen API. The page declares itself a home-screen app, which is the one way to lose the browser's bars there. No manifest and no service worker: nothing is cached |
 | 2026-11-11 | Touches on the game are cancelled, and the page has `touch-action: none` | Safari on iOS ignores `user-scalable=no` and zooms on a double tap, which is exactly what tapping jump twice is. Real buttons and the cards keep their touches, or they would never be clicked or scrolled |
 
