@@ -6,6 +6,7 @@
 
 import './ui/style.css';
 import { Game } from './core/game.ts';
+import type { GameEvent } from './core/types.ts';
 import { PARAMS } from './core/params.ts';
 import { audio } from './platform/audio.ts';
 import { type Action, bindInput, guardGestures, Pad } from './platform/input.ts';
@@ -59,6 +60,7 @@ function reportRun(cause: 'finished' | 'abandoned'): void {
 function start(): void {
   audio.unlock();
   audio.play('start');
+  audio.startMusic();
   pad.clear();
   game.start();
   renderer.snap(game);
@@ -77,6 +79,8 @@ function pause(): void {
   if (game.phase !== 'playing') return;
   game.pause();
   pad.clear();
+  audio.pauseMusic();
+  audio.play('click');
   ui.showPaused(game);
 }
 
@@ -84,6 +88,8 @@ function resume(): void {
   if (game.phase !== 'paused') return;
   pad.clear();
   game.resume();
+  audio.play('click');
+  audio.resumeMusic();
   ui.hideOverlay();
   loop.resync();
 }
@@ -148,16 +154,58 @@ resize();
 renderer.snap(game);
 ui.showTitle();
 
+/** How loud something at x, y is to the player: full when close, silent a screen away. */
+function nearness(x: number, y: number): number {
+  const distance = Math.hypot(x - game.player.x, y - game.player.y);
+  return Math.max(0, Math.min(1, 1 - (distance - 90) / 210));
+}
+
+function sound(event: GameEvent): void {
+  switch (event.type) {
+    case 'caught':
+      audio.duckMusic(1.2);
+      audio.play(event.cause === 'stempel' ? 'rejected' : 'caught');
+      break;
+    case 'warn':
+    case 'stamp':
+    case 'crumble':
+      // The whole floor is simulated; only what is near is heard.
+      audio.play(event.type, nearness(event.x, event.y));
+      break;
+    case 'win':
+      audio.pauseMusic();
+      audio.play('win');
+      break;
+    default:
+      audio.play(event.type);
+  }
+}
+
+/** Pixels run since the last footstep was heard. */
+let sinceStep = 0;
+const STRIDE = 20;
+
 const loop = startLoop({
   running: () => game.phase === 'playing',
   step(dt) {
     game.step(dt, pad.read());
+
+    const p = game.player;
+    if (p.ground >= 0 && game.caught <= 0 && p.dashT <= 0 && Math.abs(p.vx) > 40) {
+      sinceStep += Math.abs(p.vx) * dt;
+      if (sinceStep >= STRIDE) {
+        sinceStep = 0;
+        audio.play('step');
+      }
+    } else {
+      // The first step after standing still or landing comes quickly.
+      sinceStep = STRIDE * 0.7;
+    }
   },
   draw(dt) {
     const events = game.drain();
     for (const event of events) {
-      if (event.type === 'respawn') continue;
-      audio.play(event.type);
+      sound(event);
       if (event.type === 'win') {
         ui.update(game);
         ui.showResult(game, RESULT_LOCK_MS);

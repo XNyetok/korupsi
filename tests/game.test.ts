@@ -196,6 +196,17 @@ test('the stamp only bites on the way down and on the desk', () => {
   assert.equal(beside.deaths, 0, 'standing beside it is safe');
 });
 
+test('a stamp announces itself: a warning, then the hit, once per cycle', () => {
+  const def = YARD.stamps[0] as FloorDef['stamps'][number];
+  const game = quietGame(YARD);
+  run(game, def.period * 3);
+  const heard = game
+    .drain()
+    .filter((e) => e.type === 'warn' || e.type === 'stamp')
+    .map((e) => e.type);
+  assert.deepEqual(heard, ['warn', 'stamp', 'warn', 'stamp', 'warn', 'stamp']);
+});
+
 test('being caught sends the player back to the checkpoint with the bag as it was', () => {
   const game = yard();
   run(game, 0.3, hold({ move: 1 }));

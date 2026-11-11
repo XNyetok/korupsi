@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { expect, test } from '@playwright/test';
 
-import { goToDoor, holdTouch, leaveAndReturn, open, placeOn, start, state, waitForPhase } from './helpers.ts';
+import { goToDoor, holdTouch, leaveAndReturn, open, placeOn, sound, start, state, waitForPhase } from './helpers.ts';
 
 test.describe('title and input', () => {
   test('shows the title card, the version and a crisp canvas', async ({ page, isMobile }) => {
@@ -194,6 +194,60 @@ test.describe('title and input', () => {
     await expect(mute).toHaveAttribute('aria-pressed', 'true');
     await page.waitForTimeout(200);
     expect((await state(page)).y).toBe(0);
+  });
+});
+
+test.describe('sound', () => {
+  test('the tune starts with the run, stops for a pause and for the result', async ({ page }) => {
+    const errors = await open(page);
+    expect((await sound(page)).state).toBe('uninitialised');
+
+    await start(page);
+    await page.waitForFunction(
+      () => (window as unknown as { __korupsi: { audio: { state: string } } }).__korupsi.audio.state === 'running',
+    );
+    expect((await sound(page)).musicOn).toBe(true);
+
+    await page.locator('#pause').click();
+    await waitForPhase(page, 'paused');
+    expect((await sound(page)).musicOn).toBe(false);
+
+    await page.locator('#overlay button.primary').click();
+    await waitForPhase(page, 'playing');
+    expect((await sound(page)).musicOn).toBe(true);
+
+    // Everything a run can sound like, played together, must not throw.
+    await placeOn(page, 0, 340);
+    await placeOn(page, 10, 336);
+    await expect(page.locator('#hud-deaths')).toHaveText('OTT 1');
+    // Caught means held: wait to be back in the lobby before walking anywhere.
+    await page.waitForFunction(() => {
+      const g = (window as unknown as { __korupsi: { caught: number; player: { ground: number } } }).__korupsi;
+      return g.caught <= 0 && g.player.ground === 0;
+    });
+
+    await goToDoor(page);
+    await page.evaluate(() => {
+      const g = (window as unknown as { __korupsi: { player: { x: number }; floor: { exit: { x: number } } } })
+        .__korupsi;
+      g.player.x = g.floor.exit.x;
+    });
+    await waitForPhase(page, 'won');
+    expect((await sound(page)).musicOn).toBe(false);
+    expect(errors).toEqual([]);
+  });
+
+  test('the sound switch silences everything and is remembered', async ({ page }) => {
+    await open(page);
+    await page.locator('#mute').click();
+    await expect(page.locator('#mute')).toHaveAttribute('aria-pressed', 'true');
+    await start(page);
+    expect((await sound(page)).muted).toBe(true);
+
+    await page.reload();
+    await expect(page.locator('#mute')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#mute').click();
+    await expect(page.locator('#mute')).toHaveAttribute('aria-pressed', 'false');
   });
 });
 
