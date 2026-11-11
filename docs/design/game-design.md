@@ -3,8 +3,8 @@
 **Status:** the first floor is playable, released as v0.5.0, and has been played by a
 person. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts), the
 tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). Tests and a scripted climb
-prove the floor is possible. The first hands-on session has changes to ask for, not yet
-written down: expect the numbers to move.
+prove the floor is possible. The first hands-on session, on a phone, asked for three
+things around the game rather than in it: see the playtest log.
 
 ## One line
 
@@ -160,6 +160,7 @@ early waits for the landing.
 | 2026-11-10 | A pause no longer ends the run after a minute | That rule protected a score that could be farmed by waiting. The score is a clock now, and a paused clock is stopped |
 | 2026-11-10 | The size budget is 30 KB (was 18 KB) | The art is code. The build is about 22 KB gzipped |
 | 2026-11-10 | A press shorter than a simulation step is kept until it is read | A quick tap on a touch button could begin and end between two steps and never jump |
+| 2026-11-11 | Touches on the game are cancelled, and the page has `touch-action: none` | Safari on iOS ignores `user-scalable=no` and zooms on a double tap, which is exactly what tapping jump twice is. Real buttons and the cards keep their touches, or they would never be clicked or scrolled |
 
 ## What the tests check
 
@@ -183,7 +184,7 @@ the floor is fun.
 | --- | --- | --- | --- |
 | 2026-11-09 to 10 | v0.1.0 to v0.4.0 | The one-tap endless climb: hands-on on a phone, simulated runs, and the first six real runs from telemetry | The maintainer found it hard to pick up, and it was not the game that was asked for. Retired on 2026-11-10; the details are in the git history of this file |
 | 2026-11-10 | `feat/platformer-kelurahan` | The Kelurahan floor, by tests and by screenshots on a desktop, an upright phone and a phone on its side. No hands-on session yet | The floor is climbable empty and full, cannot be skipped, and a scripted player finishes it clean. The feel of the jump and the difficulty are unjudged |
-| 2026-11-10 | `fa63b0a` (PR #28), released as v0.5.0 | The Kelurahan floor, hands on: the first session played by a person rather than by a script | The maintainer has changes to ask for; they are not recorded yet, and nothing has been tuned. This row first said that nothing was asked to change, which was wrong |
+| 2026-11-10 | v0.5.0 | The Kelurahan floor, hands on, on a phone in Safari: the first session played by a person rather than by a script | Three notes, none about the jump or the hazards: a double tap on a control zoomed the page; the game should fill the phone's screen; the result should be shared as an image. Tracked as P2 in the plan |
 
 ## Tuning
 

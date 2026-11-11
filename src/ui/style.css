@@ -31,7 +31,13 @@ html, body {
   overscroll-behavior: none;
   -webkit-user-select: none;
   user-select: none;
+  -webkit-touch-callout: none;
+  /* The page is the game: no panning, no pinch, no double-tap zoom. Cards
+     that may need to scroll say so themselves. */
+  touch-action: none;
 }
+
+button { touch-action: manipulation; }
 
 #stage {
   position: fixed;
@@ -229,6 +235,7 @@ body:not(.is-playing) #touch { visibility: hidden; }
   justify-content: center;
   padding: 12px;
   overflow: auto;
+  touch-action: pan-y;
   background: rgba(13, 20, 24, 0.66);
 }
 

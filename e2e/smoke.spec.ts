@@ -91,6 +91,34 @@ test.describe('title and input', () => {
     await page.locator('#btn-jump').dispatchEvent('pointerup', { pointerId: 9, pointerType: 'touch' });
   });
 
+  test('a double tap on the controls cannot zoom the page', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'touch only');
+    await open(page);
+    await start(page);
+
+    // Safari zooms on a double tap unless the touch is cancelled, so every
+    // touch outside a real button or a card must be.
+    const cancelled = (selector: string) =>
+      page.evaluate((sel) => {
+        const el = document.querySelector(sel);
+        if (!el) throw new Error(`${sel} is missing`);
+        return ['touchstart', 'touchend', 'dblclick'].map(
+          (type) => !el.dispatchEvent(new Event(type, { bubbles: true, cancelable: true })),
+        );
+      }, selector);
+
+    for (const selector of ['#btn-jump', '#btn-dash', '#pad', '#game', '#stage']) {
+      expect(await cancelled(selector), selector).toEqual([true, true, true]);
+    }
+    // Real buttons keep their taps: a cancelled touch would never become a click.
+    expect(await cancelled('#pause')).toEqual([false, false, false]);
+
+    expect(await page.evaluate(() => getComputedStyle(document.body).touchAction)).toBe('none');
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector('#pause') as Element).touchAction)).toBe(
+      'manipulation',
+    );
+  });
+
   test('an envelope adds money and weight to the HUD', async ({ page }) => {
     await open(page);
     await start(page);
