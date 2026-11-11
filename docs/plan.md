@@ -68,6 +68,10 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
+- [x] **D7 — Credit nyetok.id.** Done 2026-11-11 (#41), not released yet. "Dibuat oleh
+  nyetok.id", as a link that opens beside the game: next to the version on the title
+  card, under the result, in the panel's footer (#40), in the page's author metadata and
+  in the README. Not on the shared picture, which stays the player's own.
 - [x] **D6 — A panel that can be read.** Done 2026-11-11 (#40), not released yet. The
   maintainer asked for a cleaner panel whose numbers explain themselves. It now leads
   with four figures (visits, runs started, finished, shared) and what share each is of

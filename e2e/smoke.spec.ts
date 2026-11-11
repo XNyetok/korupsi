@@ -9,7 +9,13 @@ test.describe('title and input', () => {
     const errors = await open(page);
     const card = page.locator('.card.title');
     await expect(card.locator('.logo')).toBeVisible();
-    await expect(card.locator('.version')).toHaveText(/^v\d+\.\d+\.\d+$/);
+    await expect(card.locator('.version .v')).toHaveText(/^v\d+\.\d+\.\d+$/);
+    // The credit: who made it, as a link that opens beside the game, not over it.
+    const credit = card.locator('.version a');
+    await expect(credit).toHaveText('nyetok.id');
+    await expect(credit).toHaveAttribute('href', 'https://nyetok.id');
+    await expect(credit).toHaveAttribute('target', '_blank');
+    await expect(credit).toHaveAttribute('rel', 'noopener');
     await expect(card.locator('button.primary')).toHaveText('Mulai');
 
     // The canvas is a window on a tower 384 game pixels wide, scaled without
@@ -315,6 +321,7 @@ test.describe('result', () => {
     await expect(card.locator('.gelar')).toHaveText('Belut Birokrasi');
     await expect(card.locator('.lede')).toHaveText('Licin. Tak tersentuh dan tak terkejar.');
     await expect(card.locator('.record')).toContainText('Rekor waktu baru');
+    await expect(card.locator('.version a')).toHaveText('nyetok.id');
 
     // The record survives a reload.
     await page.waitForTimeout(800);
