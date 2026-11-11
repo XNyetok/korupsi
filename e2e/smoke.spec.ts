@@ -321,7 +321,8 @@ test.describe('result', () => {
     expect(errors).toEqual([]);
   });
 
-  test('sharing without a share sheet saves the result as a story-sized picture', async ({ page }) => {
+  test('sharing on a computer saves the result as a story-sized picture', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'a phone shares or shows the picture instead');
     await open(page);
     await win(page);
 
@@ -340,19 +341,19 @@ test.describe('result', () => {
     expect((await state(page)).phase).toBe('won');
   });
 
-  test('sharing on a phone hands the picture to the share sheet', async ({ page, isMobile }) => {
+  test('sharing on a phone hands the share sheet the picture and nothing else', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'the share sheet is a phone thing');
     // A headless browser has no share sheet: stand in for it and keep what it was given.
     await page.addInitScript(() => {
-      const w = window as unknown as { __shared?: { files: number; type: string; size: number; text: string } };
+      const w = window as unknown as { __shared?: { keys: string[]; type: string; name: string; size: number } };
       navigator.canShare = (data?: ShareData) => Boolean(data?.files?.length);
       navigator.share = async (data?: ShareData) => {
         const file = data?.files?.[0];
         w.__shared = {
-          files: data?.files?.length ?? 0,
+          keys: Object.keys(data ?? {}),
           type: file?.type ?? '',
+          name: file?.name ?? '',
           size: file?.size ?? 0,
-          text: data?.text ?? '',
         };
       };
     });
@@ -362,15 +363,62 @@ test.describe('result', () => {
     await page.locator('#overlay .share').click();
     await page.waitForFunction(() => '__shared' in window);
     const shared = await page.evaluate(
-      () => (window as unknown as { __shared: { files: number; type: string; size: number; text: string } }).__shared,
+      () => (window as unknown as { __shared: { keys: string[]; type: string; name: string; size: number } }).__shared,
     );
-    expect(shared.files).toBe(1);
+    // A caption beside the picture makes apps that only take pictures, like a
+    // story, drop out of the sheet on iOS. So: the file, and only the file.
+    expect(shared.keys).toEqual(['files']);
     expect(shared.type).toBe('image/png');
+    expect(shared.name).toBe('korupsi-kelurahan.png');
     expect(shared.size).toBeGreaterThan(5_000);
-    expect(shared.text).toMatch(
-      /^Lolos dari Kelurahan dalam \d+:\d\d: 0 kali OTT, 0 amplop \(Rp 0\)\. https:\/\/korupsi\.web\.id\/$/,
-    );
-    // The sheet took it, so nothing is saved and nothing needs saying.
+    // The sheet took it, so nothing else appears.
+    await expect(page.locator('.viewer')).toHaveCount(0);
+    await expect(page.locator('#toast')).not.toHaveClass(/is-visible/);
+  });
+
+  test('a phone whose share sheet refuses the picture shows it for a long press', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'the share sheet is a phone thing');
+    await page.addInitScript(() => {
+      navigator.canShare = () => true;
+      navigator.share = async () => {
+        throw new DOMException('not allowed', 'NotAllowedError');
+      };
+    });
+    await open(page);
+    await win(page);
+
+    await page.locator('#overlay .share').click();
+    const viewer = page.locator('.viewer');
+    await expect(viewer).toBeVisible();
+    await expect(viewer.locator('p')).toContainText('Tekan lama gambar');
+    const picture = await viewer.locator('img').evaluate((img: HTMLImageElement) => ({
+      src: img.src.slice(0, 22),
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+      // The page refuses the long-press menu everywhere else; here it must not.
+      select: getComputedStyle(img).userSelect,
+    }));
+    expect(picture).toEqual({ src: 'data:image/png;base64,', width: 1080, height: 1920, select: 'auto' });
+
+    await viewer.locator('button').click();
+    await expect(viewer).toHaveCount(0);
+    expect((await state(page)).phase).toBe('won');
+  });
+
+  test('closing the share sheet is not an error and not a share', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'the share sheet is a phone thing');
+    await page.addInitScript(() => {
+      navigator.canShare = () => true;
+      navigator.share = async () => {
+        throw new DOMException('closed', 'AbortError');
+      };
+    });
+    await open(page);
+    await win(page);
+
+    await page.locator('#overlay .share').click();
+    await expect(page.locator('#overlay .share')).toBeEnabled();
+    await expect(page.locator('.viewer')).toHaveCount(0);
     await expect(page.locator('#toast')).not.toHaveClass(/is-visible/);
   });
 

@@ -32,13 +32,18 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P2 — Play the Kelurahan and tune it.** Waiting on the maintainer. The first
-  session, on v0.5.0 on a phone, gave four notes; all four went out in v0.6.0 (see Done).
-  None has been tried on a real phone yet. Next: play v0.6.0 in Safari and in Chrome and
-  say what is still off, above all whether the double-tap zoom is gone, whether the share
-  sheet takes the picture, and whether the tune is worth keeping. The questions that need
-  more than one session are in `docs/design/game-design.md` (Open questions). P3 waits
-  for this.
+- [~] **P2 — Play the Kelurahan and tune it.** The maintainer played v0.6.0 in Safari on
+  an iPhone on 2026-11-11. The double-tap zoom is gone, and the tune and the effects are
+  good. One thing was still off:
+  - [x] Sharing the result offered a save but no way to a story. Fixed 2026-11-11 (#37):
+    the share sheet now gets the picture alone, without the caption that made apps which
+    only take pictures drop out of it, and is asked for straight from the press. A phone
+    whose sheet will not take the picture shows it for a long press instead of
+    downloading it. Not released yet, and not tried on the phone.
+
+  Next: release it, and the maintainer tries the share sheet again. The questions that
+  need more than one session are in `docs/design/game-design.md` (Open questions). P3
+  waits for this.
 
 ## Next
 

@@ -31,7 +31,8 @@ playable; the Kecamatan and the floors above it are next.
 
 The floor ends at the door to the Kecamatan. The result card shows your time, how often
 you were caught, and what you carried out. "Bagikan hasil" turns that into a picture the
-size of a story: a phone opens its share sheet with it, a computer saves the file.
+size of a story: a phone opens its share sheet with the picture, a computer saves the
+file.
 
 | Input | Action |
 | --- | --- |
