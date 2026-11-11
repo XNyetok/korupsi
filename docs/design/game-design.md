@@ -4,8 +4,8 @@
 person. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts), the
 tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). Tests and a scripted climb
 prove the floor is possible. The first hands-on session, on a phone, asked for four
-things around the game rather than in it; all four are in v0.6.0 and none has been tried
-on a real phone yet: see the playtest log.
+things around the game rather than in it; all four are in v0.6.0. The second session
+confirmed three of them and sent the fourth, sharing, back: see the playtest log.
 
 ## One line
 
@@ -191,6 +191,8 @@ early waits for the landing.
 | 2026-11-11 | A tune, footsteps and louder effects, all still synthesised | The maintainer's note: the sound had no punch. Measured, the old effects peaked around -30 dB of full scale, there was no music, running was silent and a stamp gave no warning to the ear. Synthesis was kept over recorded or generated audio because it costs a few kilobytes instead of a megabyte, needs no license entry, and starts with the page. If the tune does not hold up to listening, a produced track is the fallback, at the price of a loading step |
 | 2026-11-11 | The tune is in a pelog-like scale | The game is about an Indonesian office; five notes are enough to say so without quoting any song |
 | 2026-11-11 | The sound and pause buttons sit above the cards | They were under the title, pause and result cards, so the sound could not be switched off there. Found by a browser test |
+| 2026-11-11 | The share sheet gets the picture and nothing else | On the maintainer's iPhone the sheet offered a save and no story. A caption or an address sent beside a file makes iOS treat the share as text with an attachment, and apps that only take pictures drop out of the sheet. The address is on the picture, so the caption was only costing the one target that mattered |
+| 2026-11-11 | The sheet is asked for straight from the press, and a phone that refuses it shows the picture | Safari only opens the sheet from the press itself, so the file is made before the button comes alive. If the sheet still will not take a file, a download prompt is the wrong answer on a phone: the picture is shown, and a long press on a picture saves or shares it in every phone browser |
 | 2026-11-11 | The result is shared as a picture, 1080 x 1920 | The maintainer's note: a picture goes into a story or a chat, a line of text does not, and every share is the game's advertising. The card is painted by the game itself, so it needs no image file, and what matters sits clear of the top and bottom that story apps cover. A phone gets its share sheet; anything else gets the file, because a desktop share sheet is rarely where a picture is wanted |
 | 2026-11-11 | A full-screen button only where the browser has full screen; an iPhone uses the home screen | Safari on an iPhone has no full-screen API. The page declares itself a home-screen app, which is the one way to lose the browser's bars there. No manifest and no service worker: nothing is cached |
 | 2026-11-11 | Touches on the game are cancelled, and the page has `touch-action: none` | Safari on iOS ignores `user-scalable=no` and zooms on a double tap, which is exactly what tapping jump twice is. Real buttons and the cards keep their touches, or they would never be clicked or scrolled |
@@ -226,6 +228,7 @@ in CI. Whether the tune is any good is for ears.
 | 2026-11-10 | `feat/platformer-kelurahan` | The Kelurahan floor, by tests and by screenshots on a desktop, an upright phone and a phone on its side. No hands-on session yet | The floor is climbable empty and full, cannot be skipped, and a scripted player finishes it clean. The feel of the jump and the difficulty are unjudged |
 | 2026-11-10 | v0.5.0 | The Kelurahan floor, hands on, on a phone in Safari: the first session played by a person rather than by a script | Four notes, none about the jump or the hazards: a double tap on a control zoomed the page; the game should fill the phone's screen; the result should be shared as an image; the sound had no punch and there was no music. Tracked as P2 in the plan |
 | 2026-11-11 | v0.6.0 | The four notes, by tests, by screenshots at phone sizes, by rendering the sound offline, and by a headless browser on the live site. Not on a real phone, and not by ear | All four behave as intended in a browser. What a browser cannot say: whether Safari on an iPhone still zooms, whether its share sheet takes the picture, and whether the tune is any good |
+| 2026-11-11 | v0.6.0 | The maintainer, in Safari on an iPhone | The double tap no longer zooms. The tune and the effects are good. Sharing opened a menu that offered a save and no story: the picture was being sent with a caption. Sharing in Chrome on Android is still untried |
 
 ## Tuning
 

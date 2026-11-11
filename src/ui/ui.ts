@@ -193,29 +193,55 @@ export class Ui {
       const text = `Lolos dari ${game.floor.name} dalam ${clock(game.time)}: ${deaths} kali OTT, ${weight} amplop (${rupiah(game.money)}).`;
       const filename = `korupsi-${game.floor.name.toLowerCase()}.png`;
 
-      // The picture is painted right after the card appears, not on the press:
-      // a share sheet only opens from a press, and must not wait for a drawing.
-      const image = new Promise<Blob | null>((resolve) => {
-        window.setTimeout(() => {
-          try {
-            paintShareCard(game).toBlob((blob) => resolve(blob), 'image/png');
-          } catch {
-            resolve(null);
-          }
-        }, 30);
-      });
+      // The picture is painted right after the card appears, not on the press.
+      // A share sheet only opens straight from a press: anything that has to
+      // be waited for in between, and Safari refuses. So the button is dead
+      // until the file exists, and the press does nothing but share it.
+      let card: HTMLCanvasElement | null = null;
+      let file: File | null = null;
+      share.disabled = true;
+      window.setTimeout(() => {
+        try {
+          card = paintShareCard(game);
+          card.toBlob((blob) => {
+            if (blob) file = new File([blob], filename, { type: 'image/png' });
+            share.disabled = false;
+          }, 'image/png');
+        } catch {
+          share.disabled = false;
+        }
+      }, 30);
 
-      share.addEventListener('click', async () => {
+      share.addEventListener('click', () => {
         if (share.disabled) return;
         share.disabled = true;
-        const outcome = await shareResult({ text, image: await image, filename });
-        share.disabled = false;
-        if (outcome === 'shared' || outcome === 'saved' || outcome === 'copied') track('shared', { via: outcome });
-        if (outcome === 'saved') this.toast('Gambar hasil disimpan');
-        if (outcome === 'copied') this.toast('Disalin ke papan klip');
-        if (outcome === 'failed') this.toast('Tidak bisa membagikan');
+        void shareResult({ text, file }).then((outcome) => {
+          share.disabled = false;
+          if (outcome === 'show' && card) this.showPicture(card.toDataURL('image/png'));
+          if (outcome !== 'cancelled' && outcome !== 'failed') track('shared', { via: outcome });
+          if (outcome === 'saved') this.toast('Gambar hasil disimpan');
+          if (outcome === 'copied') this.toast('Disalin ke papan klip');
+          if (outcome === 'failed') this.toast('Tidak bisa membagikan');
+        });
       });
     }
+  }
+
+  /**
+   * Shows the result picture itself, for a phone whose share sheet would not
+   * take it: a long press on a picture is the one thing every phone browser
+   * offers for saving or sharing it.
+   */
+  private showPicture(src: string): void {
+    const viewer = document.createElement('div');
+    viewer.className = 'viewer';
+    viewer.innerHTML = `
+      <img alt="Gambar hasil">
+      <p>Tekan lama gambar, lalu pilih <b>Simpan ke Foto</b> atau <b>Bagikan</b>.</p>
+      <button type="button">Tutup</button>`;
+    viewer.querySelector('img')?.setAttribute('src', src);
+    viewer.querySelector('button')?.addEventListener('click', () => viewer.remove());
+    this.overlay.append(viewer);
   }
 
   hideOverlay(): void {
