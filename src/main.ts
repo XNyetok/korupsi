@@ -26,6 +26,7 @@ function need<T extends HTMLElement>(id: string): T {
 const canvas = need<HTMLCanvasElement>('game');
 const screen = need<HTMLDivElement>('screen');
 const stage = need<HTMLDivElement>('stage');
+const touchPad = need<HTMLDivElement>('pad');
 
 const foundContext = canvas.getContext('2d');
 if (!foundContext) throw new Error('canvas 2d context unavailable');
@@ -96,8 +97,9 @@ let touch = window.matchMedia('(pointer: coarse)').matches;
 
 function resize(): void {
   document.body.classList.toggle('is-touch', touch);
-  const view = applyView(canvas, screen, stage, touch);
-  renderer.resize(view.viewH);
+  const view = applyView(canvas, screen, stage, touch, touchPad);
+  renderer.resize(view.viewW, view.viewH, view.deck);
+  renderer.snap(game);
 }
 
 window.addEventListener('resize', resize);
@@ -115,7 +117,7 @@ window.addEventListener(
 
 bindInput(
   pad,
-  { pad: need('pad'), jump: need('btn-jump'), dash: need('btn-dash') },
+  { pad: touchPad, jump: need('btn-jump'), dash: need('btn-dash') },
   {
     gesture: () => audio.unlock(),
     press(action: Action) {
@@ -165,7 +167,10 @@ const loop = startLoop({
     renderer.handle(events);
     renderer.draw(game, dt);
     ui.update(game);
-    debug?.tick();
+    if (debug) {
+      debug.tick();
+      (window as unknown as { __view: Renderer['frame'] }).__view = renderer.frame;
+    }
   },
 });
 

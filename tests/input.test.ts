@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { keyAction, Pad } from '../src/platform/input.ts';
 import { fitView } from '../src/platform/viewport.ts';
-import { VIEW, WORLD_WIDTH } from '../src/core/params.ts';
+import { FILL, VIEW, WORLD_WIDTH } from '../src/core/params.ts';
 
 test('keys map to actions, whatever the case', () => {
   assert.equal(keyAction('ArrowLeft'), 'left');
@@ -84,39 +84,76 @@ test('clearing lets go of everything', () => {
   assert.deepEqual(pad.read(), { move: 0, jump: false, dash: false });
 });
 
-test('a desktop window gets whole game pixels', () => {
+test('a desktop window gets the whole width of the tower in whole game pixels', () => {
   const view = fitView(1280, 720, 1, false);
+  assert.equal(view.fill, false);
   assert.equal(view.unit, 3);
+  assert.equal(view.viewW, WORLD_WIDTH);
   assert.equal(view.cssW, WORLD_WIDTH * 3);
   assert.equal(view.viewH, 240);
   assert.ok(view.cssH <= 720);
-  assert.equal(view.portrait, false);
+  assert.equal(view.deck, 0);
 });
 
-test('a phone on its side gets whole device pixels', () => {
-  const view = fitView(844, 390, 3, true);
-  assert.equal(view.unit * 3, 5);
-  assert.ok(view.cssW <= 844 && view.cssH <= 390);
-  assert.ok(view.viewH >= VIEW.minHeight && view.viewH <= VIEW.maxHeight);
-});
-
-test('an upright phone uses its full width and keeps room for the thumbs', () => {
-  const view = fitView(412, 915, 2.625, true);
-  assert.equal(view.portrait, true);
-  assert.ok(view.cssW > 412 * 0.98 && view.cssW <= 412, `width ${view.cssW}`);
-  assert.equal(view.viewH, VIEW.maxHeight);
-  assert.ok(view.cssH <= 915 - 190);
-});
-
-test('the view never shows less than a 16:9 screen of the tower', () => {
+test('a window never shows less than a 16:9 screen of the tower', () => {
   for (const [w, h, dpr] of [
     [320, 480, 2],
     [2560, 600, 1],
     [300, 200, 1],
     [1024, 1366, 2],
   ] as const) {
-    const view = fitView(w, h, dpr, true);
+    const view = fitView(w, h, dpr, false);
+    assert.equal(view.viewW, WORLD_WIDTH);
     assert.ok(view.viewH >= VIEW.minHeight && view.viewH <= VIEW.maxHeight, `${w}x${h}`);
     assert.ok(view.cssW <= w + 0.01, `${w}x${h} fits the width`);
+  }
+});
+
+test('an upright phone is filled with a tall slice of the tower', () => {
+  const view = fitView(412, 915, 2.625, true, 104);
+  assert.equal(view.fill, true);
+  assert.equal(view.cssW, 412);
+  assert.equal(view.cssH, 915);
+  // Whole device pixels per game pixel, and never fewer columns than the minimum.
+  assert.equal(view.unit * 2.625, 5);
+  assert.equal(view.viewW, FILL.minWidth);
+  assert.ok(view.viewH > 400 && view.viewH <= FILL.maxHeight);
+  // The controls cover about 104 CSS pixels, which is this many rows.
+  assert.equal(view.deck, Math.ceil(104 / view.unit));
+});
+
+test('a phone on its side is filled with the full width of the tower', () => {
+  const view = fitView(844, 390, 3, true, 104);
+  assert.equal(view.fill, true);
+  assert.equal(view.cssW, 844);
+  assert.equal(view.cssH, 390);
+  assert.equal(view.unit * 3, 7);
+  assert.ok(view.viewW > WORLD_WIDTH * 0.9 && view.viewW <= WORLD_WIDTH);
+  assert.ok(view.viewH >= FILL.minHeight);
+});
+
+test('a long phone on its side gives up whole pixels before it gives up rows', () => {
+  const view = fitView(915, 412, 2.625, true, 104);
+  assert.equal(view.viewW, WORLD_WIDTH);
+  assert.ok(view.viewH >= FILL.minHeight, `rows ${view.viewH}`);
+  assert.equal(view.cssW, 915);
+});
+
+test('a filled view is never wider than the tower or smaller than the minimum', () => {
+  for (const [w, h, dpr] of [
+    [320, 568, 2],
+    [390, 844, 3],
+    [844, 390, 3],
+    [768, 1024, 2],
+    [1024, 768, 2],
+    [1366, 1024, 2],
+    [360, 640, 1],
+    [2000, 500, 1],
+  ] as const) {
+    const view = fitView(w, h, dpr, true, 104);
+    assert.ok(view.viewW <= WORLD_WIDTH && view.viewW >= FILL.minWidth, `${w}x${h} columns ${view.viewW}`);
+    assert.ok(view.viewH >= FILL.minHeight && view.viewH <= FILL.maxHeight, `${w}x${h} rows ${view.viewH}`);
+    assert.ok(view.cssW <= w && view.cssH <= h, `${w}x${h} fits`);
+    assert.ok(view.deck <= view.viewH / 2, `${w}x${h} leaves room above the controls`);
   }
 });

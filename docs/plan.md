@@ -38,8 +38,13 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     (#32): touches on the game are cancelled before the browser can read them as a
     gesture, and the page declares `touch-action: none`. Checked in a browser test, not
     yet on the maintainer's phone.
-  - [ ] The game should fill a phone's screen, upright or sideways, instead of sitting
-    in a box with bars around it.
+  - [x] The game should fill a phone's screen, upright or sideways, instead of sitting
+    in a box with bars around it. Done 2026-11-11 (#33): on a touch screen the canvas
+    covers the screen, an upright phone shows a tall slice of the tower with a camera
+    that follows sideways, and the controls sit over a cellar drawn under the lobby.
+    Where the browser has a full screen of its own there is a button for it; an iPhone
+    gets there from the home screen. Checked at phone sizes in a browser, not yet on the
+    maintainer's phone.
   - [ ] "Bagikan hasil" should share an image of the result, fit for a story, not a line
     of text.
 

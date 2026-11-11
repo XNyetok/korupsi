@@ -20,6 +20,11 @@ export const C = {
   tile: '#77745f',
   tileDark: '#5c5a49',
   tileLine: '#3d3c33',
+  cellar: '#10191c',
+  cellarLine: '#1a272b',
+  box: '#3b2d21',
+  boxLight: '#4c3b2b',
+  boxLabel: '#6c6856',
 
   // the dusk outside the windows
   sky: ['#2a2148', '#43295a', '#6a3465', '#9a4368', '#c9566a', '#e57a5e', '#f2a65a', '#f7c873'],
