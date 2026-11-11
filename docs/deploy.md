@@ -201,6 +201,12 @@ sudo cp -p "$F" "$F.bak-$(date +%F-%H%M%S)"
 sudo install -m 644 /tmp/korupsi-rewrite.conf "$F"     # copied over with scp
 sudo nginx -t && sudo nginx -s reload
 
+# rate limit zones
+F=/www/server/panel/vhost/nginx/0.korupsi-limits.conf
+sudo cp -p "$F" "$F.bak-$(date +%F-%H%M%S)"
+sudo install -m 644 /tmp/korupsi-limits.conf "$F"
+sudo nginx -t && sudo nginx -s reload
+
 # collector unit
 sudo install -m 644 /tmp/korupsi-stats.service /etc/systemd/system/korupsi-stats.service
 sudo systemctl daemon-reload && sudo systemctl restart korupsi-stats
