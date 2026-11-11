@@ -106,6 +106,11 @@ The tower lives in [`src/core/tower.ts`](src/core/tower.ts), the numbers in
   raw rows are deleted after 90 days. The dashboard is private, but the collector's code
   is in [`server/`](server/) like everything else.
 
+## Credits
+
+Korupsi is made by [nyetok.id](https://nyetok.id). The credit is on the title card, under
+the result, and in the panel's footer.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

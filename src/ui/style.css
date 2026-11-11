@@ -355,6 +355,10 @@ body.is-touch .keys { display: none; }
   color: #6f827b;
 }
 
+.card .version + .version { margin-top: 3px; }
+.card .version a { color: var(--muted); text-underline-offset: 2px; }
+.card .version a:hover, .card .version a:focus-visible { color: var(--paper); }
+
 .card .stamp {
   display: inline-block;
   margin-bottom: 6px;

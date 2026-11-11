@@ -8,6 +8,9 @@ import { C } from '../view/palette.ts';
 import { paintLogo } from '../view/pixel.ts';
 import { paintShareCard } from '../view/sharecard.ts';
 
+/** Who made the game: shown on the title card and under the result. */
+const CREDIT = { name: 'nyetok.id', url: 'https://nyetok.id' } as const;
+
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
   if (!node) throw new Error(`missing element #${id}`);
@@ -136,7 +139,7 @@ export class Ui {
         </ul>
         <button class="primary" type="button" data-do="start">Mulai</button>
         <p class="keys"><kbd>←</kbd><kbd>→</kbd> jalan <kbd>Spasi</kbd> lompat <kbd>Shift</kbd> ngeles <kbd>Esc</kbd> jeda</p>
-        <p class="version">v${__VERSION__}</p>
+        <p class="version"><span class="v">v${__VERSION__}</span> · dibuat oleh <a href="${CREDIT.url}" target="_blank" rel="noopener">${CREDIT.name}</a></p>
       </div>`);
     const logo = this.overlay.querySelector<HTMLCanvasElement>('.logo');
     if (logo) paintLogo(logo, C.gold, C.redDark);
@@ -182,6 +185,7 @@ export class Ui {
         <button class="primary" type="button" data-do="restart">Main lagi</button>
         <button class="secondary share" type="button">Bagikan hasil</button>
         <p class="version">Lantai berikutnya, Kecamatan, masih dibangun.</p>
+        <p class="version">Dibuat oleh <a href="${CREDIT.url}" target="_blank" rel="noopener">${CREDIT.name}</a></p>
       </div>`,
       lockMs,
     );
