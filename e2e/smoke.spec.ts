@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { expect, test } from '@playwright/test';
 
 import { goToDoor, holdTouch, leaveAndReturn, open, placeOn, start, state, waitForPhase } from './helpers.ts';
@@ -265,19 +267,57 @@ test.describe('result', () => {
     expect(errors).toEqual([]);
   });
 
-  test('sharing on a desktop copies the result', async ({ page, context, isMobile }) => {
-    test.skip(isMobile, 'phones open the native share sheet');
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  test('sharing without a share sheet saves the result as a story-sized picture', async ({ page }) => {
+    await open(page);
+    await win(page);
+
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#overlay .share').click()]);
+    expect(download.suggestedFilename()).toBe('korupsi-kelurahan.png');
+    await expect(page.locator('#toast')).toHaveText('Gambar hasil disimpan');
+
+    // A PNG says its size in the first chunk: 1080 x 1920, the shape of a story.
+    const path = await download.path();
+    const bytes = readFileSync(path);
+    expect(bytes.subarray(1, 4).toString('latin1')).toBe('PNG');
+    expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([1080, 1920]);
+    expect(bytes.length).toBeGreaterThan(5_000);
+
+    // The share button must not restart the run underneath.
+    expect((await state(page)).phase).toBe('won');
+  });
+
+  test('sharing on a phone hands the picture to the share sheet', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'the share sheet is a phone thing');
+    // A headless browser has no share sheet: stand in for it and keep what it was given.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __shared?: { files: number; type: string; size: number; text: string } };
+      navigator.canShare = (data?: ShareData) => Boolean(data?.files?.length);
+      navigator.share = async (data?: ShareData) => {
+        const file = data?.files?.[0];
+        w.__shared = {
+          files: data?.files?.length ?? 0,
+          type: file?.type ?? '',
+          size: file?.size ?? 0,
+          text: data?.text ?? '',
+        };
+      };
+    });
     await open(page);
     await win(page);
 
     await page.locator('#overlay .share').click();
-    await expect(page.locator('#toast')).toHaveText('Disalin ke papan klip');
-    const copied = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copied).toMatch(
-      /^Lolos dari Kelurahan dalam \d+:\d\d: 0 kali OTT, 0 amplop \(Rp 0\)\.\nhttps:\/\/korupsi\.web\.id\/$/,
+    await page.waitForFunction(() => '__shared' in window);
+    const shared = await page.evaluate(
+      () => (window as unknown as { __shared: { files: number; type: string; size: number; text: string } }).__shared,
     );
-    expect((await state(page)).phase).toBe('won');
+    expect(shared.files).toBe(1);
+    expect(shared.type).toBe('image/png');
+    expect(shared.size).toBeGreaterThan(5_000);
+    expect(shared.text).toMatch(
+      /^Lolos dari Kelurahan dalam \d+:\d\d: 0 kali OTT, 0 amplop \(Rp 0\)\. https:\/\/korupsi\.web\.id\/$/,
+    );
+    // The sheet took it, so nothing is saved and nothing needs saying.
+    await expect(page.locator('#toast')).not.toHaveClass(/is-visible/);
   });
 
   test('the debug handle is not there for players', async ({ page }) => {
