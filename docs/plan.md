@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-10 · Last tagged release: `v0.5.0`. What is live is the latest
+Last updated: 2026-11-11 · Last tagged release: `v0.5.0`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -32,13 +32,20 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
+- [ ] **P2 — Play the Kelurahan and tune it.** Reopened 2026-11-11 (#31). The maintainer
+  played the floor on 2026-11-10 and has changes to ask for; they are not written down
+  yet, so nothing has been tuned. #29 closed this item saying no change was asked for,
+  which was wrong. Next: list the notes here, then make the changes. The questions that
+  need more than one session are in `docs/design/game-design.md` (Open questions); the
+  numbers are in `src/core/params.ts` and can be moved live with `?debug=1`. P3 does not
+  start before this.
+
+## Next
+
 - [ ] **P3 — Floor 02, Kecamatan.** Its own scenery and one new hazard, built on the
   spacing rules at the top of `src/core/tower.ts`. Needs: more than one floor in a run
   (the door leads to the next floor, the bag is paid upwards and the weight resets), a
   promotion card between floors, and the floor name in the HUD from the floor itself.
-
-## Next
-
 - [ ] **T1 — Count OTT in telemetry.** `run_ended` carries money, weight, height and
   duration, but not how often the player was caught or where, which is what says whether
   a hazard is unfair. Needs a column in the collector and a row in the panel.
@@ -56,13 +63,8 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 - [x] **v0.5.0** — released and deployed 2026-11-10 (release run 42782895974, deploy run
   42783163447): live as `0.5.0+7c5a32a`, `/api/health` 404, `/panel/` 401. The first
   player-facing release of the platformer: the Kelurahan floor, run, jump and ngeles with
-  keyboard and touch, pixel art drawn in code. The one-tap climb is retired. P2 was closed
-  first (#29).
-- [x] **P2 — Play the Kelurahan and tune it.** Done 2026-11-10 (#29). The maintainer played
-  the merged floor hands on and judged it good enough to build the next one on; no change
-  was asked for, so nothing was tuned. The questions that need ten playtests — the weight,
-  the dash through an auditor, three checkpoints — stay open in
-  `docs/design/game-design.md`, and the numbers are still in `src/core/params.ts`.
+  keyboard and touch, pixel art drawn in code. The one-tap climb is retired. It went out
+  before the notes from the first hands-on session were dealt with: see P2.
 - [x] **P1 — Rebuild as a pixel-art platformer, first floor.** Done 2026-11-10 (#28). The
   brief was a pixel-art platformer; the one-tap endless climb was a different game. Replaced: the simulation, the level
   generator, the renderer, the balance simulator and the browser tests. Kept: the
