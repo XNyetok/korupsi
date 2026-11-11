@@ -8,7 +8,7 @@ import './ui/style.css';
 import { Game } from './core/game.ts';
 import { PARAMS } from './core/params.ts';
 import { audio } from './platform/audio.ts';
-import { type Action, bindInput, Pad } from './platform/input.ts';
+import { type Action, bindInput, guardGestures, Pad } from './platform/input.ts';
 import { startLoop } from './platform/loop.ts';
 import { bestStore } from './platform/storage.ts';
 import { track, trackErrors } from './platform/telemetry.ts';
@@ -130,6 +130,7 @@ bindInput(
 );
 
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+guardGestures(document);
 
 // Safari only starts audio from a gesture, and devices disagree about which
 // events count. Any of these is enough; unlock() is cheap once running.

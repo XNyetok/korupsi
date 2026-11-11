@@ -195,3 +195,25 @@ export function bindInput(pad: Pad, touch: TouchControls, hooks: InputHooks): vo
   button(touch.dash, 'dash');
   touch.pad.addEventListener('contextmenu', (event) => event.preventDefault());
 }
+
+/**
+ * Stops the browser from treating play as page gestures. Safari on iOS zooms
+ * on a double tap and ignores `user-scalable=no`, so tapping jump twice
+ * zoomed the page. Cancelling the touch on anything that is not a real button
+ * or a card prevents that; `touch-action` in the stylesheet covers the rest.
+ */
+export function guardGestures(root: Document): void {
+  const guard = (event: Event) => {
+    const target = event.target;
+    // Buttons and cards keep their taps, clicks and scrolling.
+    if (target instanceof Element && target.closest('#overlay, button, a, input, select, textarea')) return;
+    if (event.cancelable) event.preventDefault();
+  };
+  for (const type of ['touchstart', 'touchend', 'dblclick'] as const) {
+    root.addEventListener(type, guard, { passive: false });
+  }
+  // Pinch, on Safari. Other browsers honour the viewport and touch-action.
+  for (const type of ['gesturestart', 'gesturechange'] as const) {
+    root.addEventListener(type, (event) => event.preventDefault(), { passive: false });
+  }
+}

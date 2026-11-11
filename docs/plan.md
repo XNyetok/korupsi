@@ -32,13 +32,19 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [ ] **P2 — Play the Kelurahan and tune it.** Reopened 2026-11-11 (#31). The maintainer
-  played the floor on 2026-11-10 and has changes to ask for; they are not written down
-  yet, so nothing has been tuned. #29 closed this item saying no change was asked for,
-  which was wrong. Next: list the notes here, then make the changes. The questions that
-  need more than one session are in `docs/design/game-design.md` (Open questions); the
-  numbers are in `src/core/params.ts` and can be moved live with `?debug=1`. P3 does not
-  start before this.
+- [~] **P2 — Play the Kelurahan and tune it.** The maintainer played v0.5.0 on a phone
+  (Safari) on 2026-11-10. Three notes came out of it, none about the jump or the hazards:
+  - [x] A double tap on a control zoomed the page in Safari on iOS. Fixed 2026-11-11
+    (#32): touches on the game are cancelled before the browser can read them as a
+    gesture, and the page declares `touch-action: none`. Checked in a browser test, not
+    yet on the maintainer's phone.
+  - [ ] The game should fill a phone's screen, upright or sideways, instead of sitting
+    in a box with bars around it.
+  - [ ] "Bagikan hasil" should share an image of the result, fit for a story, not a line
+    of text.
+
+  The questions that need more than one session are in `docs/design/game-design.md` (Open
+  questions). P3 does not start before these three are done.
 
 ## Next
 
