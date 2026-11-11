@@ -1,12 +1,13 @@
 # Korupsi — game design
 
-**Status:** the first floor is playable, live as v0.6.1, and has been played by a
+**Status:** the first floor is playable, live as v0.7.0, and has been played by a
 person. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts), the
 tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). Tests and a scripted climb
-prove the floor is possible. The first hands-on session, on a phone, asked for four
-things around the game rather than in it; all four are in v0.6.0. The second session
-confirmed three of them and sent the fourth, sharing, back; that fix is in v0.6.1 and has
-not been tried on a phone yet: see the playtest log.
+prove the floor is possible. Three hands-on sessions on a phone shaped how the game sits
+on a screen, how it sounds and how a result is shared; none has yet asked for a change to
+the jump or the hazards. From v0.7.0 the game reports which hazard catches players and
+where they leave ([`../telemetry.md`](../telemetry.md)), so the floor can be tuned from
+numbers as well as from sessions: see the playtest log.
 
 ## One line
 
@@ -240,6 +241,8 @@ in CI. Whether the tune is any good is for ears.
 | 2026-11-11 | v0.6.0 | The four notes, by tests, by screenshots at phone sizes, by rendering the sound offline, and by a headless browser on the live site. Not on a real phone, and not by ear | All four behave as intended in a browser. What a browser cannot say: whether Safari on an iPhone still zooms, whether its share sheet takes the picture, and whether the tune is any good |
 | 2026-11-11 | v0.6.0 | The maintainer, in Safari on an iPhone | The double tap no longer zooms. The tune and the effects are good. Sharing opened a menu that offered a save and no story: the picture was being sent with a caption. Sharing in Chrome on Android is still untried |
 | 2026-11-11 | v0.6.1 | The share fix, by tests and by a headless browser on the live site with a stand-in share sheet. Not on a real phone | The sheet is handed the picture alone, and a sheet that refuses it leads to the picture on screen. Whether the iPhone's sheet now lists a story is the maintainer's to see; that the caption was the cause is an inference from the symptom, not something measured |
+| 2026-11-11 | v0.6.1 | The maintainer, in Safari on an iPhone | Instagram is in the share sheet now. There is no direct "story" entry: that choice is made inside the app, and a web page cannot reach past the sheet. The picture itself should be something people want to post, which became the decree in v0.7.0 |
+| 2026-11-11 | v0.7.0 | The decree, the panel and the new telemetry, by tests, by a local collector on seeded data, and by a headless browser on the live site. Not by a player, and the panel not against live data | The maintainer saw samples of the decree and approved it. The thresholds of the ten titles are guesses, and the panel's new breakdowns are empty until runs from this release arrive: both are for the next reading of the numbers |
 
 ## Tuning
 
