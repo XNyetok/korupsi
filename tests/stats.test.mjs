@@ -121,10 +121,9 @@ test('stats aggregate counts, causes and medians', () => {
     ],
   );
 
-  assert.equal(stats.medians.money, 2_000_000);
-  assert.equal(stats.medians.height, 200);
-  assert.equal(stats.medians.duration, 45);
-  assert.equal(stats.medians.samples, 3);
+  // None of these three runs reached the door or was walked away from.
+  assert.deepEqual(stats.finished, { n: 0, duration: null, money: null, weight: null });
+  assert.deepEqual(stats.abandoned, { n: 0, duration: null, height: null });
 
   assert.equal(stats.errors[0].message, 'boom');
   assert.equal(stats.errors[0].n, 2);
@@ -134,6 +133,61 @@ test('stats aggregate counts, causes and medians', () => {
     ['r1'],
   );
 
+  store.close();
+});
+
+test('finished and abandoned runs are measured apart', () => {
+  const store = openStore(':memory:');
+  const now = Date.now();
+  const run = (cause, fields) => store.insert(normaliseEvent({ type: 'run_ended', rev: 'r1', cause, ...fields }), now);
+
+  run('finished', { money: 500_000, weight: 1, height: 42, duration: 60 });
+  run('finished', { money: 1_500_000, weight: 3, height: 42, duration: 90 });
+  run('finished', { money: 3_000_000, weight: 6, height: 42, duration: 200 });
+  run('abandoned', { money: 0, weight: 0, height: 3, duration: 8 });
+  run('abandoned', { money: 0, weight: 0, height: 9, duration: 20 });
+  run('abandoned', { money: 500_000, weight: 1, height: 24, duration: 70 });
+  run('abandoned', { money: 500_000, weight: 1, height: 57, duration: 300 });
+
+  const stats = store.stats(7);
+
+  // Each day says how many of its runs reached the door, for the daily chart.
+  assert.equal(stats.totals.ended, 7);
+  assert.equal(stats.totals.finished, 3);
+  assert.equal(stats.daily.at(-1).finished, 3);
+
+  // The time to the door is not dragged down by people who left in ten seconds.
+  assert.deepEqual(stats.finished, { n: 3, duration: 90, money: 1_500_000, weight: 3 });
+  assert.deepEqual(stats.abandoned, { n: 4, duration: 45, height: 17 });
+
+  // Where they left, in ten-metre bands; anything above the last band counts in it.
+  assert.deepEqual(stats.quit, [
+    { from: 0, to: 9, n: 2 },
+    { from: 10, to: 19, n: 0 },
+    { from: 20, to: 29, n: 1 },
+    { from: 30, to: 39, n: 0 },
+    { from: 40, to: null, n: 1 },
+  ]);
+
+  assert.deepEqual(
+    stats.causes.map((row) => [row.cause, row.n]),
+    [
+      ['abandoned', 4],
+      ['finished', 3],
+    ],
+  );
+  store.close();
+});
+
+test('an empty store still answers with every field', () => {
+  const store = openStore(':memory:');
+  const stats = store.stats(30);
+  assert.deepEqual(stats.totals, { visits: 0, runs: 0, ended: 0, finished: 0, shared: 0, errors: 0 });
+  assert.equal(stats.finished.n, 0);
+  assert.equal(stats.abandoned.n, 0);
+  assert.equal(stats.quit.length, 5);
+  assert.ok(stats.quit.every((band) => band.n === 0));
+  assert.deepEqual(stats.daily, []);
   store.close();
 });
 
