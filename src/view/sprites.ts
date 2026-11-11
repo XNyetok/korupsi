@@ -460,17 +460,20 @@ export function drawExit(ctx: Ctx, x: number, sy: number, label: string): void {
   text(ctx, '^', left + w - 7, sy - 44, C.goldLight);
 }
 
-/** The tape the audit team leaves behind: fall below it and they have you. */
-export function drawAuditLine(ctx: Ctx, sy: number, width: number, viewH: number): void {
+/**
+ * The tape the audit team leaves behind: fall below it and they have you.
+ * `left` and `width` are the part of the tower the view shows.
+ */
+export function drawAuditLine(ctx: Ctx, sy: number, left: number, width: number, viewH: number): void {
   if (sy > viewH) return;
   ctx.fillStyle = 'rgba(143, 42, 38, 0.32)';
-  ctx.fillRect(0, sy + 3, width, Math.max(0, viewH - sy - 3));
-  for (let x = -8; x < width; x += 12) {
+  ctx.fillRect(left, sy + 3, width, Math.max(0, viewH - sy - 3));
+  for (let x = left - (left % 12) - 8; x < left + width; x += 12) {
     rect(ctx, x, sy, 7, 3, C.red);
     rect(ctx, x + 7, sy, 5, 3, C.white);
   }
-  rect(ctx, 0, sy + 3, width, 1, C.redDark);
+  rect(ctx, left, sy + 3, width, 1, C.redDark);
   const label = 'TIM AUDIT';
-  rect(ctx, 10, sy + 6, textWidth(label) + 6, 9, C.red);
-  text(ctx, label, 13, sy + 8, C.white);
+  rect(ctx, left + 10, sy + 6, textWidth(label) + 6, 9, C.red);
+  text(ctx, label, left + 13, sy + 8, C.white);
 }

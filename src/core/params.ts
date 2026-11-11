@@ -58,6 +58,13 @@ export const WORLD_WIDTH = 384;
 /** Rows of the tower a screen may show: 16:9 at the least, taller on a taller screen. */
 export const VIEW = { minHeight: 216, maxHeight: 320 } as const;
 
+/**
+ * The view when the game fills a touch screen: never fewer columns or rows
+ * than this, so the next ledge is always in sight, and never taller than the
+ * sky is painted for.
+ */
+export const FILL = { minWidth: 216, minHeight: 160, maxHeight: 640 } as const;
+
 /** The player's box: `half` each side of x, `height` up from the feet. */
 export const PLAYER = { half: 5, height: 24 } as const;
 

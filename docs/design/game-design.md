@@ -89,10 +89,17 @@ early waits for the landing.
 
 ## Art direction
 
-- **Resolution.** The tower is 384 pixels wide on every screen and at least 216 tall. The
-  page scales the canvas by a whole number of device pixels whenever that costs less than
-  15% of the screen, so every game pixel is the same size; an upright phone uses its full
-  width instead.
+- **Resolution.** The tower is 384 pixels wide. With a mouse and keyboard it sits in a
+  window that shows its full width and at least 216 rows, scaled by a whole number of
+  device pixels whenever that costs less than 15% of the screen, so every game pixel is
+  the same size.
+- **On a touch screen the game fills the screen.** The view is as wide as the screen
+  allows and never wider than the tower: an upright phone shows a slice at least 216
+  pixels wide and the camera follows the player sideways; a phone on its side shows the
+  full width and at least 160 rows. The scale is still a whole number of device pixels
+  unless a long phone on its side would lose too many rows to it. The touch controls sit
+  over the bottom of the picture, so the camera starts low enough to show a cellar under
+  the lobby, and the ground floor is never behind a button.
 - **Drawn in code.** Scenery, sprites and both fonts are rectangles placed a pixel at a
   time (`src/view/`). There are no image files, so there is nothing to license and
   nothing to load.
@@ -113,7 +120,7 @@ early waits for the landing.
 
 - One floor with three checkpoints. The scripted player in the tests finishes it clean in
   about 20 seconds; a first climb, with its OTTs, will take several times that
-- Keyboard and touch controls; a phone held either way
+- Keyboard and touch controls; on a phone the game fills the screen, held either way
 - Best time and most money per floor in `localStorage`
 - Synthesised sound, sharing, anonymous telemetry to the game's own server
 
@@ -160,6 +167,9 @@ early waits for the landing.
 | 2026-11-10 | A pause no longer ends the run after a minute | That rule protected a score that could be farmed by waiting. The score is a clock now, and a paused clock is stopped |
 | 2026-11-10 | The size budget is 30 KB (was 18 KB) | The art is code. The build is about 22 KB gzipped |
 | 2026-11-10 | A press shorter than a simulation step is kept until it is read | A quick tap on a touch button could begin and end between two steps and never jump |
+| 2026-11-11 | On a touch screen the game fills the screen; the box with bars is for a mouse and keyboard only | The maintainer's note from the first session on a phone. A box wasted a third of an upright phone and put the controls on bare background. Filling the screen means an upright phone cannot show the tower's full width at a readable size, so the camera follows sideways there; the slice is never narrower than 216 pixels, which keeps the next ledge in view |
+| 2026-11-11 | A cellar is drawn under the lobby | The touch controls cover the bottom of the picture. Without something below the ground floor they would cover the first ledge of the climb |
+| 2026-11-11 | A full-screen button only where the browser has full screen; an iPhone uses the home screen | Safari on an iPhone has no full-screen API. The page declares itself a home-screen app, which is the one way to lose the browser's bars there. No manifest and no service worker: nothing is cached |
 | 2026-11-11 | Touches on the game are cancelled, and the page has `touch-action: none` | Safari on iOS ignores `user-scalable=no` and zooms on a double tap, which is exactly what tapping jump twice is. Real buttons and the cards keep their touches, or they would never be clicked or scrolled |
 
 ## What the tests check

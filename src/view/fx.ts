@@ -136,8 +136,11 @@ export class Fx {
     this.floaters = this.floaters.filter((f) => f.age < f.life);
   }
 
-  /** `row` turns a height above the ground floor into a screen row. */
-  draw(ctx: Ctx, row: (y: number) => number, width: number): void {
+  /**
+   * `row` turns a height above the ground floor into a screen row; `left`
+   * and `width` are the part of the tower in view, so a word stays on screen.
+   */
+  draw(ctx: Ctx, row: (y: number) => number, left: number, width: number): void {
     for (const p of this.particles) rect(ctx, p.x, row(p.y), p.size, p.size, p.color);
 
     for (const f of this.floaters) {
@@ -145,7 +148,7 @@ export class Fx {
       if (f.life - f.age < 0.2 && Math.floor(f.age * 30) % 2 === 0) continue;
       const w = textWidth(f.label, f.big);
       const h = textHeight(f.big);
-      const cx = Math.max(w / 2 + 3, Math.min(width - w / 2 - 3, f.x));
+      const cx = Math.max(left + w / 2 + 3, Math.min(left + width - w / 2 - 3, f.x));
       const top = row(f.y) - h;
       rect(ctx, Math.round(cx - w / 2) - 2, top - 2, w + 4, h + 4, C.ink);
       textCentred(ctx, f.label, cx, top, f.color, f.big);

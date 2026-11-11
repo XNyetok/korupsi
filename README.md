@@ -40,8 +40,10 @@ you were caught, and what you carried out.
 | `Esc` or `P` | Pause |
 | Touch | A left-right pad and two buttons appear on phones and tablets |
 
-Switching apps pauses the run. It plays on a phone held either way, but sideways is
-roomier.
+Switching apps pauses the run. On a phone the game fills the screen, held either way:
+upright it shows a tall slice of the tower and the camera follows you sideways. Where the
+browser has a full screen there is a button for it in the corner; on an iPhone, add the
+page to the home screen and open it from there.
 
 ## Under the hood
 
@@ -49,7 +51,7 @@ roomier.
 | --- | --- |
 | Build size | about 22 KB gzipped, no runtime dependencies; CI enforces a 30 KB budget |
 | Stack | TypeScript and Canvas 2D, bundled by Vite |
-| Art | pixel art drawn in code at 384 pixels wide, scaled up without smoothing; no image files |
+| Art | pixel art drawn in code, a tower 384 pixels wide, scaled up without smoothing; no image files |
 | Audio | WebAudio oscillators, no audio files |
 | Caching | none beyond HTTP: every visit loads the live build |
 | Hosting | nginx on a VPS; a published GitHub Release is deployed by GitHub Actions |

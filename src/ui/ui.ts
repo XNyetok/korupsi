@@ -1,5 +1,6 @@
 import { clock, type Game, rupiah } from '../core/game.ts';
 import { audio } from '../platform/audio.ts';
+import { canFullscreen, isFullscreen, onFullscreenChange, toggleFullscreen } from '../platform/fullscreen.ts';
 import { shareResult } from '../platform/share.ts';
 import { track } from '../platform/telemetry.ts';
 import { C } from '../view/palette.ts';
@@ -31,6 +32,7 @@ export class Ui {
   private time = el<HTMLSpanElement>('hud-time');
   private mute = el<HTMLButtonElement>('mute');
   private pause = el<HTMLButtonElement>('pause');
+  private full = el<HTMLButtonElement>('full');
   private toastEl = el<HTMLDivElement>('toast');
   private toastTimer = 0;
   private cache = '';
@@ -46,6 +48,21 @@ export class Ui {
       this.renderMute();
     });
     this.renderMute();
+
+    // Full screen is offered only where the browser has it.
+    if (canFullscreen()) {
+      this.full.hidden = false;
+      document.body.classList.add('has-fullscreen');
+      this.full.addEventListener('click', (event) => {
+        if (event.detail > 0) this.full.blur();
+        void toggleFullscreen();
+      });
+      onFullscreenChange(() => {
+        const on = isFullscreen();
+        this.full.setAttribute('aria-pressed', String(on));
+        this.full.setAttribute('aria-label', on ? 'Keluar dari layar penuh' : 'Layar penuh');
+      });
+    }
 
     this.pause.addEventListener('click', (event) => {
       if (event.detail > 0) this.pause.blur();

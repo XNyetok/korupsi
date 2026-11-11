@@ -14,6 +14,12 @@ import { type Ctx, layer, rect, seeded, text, textCentred, textHeight, textWidth
 
 /** Pixels of floor drawn below the ground line. */
 export const BASE = 20;
+/**
+ * How far below the ground line the wall is painted. Under the floor is the
+ * cellar: on a touch screen the camera starts low enough to show it, so the
+ * controls sit over the cellar instead of over the lobby.
+ */
+export const CELLAR = 132;
 /** Height of one storey of the building. */
 export const STOREY = 140;
 /** How much of the camera's travel the sky follows. */
@@ -25,7 +31,7 @@ export interface Backdrop {
 }
 
 export function paintBackdrop(floor: FloorDef, maxView: number): Backdrop {
-  const skyHeight = Math.ceil(maxView + (floor.height + BASE) * PARALLAX) + 8;
+  const skyHeight = Math.ceil(maxView + (floor.height + CELLAR) * PARALLAX) + 8;
   return { sky: paintSky(skyHeight), wall: paintWall(floor) };
 }
 
@@ -135,7 +141,7 @@ function paintSky(height: number): HTMLCanvasElement {
 
 function paintWall(floor: FloorDef): HTMLCanvasElement {
   const H = floor.height;
-  const { canvas, ctx } = layer(W, H + BASE);
+  const { canvas, ctx } = layer(W, H + CELLAR);
   const random = seeded(17);
   const storeys = Math.ceil(H / STOREY);
 
@@ -144,7 +150,7 @@ function paintWall(floor: FloorDef): HTMLCanvasElement {
   /** A rectangle given by its left edge and the height of its top. */
   const box = (x: number, top: number, w: number, h: number, color: string) => rect(ctx, x, row(top), w, h, color);
 
-  rect(ctx, 0, 0, W, H + BASE, C.wall);
+  rect(ctx, 0, 0, W, H + CELLAR, C.wall);
 
   // Plaster: specks, and the odd damp streak nobody has budgeted to fix.
   for (let i = 0; i < 2600; i++) {
@@ -281,6 +287,29 @@ function paintWall(floor: FloorDef): HTMLCanvasElement {
   }
   rect(ctx, 0, H, W, 1, C.paper);
   rect(ctx, 0, H + 1, W, 1, C.tileLine);
+
+  // The cellar: the archive nobody has opened in years. On a phone the touch
+  // controls sit over it, so it is kept dark and plain.
+  const cellar = H + BASE;
+  rect(ctx, 0, cellar, W, CELLAR - BASE, C.cellar);
+  rect(ctx, 0, cellar, W, 4, C.slab);
+  rect(ctx, 0, cellar + 4, W, 1, C.slabLight);
+  for (let px = 0; px < W; px += 3) rect(ctx, px, cellar + 5 + ((px / 3) % 2), 1, 1, C.cellarLine);
+  for (let board = cellar + 36; board < H + CELLAR; board += 32) {
+    let bx = 6 + Math.floor(random() * 8);
+    while (bx < W - 34) {
+      const bw = 16 + Math.floor(random() * 13);
+      const bh = 11 + Math.floor(random() * 11);
+      rect(ctx, bx, board - bh, bw, bh, C.box);
+      rect(ctx, bx, board - bh, bw, 2, C.boxLight);
+      rect(ctx, bx + bw - 1, board - bh + 2, 1, bh - 2, C.cellar);
+      rect(ctx, bx + 3, board - bh + 5, Math.min(9, bw - 6), 4, C.boxLabel);
+      bx += bw + (random() > 0.72 ? 10 + Math.floor(random() * 18) : 1);
+    }
+    rect(ctx, 0, board, W, 2, C.cellarLine);
+    for (let px = 22; px < W; px += 68) rect(ctx, px, board + 2, 2, 30, C.cellarLine);
+  }
+  textCentred(ctx, 'GUDANG ARSIP', W / 2, cellar + 10, C.boxLabel);
 
   return canvas;
 }

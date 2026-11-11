@@ -14,7 +14,11 @@
   --red: #d9483b;
   --green: #4fae6b;
   --u: 2px;
+  /* Height the touch controls take at the bottom of the screen; 0 without them. */
+  --deck: 0px;
   --tool: max(30px, calc(var(--u) * 11));
+  /* Buttons in the top right corner: pause and sound, and full screen where there is one. */
+  --tools: 2;
   --font: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
@@ -49,9 +53,6 @@ button { touch-action: manipulation; }
   overflow: hidden;
 }
 
-/* An upright phone keeps the bottom for thumbs: the tower sits in what is left
-   above the touch controls (the same height viewport.ts sets aside). */
-body.is-portrait.is-touch #stage { padding-bottom: 190px; }
 
 #screen {
   position: relative;
@@ -84,7 +85,11 @@ canvas#game {
   align-items: flex-start;
   gap: calc(var(--u) * 2);
   padding: calc(var(--u) * 3);
-  padding-right: calc(var(--u) * 5 + var(--tool) * 2);
+  padding-right: calc(var(--u) * 5 + (var(--tool) + var(--u)) * var(--tools));
+  /* When the game fills the screen, stay clear of the notch and round corners. */
+  padding-top: max(calc(var(--u) * 3), env(safe-area-inset-top));
+  padding-left: max(calc(var(--u) * 3), env(safe-area-inset-left));
+  margin-right: env(safe-area-inset-right);
   font-size: clamp(10px, calc(var(--u) * 6), 20px);
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -116,8 +121,8 @@ body.is-playing #hud { opacity: 1; }
 
 .tools {
   position: absolute;
-  top: calc(var(--u) * 3);
-  right: calc(var(--u) * 3);
+  top: max(calc(var(--u) * 3), env(safe-area-inset-top));
+  right: max(calc(var(--u) * 3), env(safe-area-inset-right));
   display: flex;
   gap: var(--u);
 }
@@ -138,6 +143,9 @@ body.is-playing #hud { opacity: 1; }
 .tool:hover, .tool:focus-visible { background: var(--paper); color: var(--ink); outline: none; }
 
 body:not(.is-playing) #pause { display: none; }
+.tool[hidden] { display: none; }
+body.has-fullscreen { --tools: 3; }
+#full[aria-pressed="true"] { color: var(--gold); }
 
 #mute .icon-off { display: none; }
 #mute[aria-pressed="true"] .icon-on { display: none; }
@@ -147,7 +155,7 @@ body:not(.is-playing) #pause { display: none; }
 .toast {
   position: absolute;
   left: 50%;
-  bottom: 12%;
+  bottom: max(12%, calc(var(--deck, 0px) + 10px));
   z-index: 30;
   transform: translateX(-50%);
   padding: 6px 12px;

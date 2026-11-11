@@ -3,20 +3,35 @@ import { expect, test } from '@playwright/test';
 import { goToDoor, holdTouch, leaveAndReturn, open, placeOn, start, state, waitForPhase } from './helpers.ts';
 
 test.describe('title and input', () => {
-  test('shows the title card, the version and a crisp canvas', async ({ page }) => {
+  test('shows the title card, the version and a crisp canvas', async ({ page, isMobile }) => {
     const errors = await open(page);
     const card = page.locator('.card.title');
     await expect(card.locator('.logo')).toBeVisible();
     await expect(card.locator('.version')).toHaveText(/^v\d+\.\d+\.\d+$/);
     await expect(card.locator('button.primary')).toHaveText('Mulai');
 
-    // The tower is 384 game pixels wide on every screen, scaled without smoothing.
+    // The canvas is a window on a tower 384 game pixels wide, scaled without
+    // smoothing. With a mouse it shows the full width, in a box; on a touch
+    // screen it fills the screen and may show a slice.
     const canvas = page.locator('#game');
-    expect(await canvas.evaluate((el: HTMLCanvasElement) => el.width)).toBe(384);
+    const width = await canvas.evaluate((el: HTMLCanvasElement) => el.width);
     expect(await canvas.evaluate((el) => getComputedStyle(el).imageRendering)).toBe('pixelated');
     const box = await canvas.boundingBox();
     const viewport = page.viewportSize();
-    expect(box && viewport && box.width <= viewport.width && box.height <= viewport.height).toBe(true);
+    if (!box || !viewport) throw new Error('no canvas box');
+    if (isMobile) {
+      expect(width).toBeGreaterThanOrEqual(216);
+      expect(width).toBeLessThanOrEqual(384);
+      expect(Math.abs(box.width - viewport.width)).toBeLessThan(1);
+      expect(Math.abs(box.height - viewport.height)).toBeLessThan(1);
+    } else {
+      expect(width).toBe(384);
+      expect(box.width <= viewport.width && box.height <= viewport.height).toBe(true);
+    }
+
+    // Full screen is offered exactly where the browser has it.
+    const able = await page.evaluate(() => document.fullscreenEnabled);
+    await expect(page.locator('#full')).toBeVisible({ visible: able });
 
     expect(errors).toEqual([]);
   });
@@ -117,6 +132,31 @@ test.describe('title and input', () => {
     expect(await page.evaluate(() => getComputedStyle(document.querySelector('#pause') as Element).touchAction)).toBe(
       'manipulation',
     );
+  });
+
+  test('on a phone the player stays in view and clear of the controls', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'touch only');
+    await open(page);
+    await start(page);
+
+    // The far right of the lobby, then the far left: the camera follows.
+    for (const x of [370, 14]) {
+      await placeOn(page, 0, x);
+      await page.waitForTimeout(700);
+      const seen = await page.evaluate(() => {
+        const g = (window as unknown as { __korupsi: { player: { x: number } } }).__korupsi;
+        const view = (
+          window as unknown as {
+            __view: { left: number; width: number; groundRow: number; rows: number; deck: number };
+          }
+        ).__view;
+        return { x: g.player.x, ...view };
+      });
+      expect(seen.x).toBeGreaterThanOrEqual(seen.left);
+      expect(seen.x).toBeLessThanOrEqual(seen.left + seen.width);
+      // The ground floor is drawn above the rows the controls cover.
+      expect(seen.groundRow).toBeLessThanOrEqual(seen.rows - seen.deck);
+    }
   });
 
   test('an envelope adds money and weight to the HUD', async ({ page }) => {
