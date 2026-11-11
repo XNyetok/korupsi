@@ -54,6 +54,10 @@ export const C = {
   bamboo: '#cdb85c',
   bambooDark: '#8f7c33',
   paper: '#ece4cc',
+  // the violet of office stamp pads, and the pink of a duty stamp
+  stampInk: '#5a4a9c',
+  meterai: '#d9a3b4',
+  meteraiDark: '#b0718a',
   paperDark: '#bfb596',
   cork: '#8f6a44',
   glass: '#9fd9c2',

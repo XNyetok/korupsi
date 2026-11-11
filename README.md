@@ -30,9 +30,10 @@ playable; the Kecamatan and the floors above it are next.
 - **Proyek fiktif** ledges, the red-and-white ones, give way shortly after you land.
 
 The floor ends at the door to the Kecamatan. The result card shows your time, how often
-you were caught, and what you carried out. "Bagikan hasil" turns that into a picture the
-size of a story: a phone opens its share sheet with the picture, a computer saves the
-file.
+you were caught, what you carried out, and the title the climb earned you: one of ten,
+from Raja Amplop to plain Oknum. "Bagikan hasil" turns that into a picture the size of a
+story, a decree appointing you to the title: a phone opens its share sheet with the
+picture, a computer saves the file.
 
 | Input | Action |
 | --- | --- |
@@ -51,7 +52,7 @@ page to the home screen and open it from there.
 
 | | |
 | --- | --- |
-| Build size | about 27 KB gzipped, no runtime dependencies; CI enforces a 30 KB budget |
+| Build size | about 28 KB gzipped, no runtime dependencies; CI enforces a 30 KB budget |
 | Stack | TypeScript and Canvas 2D, bundled by Vite |
 | Art | pixel art drawn in code, a tower 384 pixels wide, scaled up without smoothing; no image files |
 | Audio | a tune and effects synthesised with WebAudio; no audio files |

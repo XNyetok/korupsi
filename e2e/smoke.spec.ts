@@ -311,6 +311,9 @@ test.describe('result', () => {
     await expect(card.locator('.stamp')).toHaveText('lolos');
     await expect(card.locator('.big')).toHaveText(/^\d+:\d\d$/);
     await expect(card.locator('.stats')).toContainText('0/6');
+    // Quick, clean and empty-handed: the title the decree will carry.
+    await expect(card.locator('.gelar')).toHaveText('Belut Birokrasi');
+    await expect(card.locator('.lede')).toHaveText('Licin. Tak tersentuh dan tak terkejar.');
     await expect(card.locator('.record')).toContainText('Rekor waktu baru');
 
     // The record survives a reload.
