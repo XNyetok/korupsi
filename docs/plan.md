@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-11 · Last tagged release: `v0.6.1`. What is live is the latest
+Last updated: 2026-11-11 · Last tagged release: `v0.7.0`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -32,21 +32,16 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P2 — Play the Kelurahan and tune it.** Waiting on the maintainer. Two sessions on
-  an iPhone so far, both about how the game sits on a phone rather than how it plays:
-  the notes are in Done under v0.6.0 and v0.6.1. Confirmed on the phone: the double-tap
-  zoom is gone, the tune and the effects are good, and in v0.6.1 the share sheet lists
-  Instagram (the story is chosen inside that app; a web page cannot open it directly).
-  One more note from the third session:
-  - [x] The shared picture should be something people want to post: funny, and
-    different with the result. Done 2026-11-11 (#39): it is now a surat keputusan that
-    appoints the player to one of ten titles, from Raja Amplop to Oknum, decided by the
-    time, the OTT count and the envelopes. The portrait, the decree's number and the
-    envelopes on the desk change with the result too, and the result screen shows the
-    title. Not released yet.
-
-  Still untried: sharing in Chrome on Android. The questions that need more than one
-  session are in `docs/design/game-design.md` (Open questions). P3 waits for this.
+- [~] **P2 — Play the Kelurahan and tune it.** Waiting on the maintainer, and now on the
+  numbers too. Three sessions on an iPhone so far, all about how the game sits on a phone
+  and how a result is shared, none about the jump or the hazards; what came of them is in
+  Done under v0.6.0, v0.6.1 and v0.7.0. Confirmed on the phone: no double-tap zoom, the
+  tune and the effects are good, the share sheet lists Instagram (the story is chosen
+  inside that app; a web page cannot open it directly). Still untried: sharing in Chrome
+  on Android, and the panel against live data. From v0.7.0 the panel says which hazard
+  catches people and where they leave: read it after a few days of play (the JSON export
+  is the form to give an agent, `docs/telemetry.md` says how to read it), then tune the
+  floor. The open questions are in `docs/design/game-design.md`. P3 waits for this.
 
 ## Next
 
@@ -65,37 +60,26 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
-- [x] **T1 — Telemetry a decision can be made from.** Done 2026-11-11 (#42), not released
-  yet. The maintainer wants the data readable by an agent as well as a person, as the
-  basis for what to build next. A run now reports how often the player was caught and by
-  which hazard (named by the ledge it is on, as in `src/core/tower.ts`), the last
-  checkpoint reached, the title earned and whether the sound was off; a visit and a run
-  say touch or keyboard and how the game sat on the screen; a share says how. The
-  collector gains the columns on an existing database when it starts. The statistics
-  carry a note on every key (`about`) and a format number, the panel shows the new
-  breakdowns and can save the whole answer as one JSON file, and `docs/telemetry.md`
-  lists every field and how to read it. Collected from the release that ships it:
-  earlier rows have none of this.
-- [x] **D7 — Credit nyetok.id.** Done 2026-11-11 (#41), not released yet. "Dibuat oleh
-  nyetok.id", as a link that opens beside the game: next to the version on the title
-  card, under the result, in the panel's footer (#40), in the page's author metadata and
-  in the README. Not on the shared picture, which stays the player's own.
-- [x] **D6 — A panel that can be read.** Done 2026-11-11 (#40), not released yet. The
-  maintainer asked for a cleaner panel whose numbers explain themselves. It now leads
-  with four figures (visits, runs started, finished, shared) and what share each is of
-  the one before, shows the days as one chart with a table behind it, and measures the
-  runs that reached the door apart from the runs that were left: the old panel averaged
-  them together, and counted a run that was walked away from as "finished". New from the
-  collector: finished runs per day, medians per outcome, and how high abandoned runs got,
-  in ten-metre bands. Light and dark, and readable on a phone. Checked against a seeded
-  database on a local collector, not against the live data.
-- [x] **v0.6.1** — released and deployed 2026-11-11 (release run 42957553708, deploy run
-  42957741901): live as `0.6.1+8a97b15`, `/api/health` 404, `/panel/` 401; on the live
-  site a phone with a stand-in share sheet is handed the picture and nothing else, and
-  one that refuses it is shown the picture. The note from the maintainer's second
-  session, in Safari on an iPhone: sharing offered a save but no way to a story. The
-  share sheet now gets the picture alone, asked for straight from the press, and a phone
-  whose sheet will not take it shows it for a long press instead of downloading it (#37).
+- [x] **v0.7.0** — released and deployed 2026-11-11 (release run 42963565410, deploy run
+  42963759102): live as `0.7.0+19db25a`, `/api/health` 404, `/panel/` 401, the collector
+  answers after gaining its new columns; on the live site a finished run shows its title,
+  the credit links to nyetok.id and the decree is saved at 1080 x 1920.
+  - The shared picture is a surat keputusan that appoints the player to one of ten
+    titles, decided by the time, the OTT count and the envelopes; the portrait, the
+    number and the envelopes on the desk change with the result, and the result screen
+    shows the title (#39).
+  - The panel was redesigned to be read: four headline figures with what share each is of
+    the one before, the days as one chart with a table behind it, and finished runs
+    measured apart from abandoned ones (D6, #40).
+  - A run reports how often the player was caught and by which hazard, the last
+    checkpoint reached, the title and whether the sound was off; a visit and a run say
+    touch or keyboard. The statistics explain every key they carry and can be saved as
+    one JSON file; `docs/telemetry.md` lists every field (T1, #42). Collected from this
+    release on: earlier rows have none of it.
+  - "Dibuat oleh nyetok.id" on the title card, under the result and in the panel (D7,
+    #41).
+- [x] **v0.6.1** — 2026-11-11: the share sheet gets the picture alone, so apps that only
+  take pictures stay in it; a phone that refuses it shows the picture instead (#37).
 - [x] **v0.6.0** — 2026-11-11: the four notes from the first session on a phone. No
   double-tap zoom in Safari (#32), the game fills a phone's screen (#33), the result
   shared as a story-sized picture (#34), a tune and louder effects (#35).
