@@ -25,6 +25,7 @@
     <button type="button" data-days="90" aria-pressed="false">90 hari</button>
   </div>
   <button type="button" id="refresh" class="ghost">Muat ulang</button>
+  <button type="button" id="export" class="ghost" title="Semua angka di halaman ini sebagai satu berkas yang menjelaskan dirinya sendiri, untuk dibaca agent atau program">Unduh data (JSON)</button>
   <p id="period" class="period" role="status" aria-live="polite"></p>
 </div>
 
@@ -78,20 +79,62 @@
     <div class="split">
       <div class="tiles small" id="abandoned"></div>
       <div>
-        <h3>Berhenti di ketinggian berapa</h3>
+        <h3>Berhenti di bagian mana</h3>
+        <p class="hint">Lantai ini punya tiga bagian, dipisah dua mesin absen. Bagian dengan baris terpanjang adalah yang paling membuat pemain pergi.</p>
+        <div id="sections" class="bars"></div>
+        <h3 class="gap">Berhenti di ketinggian berapa</h3>
         <p class="hint">Lobi ada di 0 m dan pintu kecamatan di sekitar 42 m. Baris yang paling panjang adalah tempat pemain paling sering menyerah.</p>
         <div id="quit" class="bars"></div>
       </div>
     </div>
   </section>
 
+  <section class="card" aria-labelledby="h-hazards">
+    <h2 id="h-hazards">Rintangan yang paling sering menangkap</h2>
+    <p class="hint">Berapa kali tiap rintangan membuat pemain kena OTT. Nomor pijakan sama dengan urutan di <code>src/core/tower.ts</code>, jadi rintangan teratas di sini adalah yang pertama layak dilunakkan atau diberi peringatan lebih jelas.</p>
+    <div id="hazards" class="bars"></div>
+  </section>
+
   <div class="columns">
+    <section class="card" aria-labelledby="h-devices">
+      <h2 id="h-devices">Di perangkat apa</h2>
+      <p class="hint">Layar sentuh berarti HP atau tablet; keyboard berarti komputer. Kalau persen tamat di layar sentuh jauh lebih rendah, kontrol sentuhnya yang perlu dibenahi.</p>
+      <div class="scroll">
+        <table id="devices">
+          <thead>
+            <tr><th scope="col">Perangkat</th><th scope="col">Kunjungan</th><th scope="col">Mulai main</th><th scope="col">Tamat</th><th scope="col">% tamat</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3 class="gap">Posisi layar</h3>
+      <div id="layouts" class="bars"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-titles">
+      <h2 id="h-titles">Gelar yang didapat</h2>
+      <p class="hint">Gelar di Surat Keputusan tiap permainan yang tamat. Gelar yang tak pernah muncul berarti syaratnya terlalu sulit; yang selalu muncul, terlalu mudah.</p>
+      <div id="titles" class="bars"></div>
+    </section>
+  </div>
+
+  <div class="columns">
+    <section class="card" aria-labelledby="h-shares">
+      <h2 id="h-shares">Cara hasil dibagikan</h2>
+      <p class="hint">Lewat mana gambar hasil keluar dari game.</p>
+      <div id="shares" class="bars"></div>
+      <h3 class="gap">Suara</h3>
+      <p class="hint" id="sound"></p>
+    </section>
+
     <section class="card" aria-labelledby="h-errors">
       <h2 id="h-errors">Error di browser pemain</h2>
       <p class="hint">Kesalahan JavaScript yang terjadi saat game berjalan. Idealnya kosong.</p>
       <ul id="errors" class="list"></ul>
     </section>
+  </div>
 
+  <div class="columns">
     <section class="card" aria-labelledby="h-revs">
       <h2 id="h-revs">Versi yang dipakai</h2>
       <p class="hint">Dari versi game mana data ini datang. Setelah rilis, versi baru seharusnya segera di atas.</p>
@@ -102,6 +145,7 @@
 
 <footer>
   <p>Tanpa cookie, tanpa alamat IP, tanpa ID pengunjung. Data mentah disimpan 90 hari. Pemain yang menyalakan Do Not Track tidak tercatat.</p>
+  <p>Untuk agent atau program: tombol <b>Unduh data (JSON)</b> menyimpan semua angka di atas dalam satu berkas, lengkap dengan penjelasan tiap bagiannya (kunci <code>about</code>). Arti tiap kejadian ada di <code>docs/telemetry.md</code>.</p>
   <p>Korupsi dibuat oleh <a href="https://nyetok.id" rel="noopener">nyetok.id</a>.</p>
 </footer>
 

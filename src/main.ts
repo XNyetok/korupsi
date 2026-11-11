@@ -6,6 +6,7 @@
 
 import './ui/style.css';
 import { Game } from './core/game.ts';
+import { runReport } from './core/report.ts';
 import type { GameEvent } from './core/types.ts';
 import { PARAMS } from './core/params.ts';
 import { audio } from './platform/audio.ts';
@@ -48,13 +49,7 @@ let runOpen = false;
 function reportRun(cause: 'finished' | 'abandoned'): void {
   if (!runOpen) return;
   runOpen = false;
-  track('run_ended', {
-    cause,
-    money: game.money,
-    weight: game.weight,
-    height: game.heightMetres,
-    duration: Math.round(game.time),
-  });
+  track('run_ended', { ...runReport(game, cause), muted: audio.muted, ...setting() });
 }
 
 function start(): void {
@@ -66,7 +61,7 @@ function start(): void {
   renderer.snap(game);
   ui.hideOverlay();
   runOpen = true;
-  track('run_started');
+  track('run_started', setting());
 }
 
 function restart(): void {
@@ -100,10 +95,18 @@ const ui = new Ui({ start, resume, restart, pause });
 
 /** Touch controls show on a phone or tablet, and on anything the first time it is touched. */
 let touch = window.matchMedia('(pointer: coarse)').matches;
+/** How the game sits on the screen right now: boxed, or filling a phone held upright or sideways. */
+let layout: 'window' | 'fill-tall' | 'fill-wide' = 'window';
+
+/** What the player holds and how the game is laid out: sent with a visit and with a run, never who they are. */
+function setting(): { device: 'touch' | 'keys'; layout: typeof layout } {
+  return { device: touch ? 'touch' : 'keys', layout };
+}
 
 function resize(): void {
   document.body.classList.toggle('is-touch', touch);
   const view = applyView(canvas, screen, stage, touch, touchPad);
+  layout = view.fill ? (view.viewH > view.viewW ? 'fill-tall' : 'fill-wide') : 'window';
   renderer.resize(view.viewW, view.viewH, view.deck);
   renderer.snap(game);
 }
@@ -242,7 +245,7 @@ window.addEventListener('pagehide', () => {
 window.addEventListener('pageshow', () => loop.resetClock());
 
 trackErrors();
-track('visit');
+track('visit', setting());
 
 // The first version of the game installed a service worker that cached the
 // build. Remove any registration and cache it left behind, so every visit

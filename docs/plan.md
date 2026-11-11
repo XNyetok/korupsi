@@ -54,9 +54,6 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   spacing rules at the top of `src/core/tower.ts`. Needs: more than one floor in a run
   (the door leads to the next floor, the bag is paid upwards and the weight resets), a
   promotion card between floors, and the floor name in the HUD from the floor itself.
-- [ ] **T1 — Count OTT in telemetry.** `run_ended` carries money, weight, height and
-  duration, but not how often the player was caught or where, which is what says whether
-  a hazard is unfair. Needs a column in the collector and a row in the panel.
 
 ## Later
 
@@ -68,6 +65,17 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
+- [x] **T1 — Telemetry a decision can be made from.** Done 2026-11-11 (#42), not released
+  yet. The maintainer wants the data readable by an agent as well as a person, as the
+  basis for what to build next. A run now reports how often the player was caught and by
+  which hazard (named by the ledge it is on, as in `src/core/tower.ts`), the last
+  checkpoint reached, the title earned and whether the sound was off; a visit and a run
+  say touch or keyboard and how the game sat on the screen; a share says how. The
+  collector gains the columns on an existing database when it starts. The statistics
+  carry a note on every key (`about`) and a format number, the panel shows the new
+  breakdowns and can save the whole answer as one JSON file, and `docs/telemetry.md`
+  lists every field and how to read it. Collected from the release that ships it:
+  earlier rows have none of this.
 - [x] **D7 — Credit nyetok.id.** Done 2026-11-11 (#41), not released yet. "Dibuat oleh
   nyetok.id", as a link that opens beside the game: next to the version on the title
   card, under the result, in the panel's footer (#40), in the page's author metadata and

@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { clock, Game, jumpFactor, rupiah } from '../src/core/game.ts';
 import { PARAMS } from '../src/core/params.ts';
+import { runReport } from '../src/core/report.ts';
 import { auditorAt, KELURAHAN, ledgeX, STAMP, stampAt } from '../src/core/tower.ts';
 import type { Best, FloorDef, Input } from '../src/core/types.ts';
 import { idle, jumpApex, quietGame, run, STEP } from './helpers.ts';
@@ -234,6 +235,52 @@ test('being caught sends the player back to the checkpoint with the bag as it wa
   assert.equal(game.weight, 1, 'what was taken after clocking in is back on the floor');
   assert.deepEqual(game.taken, [false, true]);
   assert.ok(game.drain().some((e) => e.type === 'respawn'));
+});
+
+test('a run remembers which hazard caught the player, and reports itself', () => {
+  const game = yard();
+  const back = (ledge: number) => () => game.caught <= 0 && game.player.ground === ledge;
+
+  // The stamp twice and the auditor once, from the lobby.
+  game.placeOn(1, 150);
+  until(game, () => game.deaths === 1);
+  until(game, back(0));
+  game.placeOn(1, 150);
+  until(game, () => game.deaths === 2);
+  until(game, back(0));
+  game.placeOn(0, 320);
+  until(game, () => game.deaths === 3);
+  until(game, back(0));
+
+  // Then clock in, so there is a tape to fall below, and fall below it.
+  game.placeOn(3, 80);
+  game.step(STEP);
+  until(game, () => game.deaths === 4, hold({ move: -1 }));
+
+  // Named by what it is and the ledge it is on, the way the tower names them.
+  assert.deepEqual(game.catches, { 'stempel:1': 2, 'auditor:0': 1, jatuh: 1 });
+
+  const left = runReport(game, 'abandoned');
+  assert.equal(left.cause, 'abandoned');
+  assert.equal(left.deaths, 4);
+  assert.equal(left.checkpoint, 1);
+  assert.deepEqual(left.hazards, { 'stempel:1': 2, 'auditor:0': 1, jatuh: 1 });
+  assert.equal(left.title, undefined, 'only a finished run earns a title');
+  assert.equal(left.duration, Math.round(game.time));
+
+  until(game, back(3));
+  game.placeOn(3, 165);
+  run(game, 1, hold({ move: 1 }));
+  assert.equal(game.phase, 'won');
+  const done = runReport(game, 'finished');
+  // Caught four times with an empty bag.
+  assert.equal(done.title, 'kosong');
+  assert.equal(done.height, game.heightMetres);
+
+  // A new run starts with a clean sheet.
+  game.start();
+  assert.deepEqual(game.catches, {});
+  assert.equal(runReport(game, 'abandoned').deaths, 0);
 });
 
 test('falling far below the last checkpoint is a catch, and not before one', () => {

@@ -41,6 +41,13 @@ export class Game {
   /** Drives the hazards. Never rewinds, so a respawn does not reset their rhythm. */
   worldTime = 0;
   deaths = 0;
+  /**
+   * How often each hazard caught the player this run, by name: `auditor:10` is
+   * the auditor on ledge 10, `stempel:12` the stamp on ledge 12, `jatuh` a fall
+   * below the audit tape. It is what telemetry reports, so a floor can be
+   * judged by where it catches people.
+   */
+  catches: Record<string, number> = {};
   weight = 0;
   /** Index into the floor's checkpoints. */
   checkpoint = 0;
@@ -97,6 +104,7 @@ export class Game {
     this.phase = 'ready';
     this.time = 0;
     this.deaths = 0;
+    this.catches = {};
     this.weight = 0;
     this.checkpoint = 0;
     this.peak = 0;
@@ -375,7 +383,7 @@ export class Game {
     if (!this.hazards) return;
 
     if (p.y < this.auditLine) {
-      this.catch('jatuh');
+      this.catch('jatuh', 'jatuh');
       return;
     }
 
@@ -389,7 +397,7 @@ export class Game {
           p.y < feet + AUDITOR.height - 2 &&
           p.y + PLAYER.height - 2 > feet
         ) {
-          this.catch('auditor');
+          this.catch('auditor', `auditor:${def.ledge}`);
           return;
         }
       }
@@ -404,15 +412,16 @@ export class Game {
         p.y < bottom + STAMP.h &&
         p.y + PLAYER.height > bottom
       ) {
-        this.catch('stempel');
+        this.catch('stempel', `stempel:${def.ledge}`);
         return;
       }
     }
   }
 
-  private catch(cause: Cause): void {
+  private catch(cause: Cause, hazard: string): void {
     const p = this.player;
     this.deaths += 1;
+    this.catches[hazard] = (this.catches[hazard] ?? 0) + 1;
     this.cause = cause;
     this.caught = PARAMS.caughtPause;
     p.vx = 0;
