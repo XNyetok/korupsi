@@ -1,10 +1,11 @@
 # Korupsi — game design
 
-**Status:** the first floor is playable, released as v0.5.0, and has been played by a
+**Status:** the first floor is playable, live as v0.6.0, and has been played by a
 person. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts), the
 tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). Tests and a scripted climb
-prove the floor is possible. The first hands-on session, on a phone, asked for three
-things around the game rather than in it: see the playtest log.
+prove the floor is possible. The first hands-on session, on a phone, asked for four
+things around the game rather than in it; all four are in v0.6.0 and none has been tried
+on a real phone yet: see the playtest log.
 
 ## One line
 
@@ -223,7 +224,8 @@ in CI. Whether the tune is any good is for ears.
 | --- | --- | --- | --- |
 | 2026-11-09 to 10 | v0.1.0 to v0.4.0 | The one-tap endless climb: hands-on on a phone, simulated runs, and the first six real runs from telemetry | The maintainer found it hard to pick up, and it was not the game that was asked for. Retired on 2026-11-10; the details are in the git history of this file |
 | 2026-11-10 | `feat/platformer-kelurahan` | The Kelurahan floor, by tests and by screenshots on a desktop, an upright phone and a phone on its side. No hands-on session yet | The floor is climbable empty and full, cannot be skipped, and a scripted player finishes it clean. The feel of the jump and the difficulty are unjudged |
-| 2026-11-10 | v0.5.0 | The Kelurahan floor, hands on, on a phone in Safari: the first session played by a person rather than by a script | Three notes, none about the jump or the hazards: a double tap on a control zoomed the page; the game should fill the phone's screen; the result should be shared as an image. Tracked as P2 in the plan |
+| 2026-11-10 | v0.5.0 | The Kelurahan floor, hands on, on a phone in Safari: the first session played by a person rather than by a script | Four notes, none about the jump or the hazards: a double tap on a control zoomed the page; the game should fill the phone's screen; the result should be shared as an image; the sound had no punch and there was no music. Tracked as P2 in the plan |
+| 2026-11-11 | v0.6.0 | The four notes, by tests, by screenshots at phone sizes, by rendering the sound offline, and by a headless browser on the live site. Not on a real phone, and not by ear | All four behave as intended in a browser. What a browser cannot say: whether Safari on an iPhone still zooms, whether its share sheet takes the picture, and whether the tune is any good |
 
 ## Tuning
 

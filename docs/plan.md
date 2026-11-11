@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-11 · Last tagged release: `v0.5.0`. What is live is the latest
+Last updated: 2026-11-11 · Last tagged release: `v0.6.0`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -32,34 +32,13 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P2 — Play the Kelurahan and tune it.** The maintainer played v0.5.0 on a phone
-  (Safari) on 2026-11-10. Three notes came out of it, none about the jump or the hazards:
-  - [x] A double tap on a control zoomed the page in Safari on iOS. Fixed 2026-11-11
-    (#32): touches on the game are cancelled before the browser can read them as a
-    gesture, and the page declares `touch-action: none`. Checked in a browser test, not
-    yet on the maintainer's phone.
-  - [x] The game should fill a phone's screen, upright or sideways, instead of sitting
-    in a box with bars around it. Done 2026-11-11 (#33): on a touch screen the canvas
-    covers the screen, an upright phone shows a tall slice of the tower with a camera
-    that follows sideways, and the controls sit over a cellar drawn under the lobby.
-    Where the browser has a full screen of its own there is a button for it; an iPhone
-    gets there from the home screen. Checked at phone sizes in a browser, not yet on the
-    maintainer's phone.
-  - [x] "Bagikan hasil" should share an image of the result, fit for a story, not a line
-    of text. Done 2026-11-11 (#34): the result is painted as a 1080 x 1920 picture (the
-    door, the time, the money, the address). A phone opens its share sheet with the
-    picture in it; anything else saves the file. Checked in a browser with a stand-in
-    share sheet, not yet on the maintainer's phone.
-
-  - [x] The sound has no punch, and there is no music. Done 2026-11-11 (#35): a 16-bar
-    tune in a pelog-like scale, footsteps, a rattle before a stamp falls, a different
-    sound for each way of being caught, and effects about 20 dB louder than they were,
-    with the tune kept about 10 dB under them. Still synthesised, still no audio files.
-    Measured by rendering the mix offline; nobody has heard it yet.
-
-  All four are merged. What is left of this item is the maintainer's: try them on the
-  phone after the next release, in Safari and in Chrome, and say what is still off. The questions that need more than one session are in
-  `docs/design/game-design.md` (Open questions). P3 waits for that.
+- [~] **P2 — Play the Kelurahan and tune it.** Waiting on the maintainer. The first
+  session, on v0.5.0 on a phone, gave four notes; all four went out in v0.6.0 (see Done).
+  None has been tried on a real phone yet. Next: play v0.6.0 in Safari and in Chrome and
+  say what is still off, above all whether the double-tap zoom is gone, whether the share
+  sheet takes the picture, and whether the tune is worth keeping. The questions that need
+  more than one session are in `docs/design/game-design.md` (Open questions). P3 waits
+  for this.
 
 ## Next
 
@@ -81,61 +60,29 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
-- [x] **v0.5.0** — released and deployed 2026-11-10 (release run 42782895974, deploy run
-  42783163447): live as `0.5.0+7c5a32a`, `/api/health` 404, `/panel/` 401. The first
-  player-facing release of the platformer: the Kelurahan floor, run, jump and ngeles with
-  keyboard and touch, pixel art drawn in code. The one-tap climb is retired. It went out
-  before the notes from the first hands-on session were dealt with: see P2.
-- [x] **P1 — Rebuild as a pixel-art platformer, first floor.** Done 2026-11-10 (#28). The
-  brief was a pixel-art platformer; the one-tap endless climb was a different game. Replaced: the simulation, the level
-  generator, the renderer, the balance simulator and the browser tests. Kept: the
-  pipeline, the collector and panel, audio, storage, sharing, telemetry. New: a
-  hand-built Kelurahan floor (21 ledges, two auditors, two stamps, three checkpoints, six
-  envelopes), run, jump and dash with keyboard and touch, pixel art drawn in code at 384
-  pixels wide, and tests that climb the route empty and full and finish the floor with
-  the hazards on. The size budget went from 18 KB to 30 KB (the build is about 22 KB).
-  This is V1 from the old list, done without waiting for drawn sprites; V2 became P3 and
-  P4. Released as v0.5.0.
-- [x] **v0.4.0** — released and deployed 2026-11-10 (release run 42768702423, deploy run
-  42769050232): live as `0.4.0+7f64ff6`, `/api/health` 404, `/panel/` 401, the other sites
-  on the host answered 200 after.
-  - The band retuned from real-play data: `cameraBase` 26→12, `cameraAccel` 1.3→0.6
-    (B1, #25), decided from the first telemetry and a reaction-profile sweep with the
-    committed `scripts/simulate.mjs` (#24).
-  - The ready card teaches what pays and what kills, and the band warns once by toast
-    when it closes in, with `band_warned` telemetry (B2, #26).
-  - Ready screen cleanup: the build label is gone and the seed shows only with
-    `?debug=1` (#22, #23).
-- [x] **B2 — Teach the first run.** Done 2026-11-10. The ready card now says what pays
-  and what kills (gold pays and is guarded, weight shortens the jump, the band chases
-  from below), and the band gives one toast warning per run when it closes in — with a
-  `band_warned` telemetry event, so the next batch of data shows whether players still
-  die right after being warned.
-- [x] **B1 — Retune the band from real play.** Done 2026-11-10. The maintainer found the
-  first session confusing and delegated the judgement to data (their call): the six real
-  runs in telemetry died to the band at a median of 16 s against the "about a minute"
-  intent, and a reaction-profile sweep with `scripts/simulate.mjs` (#24) showed the old
-  values only suited a bot that never hesitates. `cameraBase` 26→12, `cameraAccel`
-  1.3→0.6: a hesitating player now lasts ~37 s, a casual one dies to the auditor first,
-  and the idle catch stays quick. Re-judge when the next release has gathered more
-  telemetry.
-- [x] **D5 — Release like Havus** (#20; first release v0.3.1, published and deployed
-  2026-11-10, live as `0.3.1+2340aef`; the other sites on the host answered 200 after). Merging to `main` runs
-  the checks only. A pushed `vX.Y.Z` tag runs them again and makes a draft GitHub Release
-  with the built site and collector; publishing it deploys exactly those files. The
-  version comes from the tag (`package.json` stays `0.0.0`), and GitHub Releases replace
-  `CHANGELOG.md`. The server side is unchanged.
-- [x] **D4 — Deploy like Nyetok** (2026-11-10, #19). Replaced by D5 the same day. A green push
-  to `main` deploys, as in the Nyetok repository; release-please, the tag-driven deploy and
-  the root apply script are gone, and server config is installed by hand again
-  (`docs/deploy.md`). Kept from v0.3.0: collector first with a health check, joint
-  rollback, Node check, smoke test with automatic rollback. Release folders are named
-  `<UTC time>-<sha7>` like Nyetok's.
-- [x] **v0.3.0** — released and deployed 2026-11-10 (#16): seeded runs with `?seed=`,
-  browser smoke tests as a required check, the `core`/`platform`/`view`/`ui` split, lint
-  plus the 18 KB size budget in CI, telemetry redaction, and the release-please pipeline
-  that D4 then D5 replaced. The first release deploy applied the nginx rules, so
-  `/api/health` answers 404 publicly (H3); the server's apply script went away with D4.
+- [x] **v0.6.0** — released and deployed 2026-11-11 (release run 42955077519, deploy run
+  42955274412): live as `0.6.0+f3db541`, `/api/health` 404, `/panel/` 401; the game
+  starts, plays its tune and saves a result picture on the live site. The four notes from
+  the maintainer's first session on a phone:
+  - A double tap on a control no longer zooms the page in Safari on iOS: touches on the
+    game are cancelled, and the page declares `touch-action: none` (#32).
+  - On a touch screen the game fills the screen, upright or sideways, with a camera that
+    follows sideways when the view is narrower than the tower, the controls over a cellar
+    drawn under the lobby, and a full-screen button where the browser has one (#33).
+  - "Bagikan hasil" shares a 1080 x 1920 picture of the result: the share sheet on a
+    phone, a saved file anywhere else (#34).
+  - A 16-bar tune in a pelog-like scale, footsteps, a warning before a stamp falls, and
+    effects about 20 dB louder, all still synthesised; the sound button works on the
+    cards too (#35).
+- [x] **v0.5.0** — 2026-11-10: the game rebuilt as a pixel-art platformer with its first
+  floor, the Kelurahan (P1, #28); the one-tap climb retired.
+- [x] **v0.4.0** — 2026-11-10: the audit band retuned from real play and the first run
+  taught on the ready card (B1 #25, B2 #26, simulator #24, #22, #23).
+- [x] **v0.3.1** — 2026-11-10: releases made by tag, draft and publish, like Havus (D5,
+  #20), replacing deploy-on-push (D4, #19).
+- [x] **v0.3.0** — 2026-11-10 (#16): seeded runs, browser smoke tests as a required check,
+  the `core`/`platform`/`view`/`ui` split, lint and the size budget in CI, telemetry
+  redaction; `/api/health` answers 404 publicly (H3).
 - [x] **v0.2.0** — telemetry collector and private panel.
 - [x] **v0.1.0** — first playable release.
 
