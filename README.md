@@ -92,6 +92,7 @@ The tower lives in [`src/core/tower.ts`](src/core/tower.ts), the numbers in
 - [`docs/design/game-design.md`](docs/design/game-design.md) — rules, the numbers, the
   art direction, and why each decision was made
 - [`docs/deploy.md`](docs/deploy.md) — server layout, releases, rollback, CI pipeline
+- [`docs/telemetry.md`](docs/telemetry.md) — what the game reports, and how to read it
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — commit style and what will not be merged
 - [`SECURITY.md`](SECURITY.md) — how to report a vulnerability, privately
 
@@ -101,10 +102,12 @@ The tower lives in [`src/core/tower.ts`](src/core/tower.ts), the numbers in
   real is in it: no faces, no agency logos, no state emblems.
 - On an iPhone, the silent switch mutes the game: Safari treats Web Audio as ambient
   sound, so the ringer switch wins.
-- Telemetry is anonymous and aggregate: a visit, a finished or abandoned run, a share, a
-  JavaScript error. No cookies, no addresses, no identifiers; Do Not Track disables it;
-  raw rows are deleted after 90 days. The dashboard is private, but the collector's code
-  is in [`server/`](server/) like everything else.
+- Telemetry is anonymous and aggregate: a visit, a run and how it went (how long, how
+  high, how often caught and by what), a share, a JavaScript error, and whether it was a
+  touch screen or a keyboard. No cookies, no addresses, no identifiers; Do Not Track
+  disables it; raw rows are deleted after 90 days. Every field is listed in
+  [`docs/telemetry.md`](docs/telemetry.md). The dashboard is private, but the collector's
+  code is in [`server/`](server/) like everything else.
 
 ## Credits
 

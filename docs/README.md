@@ -10,6 +10,7 @@ changes with it; the old reasoning stays in the git history.
 | [game-design.md](design/game-design.md) | Concept, pillars, core loop, open questions |
 | [assets.md](design/assets.md) | What may be committed, and under which license |
 | [deploy.md](deploy.md) | Server layout, the deploy pipeline, rollback |
+| [telemetry.md](telemetry.md) | What the game reports, every field, and how to read the statistics |
 
 ## Writing notes
 

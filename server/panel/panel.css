@@ -69,6 +69,8 @@ h1 { margin: 0; font-size: 26px; font-weight: 650; letter-spacing: -0.01em; }
 h2 { margin: 0; font-size: 16px; font-weight: 650; }
 h3 { margin: 0; font-size: 14px; font-weight: 650; }
 .hint { margin: 2px 0 0; max-width: 64ch; color: var(--ink-2); font-size: 13px; }
+h3.gap { margin-top: 22px; }
+code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92em; }
 
 /* ---------- filters ---------- */
 

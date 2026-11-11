@@ -51,6 +51,37 @@ const SERIES = [
   { key: 'finished', name: 'Tamat' },
 ];
 
+/** What the collector's short names mean, in the words the game uses. */
+const HAZARD_NAMES = { auditor: 'Auditor', stempel: 'Stempel' };
+const SECTION_NAMES = ['Lobi, sebelum mesin absen pertama', 'Setelah mesin absen pertama', 'Setelah mesin absen kedua'];
+const DEVICE_NAMES = { touch: 'Layar sentuh', keys: 'Keyboard' };
+const LAYOUT_NAMES = {
+  window: 'Dalam kotak (komputer)',
+  'fill-tall': 'Layar penuh, HP tegak',
+  'fill-wide': 'Layar penuh, HP miring',
+};
+const SHARE_NAMES = {
+  shared: 'Menu berbagi HP',
+  saved: 'Gambar diunduh',
+  show: 'Gambar ditampilkan untuk ditekan lama',
+  copied: 'Teks disalin',
+};
+const TITLE_NAMES = {
+  raja: 'Raja Amplop',
+  belut: 'Belut Birokrasi',
+  teladan: 'Pegawai Teladan',
+  langganan: 'Langganan OTT',
+  kolektor: 'Kolektor Amplop',
+  kosong: 'Tangan Kosong',
+  emas: 'Anak Emas',
+  lembur: 'Pegawai Lembur',
+  kebal: 'Kebal Hukum',
+  oknum: 'Oknum',
+};
+
+/** Rows recorded before the game sent these details have none; say so rather than show nothing. */
+const NOT_YET = 'Belum ada data. Rincian ini baru dicatat sejak v0.7.0.';
+
 /** How runs of the first version of the game ended. Shown as one row, so they do not crowd the rest. */
 const LEGACY = new Set(['auditor', 'band', 'fall']);
 
@@ -187,6 +218,82 @@ function renderRevs(stats) {
   );
 }
 
+function renderSections(stats) {
+  bars(
+    byId('sections'),
+    stats.sections.map((row) => ({
+      name: SECTION_NAMES[row.checkpoint] ?? `Setelah mesin absen ke-${row.checkpoint}`,
+      n: row.n,
+    })),
+    NOT_YET,
+  );
+}
+
+function renderHazards(stats) {
+  bars(
+    byId('hazards'),
+    stats.hazards.map((row) => ({
+      name:
+        row.kind === 'jatuh'
+          ? 'Jatuh di bawah garis audit'
+          : `${HAZARD_NAMES[row.kind] ?? row.kind} di pijakan ${row.ledge}`,
+      note: `di ${number(row.runs)} permainan`,
+      n: row.catches,
+    })),
+    NOT_YET,
+  );
+}
+
+function renderDevices(stats) {
+  const body = document.querySelector('#devices tbody');
+  if (!stats.devices.length) {
+    const tr = el('tr');
+    const td = el('td', null, NOT_YET);
+    td.colSpan = 5;
+    tr.append(td);
+    body.replaceChildren(tr);
+  } else {
+    body.replaceChildren(
+      ...stats.devices.map((row) => {
+        const tr = el('tr');
+        tr.append(
+          el('td', null, DEVICE_NAMES[row.device] ?? row.device),
+          el('td', null, number(row.visits)),
+          el('td', null, number(row.runs)),
+          el('td', null, number(row.finished)),
+          el('td', null, percent(row.finished, row.runs)),
+        );
+        return tr;
+      }),
+    );
+  }
+  bars(
+    byId('layouts'),
+    stats.layouts.map((row) => ({ name: LAYOUT_NAMES[row.layout] ?? row.layout, n: row.visits })),
+    NOT_YET,
+  );
+}
+
+function renderTitles(stats) {
+  bars(
+    byId('titles'),
+    stats.titles.map((row) => ({ name: TITLE_NAMES[row.title] ?? row.title, n: row.n })),
+    NOT_YET,
+  );
+}
+
+function renderShares(stats) {
+  bars(
+    byId('shares'),
+    stats.shares.map((row) => ({ name: SHARE_NAMES[row.via] ?? row.via, n: row.n })),
+    NOT_YET,
+  );
+  const { runs, muted } = stats.sound;
+  byId('sound').textContent = runs
+    ? `${percent(muted, runs)} permainan berakhir dengan suara dimatikan (${number(muted)} dari ${number(runs)}).`
+    : NOT_YET;
+}
+
 // ---------- medians ----------
 
 const MEDIAN = 'Angka di bawah adalah nilai tengah: separuh permainan di bawahnya, separuh di atasnya.';
@@ -200,6 +307,7 @@ function renderFinished(stats) {
     tile({ label: 'Waktu tamat', value: f.duration != null ? clock(f.duration) : '—', what: 'menit:detik' }),
     tile({ label: 'Uang dibawa', value: f.money != null ? rupiah(f.money) : '—' }),
     tile({ label: 'Amplop dibawa', value: f.weight != null ? number(f.weight) : '—', what: 'dari 6 di lantai ini' }),
+    tile({ label: 'Kena OTT', value: f.deaths != null ? number(f.deaths) : '—', what: 'kali, sebelum tamat' }),
   );
 }
 
@@ -219,6 +327,7 @@ function renderAbandoned(stats) {
       value: a.height != null ? `${number(a.height)} m` : '—',
       what: 'titik tertinggi yang dicapai',
     }),
+    tile({ label: 'Kena OTT', value: a.deaths != null ? number(a.deaths) : '—', what: 'kali, sebelum pergi' }),
   );
 }
 
@@ -472,6 +581,11 @@ function render(stats) {
   renderFinished(stats);
   renderAbandoned(stats);
   renderQuit(stats);
+  renderSections(stats);
+  renderHazards(stats);
+  renderDevices(stats);
+  renderTitles(stats);
+  renderShares(stats);
   renderErrors(stats);
   renderRevs(stats);
 }
@@ -513,6 +627,21 @@ for (const button of document.querySelectorAll('[data-days]')) {
 }
 
 byId('refresh').addEventListener('click', () => void load());
+
+// The same numbers as one file, with the collector's own notes on what each
+// part means: for an agent, a script, or a spreadsheet.
+byId('export').addEventListener('click', () => {
+  if (!lastStats) return;
+  const file = new Blob([JSON.stringify(lastStats, null, 2) + '\n'], { type: 'application/json' });
+  const url = URL.createObjectURL(file);
+  const link = el('a');
+  link.href = url;
+  link.download = `korupsi-stats-${lastStats.days}d-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+});
 
 // The chart is drawn to the width it has, so it is redrawn when that changes.
 let resizing = 0;
