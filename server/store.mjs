@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
+import { cleanModel, IN_APP } from './agent.mjs';
 import { redactMessage } from './redact.mjs';
 
 export const EVENT_TYPES = new Set(['visit', 'run_started', 'run_ended', 'shared', 'error', 'band_warned']);
@@ -153,6 +154,14 @@ const ADDED_COLUMNS = {
   away: 'INTEGER',
   finishedBefore: 'INTEGER',
   record: 'TEXT',
+  browser: 'TEXT',
+  browserVersion: 'INTEGER',
+  os: 'TEXT',
+  form: 'TEXT',
+  model: 'TEXT',
+  installed: 'INTEGER',
+  width: 'INTEGER',
+  zone: 'INTEGER',
 };
 
 /** Every column an event fills, in the order they are inserted. */
@@ -161,8 +170,11 @@ const COLUMNS = [...FIRST_COLUMNS, ...Object.keys(ADDED_COLUMNS)];
 /**
  * Returns the row to store, or null when the event is not worth keeping.
  * Everything that is not on this list is dropped, including extra fields.
+ *
+ * `agent` is what server/agent.mjs read from the User-Agent header; the
+ * header itself is not part of the row.
  */
-export function normaliseEvent(input) {
+export function normaliseEvent(input, agent = {}) {
   if (!input || typeof input !== 'object') return null;
   if (!EVENT_TYPES.has(input.type)) return null;
 
@@ -173,6 +185,22 @@ export function normaliseEvent(input) {
   // a visit and with a run, so a run can be read by device.
   event.device = oneOf(DEVICES, input.device);
   event.layout = oneOf(LAYOUTS, input.layout);
+  // What it was played in, read from the request rather than said by the page.
+  event.browser = agent.browser ?? null;
+  event.browserVersion = agent.version ?? null;
+  event.os = agent.os ?? null;
+  event.form = agent.form ?? null;
+  event.model = agent.model ?? null;
+
+  if (input.type === 'visit') {
+    // Chrome names the phone only when the page asks, so the page may say it.
+    event.model = cleanModel(input.model) ?? event.model;
+    event.installed = flag(input.installed);
+    event.width = clampInt(input.width, 100, 9999);
+    // Minutes ahead of UTC on the player's clock: 420 is WIB, 480 WITA, 540 WIT.
+    event.zone = clampInt(input.zone, -720, 840);
+    event.finishedBefore = flag(input.finishedBefore);
+  }
 
   if (input.type === 'run_started' || input.type === 'run_ended') {
     // Which run of the visit this is, the first being 1: counted in the page, never stored there.
@@ -233,7 +261,7 @@ function readFloor() {
 }
 
 /** Bumped when the shape of the statistics changes, so a reader knows what it is holding. */
-const STATS_FORMAT = 3;
+const STATS_FORMAT = 4;
 
 /**
  * What every part of the statistics means, sent with them. The answer is read
@@ -291,13 +319,31 @@ const ABOUT = {
     'By which run of the visit it was, counted in the page: the first, the second, up to five and more together (`to` null). started counts run_started, ended and finished count run_ended. Once every visit comes from a build that counts attempts, visits minus first runs started is the visits that never started a run.',
   returning:
     'Runs by players who had finished the floor on that device before (`returning`) and by those who had not (`new`), read from the record the game keeps on the device: runs, finished, and records, finishes that beat the player\u2019s own record.',
+  browsers:
+    'Per browser, read from the User-Agent header (which is not stored): visits, runs started, runs finished, and the oldest and the most common major version seen on a visit. inApp marks another app showing the page inside itself (Instagram, TikTok, WhatsApp...): the player opened a link in that app. Android WebView is such an app that does not say which.',
+  systems: 'Visits by operating system, read from the User-Agent header.',
+  forms:
+    'Visits, runs started and runs finished by kind of device, read from the User-Agent header: phone, tablet or desktop. An iPad asking for the desktop site counts as desktop; `devices` says touch or keys from the page itself.',
+  models:
+    'Visits by phone model, where the browser names it. Chrome on Android names it only when the page asks, and the page asks; Safari says no more than iPhone or iPad.',
+  widths:
+    'Visits by the width of the page in CSS pixels: narrow (under 360), phone (360 to 479), wide (480 to 839: a big phone on its side or a small tablet) and desktop (840 and up).',
+  visitors:
+    'Of the visits that said so (`said`): installed, opened from the home screen; finishedBefore, from a device on which the floor had been finished, read from the record the game keeps there.',
+  hours: 'Visits by hour of the day on the player\u2019s own clock, 0 to 23.',
+  weekdays: 'Visits by day of the week on the player\u2019s own clock: 0 is Sunday, 6 is Saturday.',
+  zones:
+    'Visits by the time zone of the player\u2019s clock, in minutes ahead of UTC: 420 is WIB, 480 WITA, 540 WIT. A rough region, without any address.',
   missing:
-    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on.',
+    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on. Rows stored before the collector read the User-Agent have no browser, system, form or model, and visits from builds before the page said them have no width, installed, zone or finishedBefore.',
 };
 
 /** How far up abandoned runs got is reported in bands this many metres tall; the last band is open-ended. */
 const QUIT_BAND = 10;
 const QUIT_BANDS = 5;
+
+/** The width of a page in CSS pixels, as a kind of screen. */
+const widthClass = (width) => (width < 360 ? 'narrow' : width < 480 ? 'phone' : width < 840 ? 'wide' : 'desktop');
 
 const median = (values) => {
   if (!values.length) return null;
@@ -705,6 +751,84 @@ export function openStore(path) {
         )
         .all(since);
 
+      // What the players came in: browser, system, kind of device, phone model.
+      const browsers = db
+        .prepare(
+          `SELECT browser AS name,
+                  SUM(type = 'visit')       AS visits,
+                  SUM(type = 'run_started') AS runs,
+                  SUM(type = 'run_ended' AND cause = 'finished') AS finished,
+                  MIN(CASE WHEN type = 'visit' THEN browserVersion END) AS oldest
+             FROM events
+            WHERE day >= ? AND browser IS NOT NULL
+            GROUP BY browser
+            ORDER BY visits DESC, name
+            LIMIT 25`,
+        )
+        .all(since)
+        .map((row) => ({ ...row }));
+      const commonVersion = db.prepare(
+        `SELECT browserVersion AS version FROM events
+          WHERE type = 'visit' AND day >= ? AND browser = ? AND browserVersion IS NOT NULL
+          GROUP BY browserVersion ORDER BY COUNT(*) DESC, browserVersion DESC LIMIT 1`,
+      );
+      for (const row of browsers) {
+        row.common = commonVersion.get(since, row.name)?.version ?? null;
+        row.inApp = IN_APP.has(row.name);
+      }
+
+      const visitsBy = (column, limit) =>
+        db
+          .prepare(
+            `SELECT ${column} AS name, COUNT(*) AS n
+               FROM events
+              WHERE type = 'visit' AND day >= ? AND ${column} IS NOT NULL
+              GROUP BY ${column}
+              ORDER BY n DESC, name
+              LIMIT ${limit}`,
+          )
+          .all(since);
+
+      const forms = db
+        .prepare(
+          `SELECT form,
+                  SUM(type = 'visit')       AS visits,
+                  SUM(type = 'run_started') AS runs,
+                  SUM(type = 'run_ended' AND cause = 'finished') AS finished
+             FROM events
+            WHERE day >= ? AND form IS NOT NULL
+            GROUP BY form
+            ORDER BY visits DESC, form`,
+        )
+        .all(since);
+
+      // What a visit says about itself: the screen, the home screen, the player's clock.
+      const visitRows = db
+        .prepare(
+          `SELECT ts, width, installed, zone, finishedBefore
+             FROM events
+            WHERE type = 'visit' AND day >= ?
+            ORDER BY id DESC
+            LIMIT 100000`,
+        )
+        .all(since);
+      const widths = { narrow: 0, phone: 0, wide: 0, desktop: 0 };
+      const hours = new Array(24).fill(0);
+      const weekdays = new Array(7).fill(0);
+      const zones = new Map();
+      for (const visit of visitRows) {
+        if (visit.width != null) widths[widthClass(visit.width)] += 1;
+        if (visit.zone == null) continue;
+        const local = new Date(visit.ts + visit.zone * 60_000);
+        hours[local.getUTCHours()] += 1;
+        weekdays[local.getUTCDay()] += 1;
+        zones.set(visit.zone, (zones.get(visit.zone) ?? 0) + 1);
+      }
+      const told = (field) => {
+        const said = visitRows.filter((visit) => visit[field] != null);
+        return { said: said.length, yes: said.filter((visit) => visit[field] === 1).length };
+      };
+
       const revs = db
         .prepare(
           `SELECT rev, COUNT(*) AS n
@@ -754,6 +878,15 @@ export function openStore(path) {
         revs,
         ...playStats(runs, starts),
         floor,
+        browsers,
+        systems: visitsBy('os', 20),
+        forms,
+        models: visitsBy('model', 25),
+        widths: Object.entries(widths).map(([name, n]) => ({ name, n })),
+        visitors: { installed: told('installed'), finishedBefore: told('finishedBefore') },
+        hours: hours.map((n, hour) => ({ hour, n })),
+        weekdays: weekdays.map((n, weekday) => ({ weekday, n })),
+        zones: [...zones].map(([zone, n]) => ({ zone, n })).sort((a, b) => b.n - a.n || a.zone - b.zone),
       };
     },
 

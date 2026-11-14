@@ -200,6 +200,61 @@
   </div>
 
   <div class="columns">
+    <section class="card" aria-labelledby="h-hours">
+      <h2 id="h-hours">Kapan orang bermain</h2>
+      <p class="hint">Kunjungan per jam menurut jam di perangkat pemain sendiri, jadi pemain di WITA dan WIT terhitung di jam setempat mereka.</p>
+      <div id="hours" class="hours"></div>
+      <h3 class="gap">Hari</h3>
+      <div id="weekdays" class="bars"></div>
+      <h3 class="gap">Zona waktu</h3>
+      <p class="hint">Perkiraan kasar asal pemain tanpa alamat apa pun: zona waktu yang dipakai jam perangkatnya.</p>
+      <div id="zones" class="bars"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-visitors">
+      <h2 id="h-visitors">Siapa yang datang</h2>
+      <p class="hint" id="visitors-hint"></p>
+      <div class="tiles small" id="visitors"></div>
+      <h3 class="gap">Jenis perangkat</h3>
+      <p class="hint">Dibaca dari keterangan browser. Kalau persen tamat di HP jauh lebih rendah daripada di komputer, kontrol sentuhnya yang perlu dibenahi.</p>
+      <div class="scroll">
+        <table id="forms">
+          <thead>
+            <tr><th scope="col">Perangkat</th><th scope="col">Kunjungan</th><th scope="col">Mulai main</th><th scope="col">Tamat</th><th scope="col">% tamat</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3 class="gap">Lebar layar</h3>
+      <div id="widths" class="bars"></div>
+    </section>
+  </div>
+
+  <div class="columns">
+    <section class="card" aria-labelledby="h-browsers">
+      <h2 id="h-browsers">Browser</h2>
+      <p class="hint" id="browsers-hint">Dibaca dari keterangan browser, yang tidak disimpan. "Dalam aplikasi" berarti tautan dibuka di dalam aplikasi lain, seperti Instagram atau TikTok. % tamat dihitung dari permainan yang dimulai di browser itu. Versi tertua menunjukkan seberapa lama browser yang masih harus didukung.</p>
+      <div class="scroll">
+        <table id="browsers">
+          <thead>
+            <tr><th scope="col">Browser</th><th scope="col">Kunjungan</th><th scope="col">% tamat</th><th scope="col">Versi</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="hint" id="in-app"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-models">
+      <h2 id="h-models">Model HP</h2>
+      <p class="hint">Hanya untuk browser yang menyebutkannya. Chrome di Android menyebut model kalau ditanya, dan game menanyakannya; Safari hanya menyebut iPhone atau iPad.</p>
+      <div id="models" class="bars"></div>
+      <h3 class="gap">Sistem operasi</h3>
+      <div id="systems" class="bars"></div>
+    </section>
+  </div>
+
+  <div class="columns">
     <section class="card" aria-labelledby="h-shares">
       <h2 id="h-shares">Cara hasil dibagikan</h2>
       <p class="hint">Lewat mana gambar hasil keluar dari game.</p>
@@ -225,7 +280,7 @@
 </main>
 
 <footer>
-  <p>Tanpa cookie, tanpa alamat IP, tanpa ID pengunjung. Data mentah disimpan 90 hari. Pemain yang menyalakan Do Not Track tidak tercatat.</p>
+  <p>Tanpa cookie, tanpa alamat IP, tanpa ID pengunjung. Data mentah disimpan 90 hari. Keterangan browser diringkas jadi nama browser, sistem, jenis perangkat, dan model HP, lalu dibuang. Pemain yang menyalakan Do Not Track atau Global Privacy Control tidak tercatat.</p>
   <p>Untuk agent atau program: tombol <b>Unduh data (JSON)</b> menyimpan semua angka di atas dalam satu berkas, lengkap dengan penjelasan tiap bagiannya (kunci <code>about</code>). Arti tiap kejadian ada di <code>docs/telemetry.md</code>.</p>
   <p>Korupsi dibuat oleh <a href="https://nyetok.id" rel="noopener">nyetok.id</a>.</p>
 </footer>

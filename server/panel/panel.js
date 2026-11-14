@@ -82,6 +82,25 @@ const TITLE_NAMES = {
 /** Rows recorded before the game sent these details have none; say so rather than show nothing. */
 const NOT_YET = 'Belum ada data. Rincian ini baru dicatat sejak v0.7.0.';
 const PLAY_NOT_YET = 'Belum ada data. Rincian cara bermain dicatat mulai versi setelah v0.7.1.';
+const NEXT = 'Belum ada data. Rincian ini dicatat mulai versi setelah v0.7.1.';
+
+const FORM_NAMES = { phone: 'HP', tablet: 'Tablet', desktop: 'Komputer' };
+const WIDTH_NAMES = {
+  narrow: ['Sempit', 'di bawah 360 px'],
+  phone: ['HP', '360–479 px'],
+  wide: ['HP besar miring atau tablet kecil', '480–839 px'],
+  desktop: ['Tablet besar atau komputer', '840 px ke atas'],
+};
+const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const ZONE_NAMES = { 420: 'WIB', 480: 'WITA', 540: 'WIT' };
+
+/** 420 -> "WIB (UTC+7)"; a zone outside Indonesia by its offset alone. */
+function zoneName(minutes) {
+  const sign = minutes < 0 ? '−' : '+';
+  const whole = Math.abs(minutes);
+  const offset = `UTC${sign}${Math.floor(whole / 60)}${whole % 60 ? ':' + String(whole % 60).padStart(2, '0') : ''}`;
+  return ZONE_NAMES[minutes] ? `${ZONE_NAMES[minutes]} (${offset})` : offset;
+}
 
 /** A sum of seconds: minutes and seconds under an hour, hours above. */
 const span = (seconds) => (seconds < 3600 ? clock(seconds) : `${decimal(seconds / 3600)} jam`);
@@ -480,6 +499,131 @@ function renderAttempts(stats) {
   );
 }
 
+// ---------- who comes, on what, and when ----------
+
+/** Twenty-four columns, one per hour of the day, each named in its tooltip. */
+function renderHours(stats) {
+  const host = byId('hours');
+  const total = stats.hours.reduce((sum, row) => sum + row.n, 0);
+  if (!total) {
+    host.replaceChildren(el('p', 'empty', NEXT));
+    return;
+  }
+  const most = Math.max(...stats.hours.map((row) => row.n));
+  const width = 24 * 14;
+  const height = 110;
+  const chart = svg('svg', {
+    class: 'plot hours-plot',
+    viewBox: `0 0 ${width} ${height + 18}`,
+    role: 'img',
+    'aria-label': `Kunjungan per jam, dari ${number(total)} kunjungan. Jam tersibuk ${stats.hours.find((row) => row.n === most).hour}.00.`,
+  });
+  chart.append(svg('line', { class: 'base', x1: 0, x2: width, y1: height, y2: height }));
+  for (const row of stats.hours) {
+    const h = most ? (row.n / most) * (height - 6) : 0;
+    const bar = svg('rect', {
+      class: 'column',
+      x: row.hour * 14 + 2,
+      y: height - h,
+      width: 10,
+      height: Math.max(h, 0.5),
+    });
+    const title = svg('title');
+    title.textContent = `${String(row.hour).padStart(2, '0')}.00–${String(row.hour).padStart(2, '0')}.59: ${number(row.n)} kunjungan (${percent(row.n, total)})`;
+    bar.append(title);
+    chart.append(bar);
+    if (row.hour % 3 === 0) {
+      const label = svg('text', { x: row.hour * 14 + 7, y: height + 13, 'text-anchor': 'middle' });
+      label.textContent = String(row.hour).padStart(2, '0');
+      chart.append(label);
+    }
+  }
+  host.replaceChildren(chart);
+}
+
+function renderWhen(stats) {
+  renderHours(stats);
+  // Monday first, the way a work week is read.
+  const week = [1, 2, 3, 4, 5, 6, 0].map((day) => stats.weekdays[day]).filter(Boolean);
+  bars(
+    byId('weekdays'),
+    week.map((row) => ({ name: DAY_NAMES[row.weekday], n: row.n })),
+    NEXT,
+  );
+  bars(
+    byId('zones'),
+    stats.zones.map((row) => ({ name: zoneName(row.zone), n: row.n })),
+    NEXT,
+  );
+}
+
+function renderVisitors(stats) {
+  const { installed, finishedBefore } = stats.visitors;
+  byId('visitors-hint').textContent = installed.said
+    ? `Dari ${number(installed.said)} kunjungan yang menyebutkannya.`
+    : NEXT;
+  byId('visitors').replaceChildren(
+    tile({
+      label: 'Dari layar utama',
+      value: percent(installed.yes, installed.said),
+      what: 'dibuka dari ikon game di layar utama HP',
+    }),
+    tile({
+      label: 'Pernah tamat',
+      value: percent(finishedBefore.yes, finishedBefore.said),
+      what: 'datang dari perangkat yang pernah menamatkan lantai ini',
+    }),
+  );
+  fillTable(
+    'forms',
+    stats.forms.map((row) => [
+      FORM_NAMES[row.form] ?? row.form,
+      number(row.visits),
+      number(row.runs),
+      number(row.finished),
+      percent(row.finished, row.runs),
+    ]),
+    NEXT,
+  );
+  bars(
+    byId('widths'),
+    stats.widths.map((row) => ({
+      name: WIDTH_NAMES[row.name]?.[0] ?? row.name,
+      note: WIDTH_NAMES[row.name]?.[1],
+      n: row.n,
+    })),
+    NEXT,
+  );
+}
+
+function renderBrowsers(stats) {
+  fillTable(
+    'browsers',
+    stats.browsers.map((row) => [
+      row.inApp ? `${row.name} (dalam aplikasi)` : row.name,
+      number(row.visits),
+      percent(row.finished, row.runs),
+      row.common == null ? '—' : row.oldest < row.common ? `${row.common} (tertua ${row.oldest})` : String(row.common),
+    ]),
+    NEXT,
+  );
+  const visits = stats.browsers.reduce((sum, row) => sum + row.visits, 0);
+  const inApp = stats.browsers.filter((row) => row.inApp).reduce((sum, row) => sum + row.visits, 0);
+  byId('in-app').textContent = visits
+    ? `${percent(inApp, visits)} kunjungan dibuka dari dalam aplikasi lain (${number(inApp)} dari ${number(visits)}).`
+    : '';
+  bars(
+    byId('models'),
+    stats.models.slice(0, 15).map((row) => ({ name: row.name, n: row.n })),
+    NEXT,
+  );
+  bars(
+    byId('systems'),
+    stats.systems.map((row) => ({ name: row.name, n: row.n })),
+    NEXT,
+  );
+}
+
 // ---------- the floor map ----------
 
 /** What the map draws, keyed in its legend. */
@@ -854,6 +998,9 @@ function render(stats) {
   renderAttempts(stats);
   renderDevices(stats);
   renderTitles(stats);
+  renderWhen(stats);
+  renderVisitors(stats);
+  renderBrowsers(stats);
   renderShares(stats);
   renderErrors(stats);
   renderRevs(stats);

@@ -221,6 +221,13 @@ body[data-loading="true"] main { opacity: 0.55; }
 .tip li { display: flex; align-items: center; gap: 6px; color: var(--ink-2); }
 .tip b { color: var(--ink); font-variant-numeric: tabular-nums; min-width: 2ch; }
 
+/* ---------- hours ---------- */
+
+.hours { margin-top: 14px; }
+.hours-plot { max-width: 520px; }
+.hours-plot .column { fill: var(--bar); }
+.hours-plot .column:hover { filter: brightness(1.12); }
+
 /* ---------- floor map ---------- */
 
 .map { margin-top: 14px; }
