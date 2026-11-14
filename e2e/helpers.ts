@@ -120,3 +120,24 @@ export async function holdTouch(
   await page.waitForTimeout(ms);
   await page.locator(selector).dispatchEvent('pointerup', init);
 }
+
+/** An https address that exists only in the test browser: telemetry runs only over https. */
+export const LIVE = 'https://korupsi.test/';
+
+/**
+ * Serves the build at LIVE and answers every beacon here, so nothing reaches
+ * the real collector. Returns the events the page sends, in order.
+ */
+export async function asLiveSite(page: Page, baseURL: string | undefined): Promise<Record<string, unknown>[]> {
+  const events: Record<string, unknown>[] = [];
+  await page.route(`${LIVE}**`, async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/beacon') {
+      events.push(route.request().postDataJSON() as Record<string, unknown>);
+      await route.fulfill({ status: 204 });
+      return;
+    }
+    await route.fulfill({ response: await route.fetch({ url: new URL(url.pathname + url.search, baseURL).href }) });
+  });
+  return events;
+}

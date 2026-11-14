@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 import { redactMessage } from './redact.mjs';
@@ -8,12 +9,15 @@ export const EVENT_TYPES = new Set(['visit', 'run_started', 'run_ended', 'shared
 // are how runs of the first version of the game ended; its rows are still stored.
 const CAUSES = new Set(['finished', 'abandoned', 'auditor', 'band', 'fall']);
 
-/** Numbers arrive from the network, so every one of them is bounded here. */
+/** Numbers arrive from the network, so every one of them is bounded here. Missing stays missing. */
 const clampInt = (value, min, max) => {
+  if (value == null || value === '') return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return Math.max(min, Math.min(max, Math.round(n)));
 };
+
+const flag = (value) => (typeof value === 'boolean' ? Number(value) : null);
 
 const clip = (value, max) => {
   if (typeof value !== 'string') return null;
@@ -51,6 +55,60 @@ function hazardTally(input) {
   return Object.keys(clean).length ? JSON.stringify(clean) : null;
 }
 
+// How a run was played (src/core/report.ts). Each part is checked on its own
+// and kept as a small JSON value; a part that is not what the game sends is
+// dropped, and the rest of the run is still stored.
+
+/** Checkpoints after the lobby, catch positions and ledges a run can report at most. */
+const MAX_STOPS = 8;
+const MAX_SPOTS = 30;
+const MAX_LEDGES = 64;
+const RECORDS = new Set(['time', 'money', 'both']);
+
+/** Run-clock seconds at which each checkpoint was reached, in order; null where one was skipped. */
+function splitList(input) {
+  if (!Array.isArray(input) || !input.length) return null;
+  return JSON.stringify(input.slice(0, MAX_STOPS).map((t) => clampInt(t, 0, 3600)));
+}
+
+/** Where catches happened: [x, y, envelopes carried] in game pixels. */
+function spotList(input) {
+  if (!Array.isArray(input)) return null;
+  const clean = [];
+  for (const spot of input.slice(0, MAX_SPOTS)) {
+    if (!Array.isArray(spot) || spot.length !== 3) continue;
+    const point = [clampInt(spot[0], 0, 999), clampInt(spot[1], 0, 9999), clampInt(spot[2], 0, 99)];
+    if (point.every((n) => n != null)) clean.push(point);
+  }
+  return clean.length ? JSON.stringify(clean) : null;
+}
+
+/** Envelope indices, each once and in order. An empty list is an answer too: none. */
+function indexList(input) {
+  if (!Array.isArray(input)) return null;
+  const clean = new Set(input.slice(0, 64).filter((i) => Number.isInteger(i) && i >= 0 && i < 64));
+  return JSON.stringify([...clean].sort((a, b) => a - b));
+}
+
+/** One number per weight carried, from nothing up: seconds, or catches. */
+function weightList(input, top) {
+  if (!Array.isArray(input) || !input.length) return null;
+  return JSON.stringify(input.slice(0, 16).map((n) => clampInt(n, 0, top) ?? 0));
+}
+
+/** Seconds stood on each ledge, by its index in the floor's `ledges`. */
+function dwellMap(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const clean = {};
+  for (const key of Object.keys(input).slice(0, MAX_LEDGES * 4)) {
+    if (!/^\d{1,2}$/.test(key)) continue;
+    const seconds = clampInt(input[key], 0, 3600);
+    if (seconds) clean[Number(key)] = seconds;
+    if (Object.keys(clean).length >= MAX_LEDGES) break;
+  }
+  return Object.keys(clean).length ? JSON.stringify(clean) : null;
+}
+
 /**
  * What a browser reports instead of an error thrown by a script from another
  * origin: no detail, no file, no line. The game loads no such script; these
@@ -65,6 +123,9 @@ function errorMessage(raw) {
   return message && !HIDDEN_ERROR.test(message) ? message : null;
 }
 
+/** The columns of the first schema. */
+const FIRST_COLUMNS = ['type', 'rev', 'cause', 'money', 'weight', 'height', 'duration', 'message'];
+
 /** The columns added after the first schema, with their types: old databases get them on opening. */
 const ADDED_COLUMNS = {
   deaths: 'INTEGER',
@@ -75,7 +136,27 @@ const ADDED_COLUMNS = {
   device: 'TEXT',
   layout: 'TEXT',
   via: 'TEXT',
+  splits: 'TEXT',
+  spots: 'TEXT',
+  lastHazard: 'TEXT',
+  sinceCaught: 'INTEGER',
+  picked: 'TEXT',
+  kept: 'TEXT',
+  lost: 'INTEGER',
+  carried: 'TEXT',
+  caughtWith: 'TEXT',
+  jumps: 'INTEGER',
+  dashes: 'INTEGER',
+  dwell: 'TEXT',
+  attempt: 'INTEGER',
+  pauses: 'INTEGER',
+  away: 'INTEGER',
+  finishedBefore: 'INTEGER',
+  record: 'TEXT',
 };
+
+/** Every column an event fills, in the order they are inserted. */
+const COLUMNS = [...FIRST_COLUMNS, ...Object.keys(ADDED_COLUMNS)];
 
 /**
  * Returns the row to store, or null when the event is not worth keeping.
@@ -85,26 +166,18 @@ export function normaliseEvent(input) {
   if (!input || typeof input !== 'object') return null;
   if (!EVENT_TYPES.has(input.type)) return null;
 
-  const event = {
-    type: input.type,
-    rev: clip(input.rev, 40),
-    cause: null,
-    money: null,
-    weight: null,
-    height: null,
-    duration: null,
-    message: null,
-    deaths: null,
-    checkpoint: null,
-    hazards: null,
-    title: null,
-    muted: null,
-    // What the player holds, and how the game sits on their screen: said with
-    // a visit and with a run, so a run can be read by device.
-    device: oneOf(DEVICES, input.device),
-    layout: oneOf(LAYOUTS, input.layout),
-    via: null,
-  };
+  const event = Object.fromEntries(COLUMNS.map((column) => [column, null]));
+  event.type = input.type;
+  event.rev = clip(input.rev, 40);
+  // What the player holds, and how the game sits on their screen: said with
+  // a visit and with a run, so a run can be read by device.
+  event.device = oneOf(DEVICES, input.device);
+  event.layout = oneOf(LAYOUTS, input.layout);
+
+  if (input.type === 'run_started' || input.type === 'run_ended') {
+    // Which run of the visit this is, the first being 1: counted in the page, never stored there.
+    event.attempt = clampInt(input.attempt, 1, 999);
+  }
 
   if (input.type === 'run_ended') {
     event.cause = CAUSES.has(input.cause) ? input.cause : null;
@@ -116,7 +189,24 @@ export function normaliseEvent(input) {
     event.checkpoint = clampInt(input.checkpoint, 0, 99);
     event.hazards = hazardTally(input.hazards);
     event.title = typeof input.title === 'string' && /^[a-z]{2,16}$/.test(input.title) ? input.title : null;
-    event.muted = typeof input.muted === 'boolean' ? Number(input.muted) : null;
+    event.muted = flag(input.muted);
+
+    event.splits = splitList(input.splits);
+    event.spots = spotList(input.spots);
+    event.lastHazard = typeof input.lastHazard === 'string' && HAZARD.test(input.lastHazard) ? input.lastHazard : null;
+    event.sinceCaught = clampInt(input.sinceCaught, 0, 3600);
+    event.picked = indexList(input.picked);
+    event.kept = indexList(input.kept);
+    event.lost = clampInt(input.lost, 0, 999);
+    event.carried = weightList(input.carried, 3600);
+    event.caughtWith = weightList(input.caughtWith, 9999);
+    event.jumps = clampInt(input.jumps, 0, 99_999);
+    event.dashes = clampInt(input.dashes, 0, 99_999);
+    event.dwell = dwellMap(input.dwell);
+    event.pauses = clampInt(input.pauses, 0, 999);
+    event.away = clampInt(input.away, 0, 999);
+    event.finishedBefore = flag(input.finishedBefore);
+    event.record = event.cause === 'finished' ? oneOf(RECORDS, input.record) : null;
   }
 
   if (input.type === 'shared') event.via = oneOf(SHARE_VIA, input.via);
@@ -129,8 +219,21 @@ export function normaliseEvent(input) {
   return event;
 }
 
+/**
+ * The floor the numbers are about (written by scripts/floor.mjs from
+ * src/core/tower.ts). Sent with the statistics, so positions and ledge
+ * numbers can be read without the source. Without the file, it is null.
+ */
+function readFloor() {
+  try {
+    return JSON.parse(readFileSync(new URL('./floor.json', import.meta.url), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
 /** Bumped when the shape of the statistics changes, so a reader knows what it is holding. */
-const STATS_FORMAT = 2;
+const STATS_FORMAT = 3;
 
 /**
  * What every part of the statistics means, sent with them. The answer is read
@@ -166,8 +269,30 @@ const ABOUT = {
   errors:
     'Errors thrown by the game\u2019s own code, and unhandled promise rejections, by message, most frequent first, with the last time seen and a build that showed it. Errors from scripts that extensions or in-app browsers add to the page are left out. Addresses are removed before storage.',
   revs: 'Events per build label (`version+commit`), to tell which release the data comes from.',
+  floor:
+    'The floor the numbers are about, in game pixels as in src/core/tower.ts: ledges (x the left edge, y the height above the ground floor, w the width; a troli rolls `travel` either side of x), the auditors\u2019 beats between `from` and `to`, the stamps, the envelopes (`amplop`, by index), the clock-in machines (`checkpoints`, the first being where a run starts) and the door (`exit`). Read `spots`, `dwell`, `envelopes` and `hazards` against it.',
+  route:
+    'The floor stretch by stretch: `stretches[i].to` is the checkpoint that ends it (1, 2...) or `door`. reached: runs that got there, of `runs`. seconds: median time the runs that crossed the stretch took to cross it.',
+  spots:
+    'Where players were caught, in squares 8 game pixels wide: x and y are the centre of a square (y is height above the ground floor, as in src/core/tower.ts), n the catches in it. A run sends all its catches up to 30, and an even sample of 30 beyond that.',
+  carrying:
+    'By the number of envelopes carried: seconds players spent free to move with that many, and the catches that happened with that many. Catches per minute is catches / (seconds / 60): the envelopes shorten the jump, and this says what that costs.',
+  lastCatch:
+    'Of the `left` runs left before the door: what had caught the player last (hazard, kind, ledge as in `hazards`), and of those, `soon`: left within `soon` seconds of that catch. uncaught: runs left without ever being caught.',
+  envelopes:
+    'Per envelope, by its index in the floor\u2019s `amplop` in src/core/tower.ts: picked, runs that picked it up at least once, of `runs`; kept, finished runs that carried it to the door, of `finished`. lost: envelopes put back by catches in all, in `lostRuns` runs.',
+  moves:
+    'Of `runs`: the median jumps and dashes (ngeles) per run, and `dashed`, the runs that dashed at least once, to tell whether players find the dash.',
+  dwell:
+    'Per ledge (index in `ledges`): runs that stood on it for a second or more, the median seconds those runs stood there, and the total. Long waits mark a ledge where players hesitate or wait for a hazard.',
+  breaks:
+    'Of `runs`: paused, the runs the player paused at least once; away, the runs whose page was left mid-run (another app, a notification) and come back to.',
+  attempts:
+    'By which run of the visit it was, counted in the page: the first, the second, up to five and more together (`to` null). started counts run_started, ended and finished count run_ended. Once every visit comes from a build that counts attempts, visits minus first runs started is the visits that never started a run.',
+  returning:
+    'Runs by players who had finished the floor on that device before (`returning`) and by those who had not (`new`), read from the record the game keeps on the device: runs, finished, and records, finishes that beat the player\u2019s own record.',
   missing:
-    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; they count in the totals and are left out of those breakdowns.',
+    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on.',
 };
 
 /** How far up abandoned runs got is reported in bands this many metres tall; the last band is open-ended. */
@@ -181,7 +306,192 @@ const median = (values) => {
   return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 };
 
+/** Leaving within this many seconds of a catch counts as leaving because of it. */
+const SOON = 15;
+/** Catch positions are counted in squares this many game pixels wide. */
+const CELL = 8;
+/** Attempts are counted one by one up to this one, then together. */
+const ATTEMPTS = 5;
+
+const parse = (text) => {
+  if (typeof text !== 'string') return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
+
+/** `stempel:12` -> its kind and its ledge; `jatuh` has no ledge. */
+const placed = (row) => {
+  const [kind, ledge] = row.hazard.split(':');
+  return { ...row, kind, ledge: ledge === undefined ? null : Number(ledge) };
+};
+
+/**
+ * How runs were played, from the details a run reports about itself
+ * (src/core/report.ts). Only rows that carry them count, which `jumps` marks:
+ * every run that sends the details sends it. `starts` are run_started rows.
+ */
+function playStats(rows, starts) {
+  const runs = rows
+    .filter((r) => r.jumps != null)
+    .map((r) => ({
+      ...r,
+      splits: parse(r.splits) ?? [],
+      spots: parse(r.spots) ?? [],
+      picked: parse(r.picked) ?? [],
+      kept: parse(r.kept) ?? [],
+      carried: parse(r.carried) ?? [],
+      caughtWith: parse(r.caughtWith) ?? [],
+      dwell: parse(r.dwell) ?? {},
+    }));
+  const finished = runs.filter((r) => r.cause === 'finished');
+  const left = runs.filter((r) => r.cause === 'abandoned');
+
+  // The route, stretch by stretch: lobby to the first machine, machine to
+  // machine, the last machine to the door. How many got to the end of each,
+  // and how long the ones who crossed it took.
+  const stops = runs.length ? runs.reduce((most, r) => Math.max(most, r.splits.length), 0) : -1;
+  const stretches = [];
+  for (let k = 0; k <= stops; k++) {
+    const door = k === stops;
+    const times = [];
+    let reached = 0;
+    for (const r of runs) {
+      const done = r.cause === 'finished';
+      if (door ? done : done || (r.checkpoint ?? 0) > k) reached += 1;
+      const from = k === 0 ? 0 : r.splits[k - 1];
+      const to = door ? (done ? r.duration : null) : r.splits[k];
+      if (from != null && to != null && to >= from) times.push(to - from);
+    }
+    stretches.push({ to: door ? 'door' : k + 1, reached, seconds: median(times) });
+  }
+
+  // Where the catches were, counted in squares of CELL pixels.
+  const cells = new Map();
+  for (const r of runs) {
+    for (const [x, y] of r.spots) {
+      const key = `${Math.floor(x / CELL)}:${Math.floor(y / CELL)}`;
+      cells.set(key, (cells.get(key) ?? 0) + 1);
+    }
+  }
+  const spots = [...cells]
+    .map(([key, n]) => {
+      const [col, row] = key.split(':').map(Number);
+      return { x: col * CELL + CELL / 2, y: row * CELL + CELL / 2, n };
+    })
+    .sort((a, b) => b.n - a.n || a.y - b.y || a.x - b.x)
+    .slice(0, 600);
+
+  // Time free to move, and catches, at each number of envelopes carried.
+  const carrying = [];
+  const weightRow = (w) => {
+    for (let i = carrying.length; i <= w; i++) carrying.push({ envelopes: i, seconds: 0, catches: 0 });
+    return carrying[w];
+  };
+  for (const r of runs) {
+    r.carried.forEach((seconds, w) => {
+      weightRow(w).seconds += seconds;
+    });
+    r.caughtWith.forEach((n, w) => {
+      weightRow(w).catches += n;
+    });
+  }
+
+  // What had caught the players who left, last, and how many left soon after.
+  const lastMap = new Map();
+  for (const r of left) {
+    if (!r.lastHazard) continue;
+    const row = lastMap.get(r.lastHazard) ?? { hazard: r.lastHazard, runs: 0, soon: 0 };
+    row.runs += 1;
+    if (r.sinceCaught != null && r.sinceCaught <= SOON) row.soon += 1;
+    lastMap.set(r.lastHazard, row);
+  }
+
+  // Each envelope: picked up in how many runs, carried out by how many who finished.
+  const envelopeCount = runs.reduce((most, r) => Math.max(most, r.carried.length - 1), 0);
+  const list = Array.from({ length: envelopeCount }, (_, i) => ({ envelope: i, picked: 0, kept: 0 }));
+  for (const r of runs) {
+    for (const i of r.picked) if (list[i]) list[i].picked += 1;
+    if (r.cause === 'finished') for (const i of r.kept) if (list[i]) list[i].kept += 1;
+  }
+
+  // How long players stand on each ledge, among the runs that stood there a second or more.
+  const ledgeMap = new Map();
+  for (const r of runs) {
+    for (const [ledge, seconds] of Object.entries(r.dwell)) {
+      const row = ledgeMap.get(ledge) ?? { ledge: Number(ledge), runs: 0, total: 0, times: [] };
+      row.runs += 1;
+      row.total += seconds;
+      row.times.push(seconds);
+      ledgeMap.set(ledge, row);
+    }
+  }
+
+  // Which run of the visit this was: the first, the second... and five or more together.
+  const attempts = Array.from({ length: ATTEMPTS }, (_, i) => ({
+    from: i + 1,
+    to: i + 1 === ATTEMPTS ? null : i + 1,
+    started: 0,
+    ended: 0,
+    finished: 0,
+  }));
+  const bucket = (n) => attempts[Math.min(ATTEMPTS, n) - 1];
+  for (const s of starts) bucket(s.attempt).started += 1;
+  for (const r of runs) {
+    if (r.attempt == null) continue;
+    bucket(r.attempt).ended += 1;
+    if (r.cause === 'finished') bucket(r.attempt).finished += 1;
+  }
+
+  const players = (rows) => ({
+    runs: rows.length,
+    finished: rows.filter((r) => r.cause === 'finished').length,
+    records: rows.filter((r) => r.record != null).length,
+  });
+
+  return {
+    route: { runs: runs.length, stretches },
+    spots,
+    carrying,
+    lastCatch: {
+      left: left.length,
+      uncaught: left.filter((r) => !r.lastHazard).length,
+      soon: SOON,
+      hazards: [...lastMap.values()].map(placed).sort((a, b) => b.runs - a.runs || a.hazard.localeCompare(b.hazard)),
+    },
+    envelopes: {
+      runs: runs.length,
+      finished: finished.length,
+      lost: runs.reduce((sum, r) => sum + (r.lost ?? 0), 0),
+      lostRuns: runs.filter((r) => r.lost > 0).length,
+      list,
+    },
+    moves: {
+      runs: runs.length,
+      dashed: runs.filter((r) => r.dashes > 0).length,
+      jumps: median(runs.map((r) => r.jumps)),
+      dashes: median(runs.map((r) => r.dashes)),
+    },
+    dwell: [...ledgeMap.values()]
+      .map(({ times, ...row }) => ({ ...row, seconds: median(times) }))
+      .sort((a, b) => a.ledge - b.ledge),
+    breaks: {
+      runs: runs.length,
+      paused: runs.filter((r) => r.pauses > 0).length,
+      away: runs.filter((r) => r.away > 0).length,
+    },
+    attempts,
+    returning: {
+      new: players(runs.filter((r) => r.finishedBefore === 0)),
+      returning: players(runs.filter((r) => r.finishedBefore === 1)),
+    },
+  };
+}
+
 export function openStore(path) {
+  const floor = readFloor();
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA synchronous = NORMAL');
@@ -227,34 +537,13 @@ export function openStore(path) {
   }
 
   const insertStmt = db.prepare(
-    `INSERT INTO events (ts, day, type, rev, cause, money, weight, height, duration, message,
-                         deaths, checkpoint, hazards, title, muted, device, layout, via)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO events (ts, day, ${COLUMNS.join(', ')}) VALUES (?, ?, ${COLUMNS.map(() => '?').join(', ')})`,
   );
 
   return {
     insert(event, now = Date.now()) {
       const day = new Date(now).toISOString().slice(0, 10);
-      insertStmt.run(
-        now,
-        day,
-        event.type,
-        event.rev ?? null,
-        event.cause ?? null,
-        event.money ?? null,
-        event.weight ?? null,
-        event.height ?? null,
-        event.duration ?? null,
-        event.message ?? null,
-        event.deaths ?? null,
-        event.checkpoint ?? null,
-        event.hazards ?? null,
-        event.title ?? null,
-        event.muted ?? null,
-        event.device ?? null,
-        event.layout ?? null,
-        event.via ?? null,
-      );
+      insertStmt.run(now, day, ...COLUMNS.map((column) => event[column] ?? null));
     },
 
     stats(days = 30) {
@@ -301,11 +590,18 @@ export function openStore(path) {
 
       const runs = db
         .prepare(
-          `SELECT cause, money, weight, height, duration, deaths, checkpoint, hazards, title, muted, device
+          `SELECT cause, money, weight, height, duration, deaths, checkpoint, hazards, title, muted, device,
+                  splits, spots, lastHazard, sinceCaught, picked, kept, lost, carried, caughtWith,
+                  jumps, dashes, dwell, attempt, pauses, away, finishedBefore, record
              FROM events
             WHERE type = 'run_ended' AND day >= ?
             ORDER BY id DESC
             LIMIT 50000`,
+        )
+        .all(since);
+      const starts = db
+        .prepare(
+          `SELECT attempt FROM events WHERE type = 'run_started' AND day >= ? AND attempt IS NOT NULL LIMIT 50000`,
         )
         .all(since);
 
@@ -340,10 +636,7 @@ export function openStore(path) {
         }
       }
       const hazards = [...hazardMap.values()]
-        .map((row) => {
-          const [kind, ledge] = row.hazard.split(':');
-          return { ...row, kind, ledge: ledge === undefined ? null : Number(ledge) };
-        })
+        .map(placed)
         .sort((x, y) => y.catches - x.catches || x.hazard.localeCompare(y.hazard));
 
       // Which stretch of the floor the players who left were in: the last checkpoint they had reached.
@@ -459,6 +752,8 @@ export function openStore(path) {
         sound: { runs: heard.length, muted: heard.filter((r) => r.muted === 1).length },
         errors,
         revs,
+        ...playStats(runs, starts),
+        floor,
       };
     },
 

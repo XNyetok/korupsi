@@ -23,8 +23,9 @@ public repository, and every issue is indexable.
 ## Data collected by the game
 
 The game posts a small number of anonymous events to its own server: a page visit, a run
-starting and ending (outcome, money, height, duration, weight), a shared result,
-and the first line of a JavaScript error. Events carry the build revision so a bug report
+starting and ending (outcome, money, height, duration, weight, and how it was played:
+where the player was caught, which envelopes were taken, time per stretch), a shared
+result, and the first line of a JavaScript error. Events carry the build revision so a bug report
 can be matched to a release.
 
 Not collected: IP addresses, cookies, device fingerprints, or any identifier that survives

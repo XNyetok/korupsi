@@ -81,6 +81,10 @@ const TITLE_NAMES = {
 
 /** Rows recorded before the game sent these details have none; say so rather than show nothing. */
 const NOT_YET = 'Belum ada data. Rincian ini baru dicatat sejak v0.7.0.';
+const PLAY_NOT_YET = 'Belum ada data. Rincian cara bermain dicatat mulai versi setelah v0.7.1.';
+
+/** A sum of seconds: minutes and seconds under an hour, hours above. */
+const span = (seconds) => (seconds < 3600 ? clock(seconds) : `${decimal(seconds / 3600)} jam`);
 
 /** How runs of the first version of the game ended. Shown as one row, so they do not crowd the rest. */
 const LEGACY = new Set(['auditor', 'band', 'fall']);
@@ -162,14 +166,19 @@ function renderTiles(stats) {
 
 // ---------- bars ----------
 
-/** One row per part: a name, a bar from a shared baseline, and the figure at its tip. */
-function bars(target, rows, emptyText) {
-  const total = rows.reduce((sum, row) => sum + row.n, 0);
-  if (!total) {
+/**
+ * One row per part: a name, a bar from a shared baseline, and the figure at
+ * its tip. Each row is a share of all the rows together, or of `of` when the
+ * rows are steps out of one whole (how many of the runs got this far). A row
+ * with a `label` shows that instead of a count and a share.
+ */
+function bars(target, rows, emptyText, of) {
+  const total = of ?? rows.reduce((sum, row) => sum + row.n, 0);
+  if (!total || !rows.length) {
     target.replaceChildren(el('p', 'empty', emptyText));
     return;
   }
-  const longest = Math.max(...rows.map((row) => row.n));
+  const longest = of ?? Math.max(...rows.map((row) => row.n));
 
   target.replaceChildren(
     ...rows.map((row) => {
@@ -180,13 +189,16 @@ function bars(target, rows, emptyText) {
       const run = el('div', 'run');
       const fill = el('div', 'fill');
       // The longest bar takes 78% of the track, leaving room for its figure.
-      fill.style.width = (row.n / longest) * 78 + '%';
-      const value = el('span', 'value', number(row.n) + ' ');
-      value.append(el('small', null, percent(row.n, total)));
+      fill.style.width = (longest ? (row.n / longest) * 78 : 0) + '%';
+      const value = el('span', 'value', row.label ?? number(row.n) + ' ');
+      if (row.label == null) value.append(el('small', null, percent(row.n, total)));
       run.append(fill, value);
 
       wrap.append(name, run);
-      wrap.title = `${row.name}: ${number(row.n)} dari ${number(total)} (${percent(row.n, total)})`;
+      wrap.title =
+        row.label == null
+          ? `${row.name}: ${number(row.n)} dari ${number(total)} (${percent(row.n, total)})`
+          : `${row.name}: ${row.label}`;
       return wrap;
     }),
   );
@@ -229,44 +241,49 @@ function renderSections(stats) {
   );
 }
 
+const hazardName = (row) =>
+  row.kind === 'jatuh' ? 'Jatuh di bawah garis audit' : `${HAZARD_NAMES[row.kind] ?? row.kind} di pijakan ${row.ledge}`;
+
 function renderHazards(stats) {
   bars(
     byId('hazards'),
-    stats.hazards.map((row) => ({
-      name:
-        row.kind === 'jatuh'
-          ? 'Jatuh di bawah garis audit'
-          : `${HAZARD_NAMES[row.kind] ?? row.kind} di pijakan ${row.ledge}`,
-      note: `di ${number(row.runs)} permainan`,
-      n: row.catches,
-    })),
+    stats.hazards.map((row) => ({ name: hazardName(row), note: `di ${number(row.runs)} permainan`, n: row.catches })),
     NOT_YET,
   );
 }
 
-function renderDevices(stats) {
-  const body = document.querySelector('#devices tbody');
-  if (!stats.devices.length) {
+/** Fills a table's body with one row per list of cell texts, or one row saying why it is empty. */
+function fillTable(id, rows, emptyText) {
+  const body = document.querySelector(`#${id} tbody`);
+  if (!rows.length) {
     const tr = el('tr');
-    const td = el('td', null, NOT_YET);
-    td.colSpan = 5;
+    const td = el('td', null, emptyText);
+    td.colSpan = document.querySelectorAll(`#${id} thead th`).length;
     tr.append(td);
     body.replaceChildren(tr);
-  } else {
-    body.replaceChildren(
-      ...stats.devices.map((row) => {
-        const tr = el('tr');
-        tr.append(
-          el('td', null, DEVICE_NAMES[row.device] ?? row.device),
-          el('td', null, number(row.visits)),
-          el('td', null, number(row.runs)),
-          el('td', null, number(row.finished)),
-          el('td', null, percent(row.finished, row.runs)),
-        );
-        return tr;
-      }),
-    );
+    return;
   }
+  body.replaceChildren(
+    ...rows.map((cells) => {
+      const tr = el('tr');
+      tr.append(...cells.map((text) => el('td', null, text)));
+      return tr;
+    }),
+  );
+}
+
+function renderDevices(stats) {
+  fillTable(
+    'devices',
+    stats.devices.map((row) => [
+      DEVICE_NAMES[row.device] ?? row.device,
+      number(row.visits),
+      number(row.runs),
+      number(row.finished),
+      percent(row.finished, row.runs),
+    ]),
+    NOT_YET,
+  );
   bars(
     byId('layouts'),
     stats.layouts.map((row) => ({ name: LAYOUT_NAMES[row.layout] ?? row.layout, n: row.visits })),
@@ -329,6 +346,252 @@ function renderAbandoned(stats) {
     }),
     tile({ label: 'Kena OTT', value: a.deaths != null ? number(a.deaths) : '—', what: 'kali, sebelum pergi' }),
   );
+}
+
+// ---------- how runs are played ----------
+
+const stopName = (to) => (to === 'door' ? 'pintu kecamatan' : `mesin absen ${to}`);
+
+function renderRoute(stats) {
+  const { runs, stretches } = stats.route;
+  const what =
+    'berapa yang sampai ke tiap mesin absen dan ke pintu, dan berapa lama tiap bagian ditempuh oleh yang melewatinya (nilai tengah, menit:detik).';
+  byId('route-hint').textContent = runs ? `Dari ${number(runs)} permainan: ${what}` : `Dari semua permainan: ${what}`;
+  bars(
+    byId('route'),
+    stretches.map((stretch, i) => {
+      const from = i === 0 ? 'lobi' : stopName(stretches[i - 1].to);
+      const took = stretch.seconds != null ? `: ${clock(stretch.seconds)}` : '';
+      return {
+        name: `Sampai ${stopName(stretch.to)}`,
+        note: `${from} → ${stopName(stretch.to)}${took}`,
+        n: stretch.reached,
+      };
+    }),
+    PLAY_NOT_YET,
+    runs,
+  );
+}
+
+function renderLastCatch(stats) {
+  const { left, uncaught, soon, hazards } = stats.lastCatch;
+  byId('last-hint').textContent = left
+    ? `Dari ${number(left)} permainan yang ditinggal: rintangan yang terakhir menangkap pemainnya sebelum ia pergi. ${number(uncaught)} pergi tanpa pernah tertangkap.`
+    : '';
+  bars(
+    byId('last'),
+    hazards.map((row) => ({
+      name: hazardName(row),
+      note: `${number(row.soon)} pergi kurang dari ${soon} detik sesudahnya`,
+      n: row.runs,
+    })),
+    left ? 'Tidak ada yang tertangkap sebelum pergi.' : PLAY_NOT_YET,
+    left || undefined,
+  );
+}
+
+function renderEnvelopes(stats) {
+  const { runs, finished, lost, lostRuns, list } = stats.envelopes;
+  fillTable(
+    'envelopes',
+    list.map((row) => [
+      `Amplop ${row.envelope + 1}`,
+      `${number(row.picked)} (${percent(row.picked, runs)})`,
+      `${number(row.kept)} (${percent(row.kept, finished)})`,
+    ]),
+    PLAY_NOT_YET,
+  );
+  byId('lost').textContent = runs
+    ? `${number(lost)} amplop lepas lagi karena kena OTT, di ${number(lostRuns)} dari ${number(runs)} permainan.`
+    : '';
+  fillTable(
+    'carrying',
+    stats.carrying.map((row) => [
+      number(row.envelopes),
+      span(row.seconds),
+      number(row.catches),
+      row.seconds ? decimal(row.catches / (row.seconds / 60)) : '—',
+    ]),
+    PLAY_NOT_YET,
+  );
+}
+
+function renderMoves(stats) {
+  const { moves, breaks } = stats;
+  byId('moves-hint').textContent = moves.runs
+    ? `Dari ${number(moves.runs)} permainan. Lompat dan ngeles adalah nilai tengah per permainan.`
+    : PLAY_NOT_YET;
+  byId('moves').replaceChildren(
+    tile({ label: 'Lompat', value: moves.jumps != null ? number(moves.jumps) : '—', what: 'kali per permainan' }),
+    tile({ label: 'Ngeles', value: moves.dashes != null ? number(moves.dashes) : '—', what: 'kali per permainan' }),
+    tile({ label: 'Pernah ngeles', value: percent(moves.dashed, moves.runs), what: 'permainan yang memakai ngeles' }),
+    tile({ label: 'Pernah dijeda', value: percent(breaks.paused, breaks.runs), what: 'permainan yang dijeda pemain' }),
+    tile({
+      label: 'Ditinggal sebentar',
+      value: percent(breaks.away, breaks.runs),
+      what: 'pindah aplikasi di tengah main, lalu kembali',
+    }),
+  );
+  const longest = [...stats.dwell].sort((a, b) => b.seconds - a.seconds || a.ledge - b.ledge).slice(0, 8);
+  bars(
+    byId('dwell'),
+    longest.map((row) => ({
+      name: row.ledge === 0 ? 'Lantai dasar' : `Pijakan ${row.ledge}`,
+      note: `${number(row.runs)} permainan`,
+      n: row.seconds,
+      label: clock(row.seconds),
+    })),
+    PLAY_NOT_YET,
+  );
+}
+
+function renderAttempts(stats) {
+  const played = stats.attempts.some((row) => row.started || row.ended);
+  fillTable(
+    'attempts',
+    played
+      ? stats.attempts.map((row) => [
+          row.to == null ? `Ke-${row.from} dan seterusnya` : `Ke-${row.from}`,
+          number(row.started),
+          number(row.ended),
+          number(row.finished),
+          percent(row.finished, row.ended),
+        ])
+      : [],
+    PLAY_NOT_YET,
+  );
+  const { new: fresh, returning } = stats.returning;
+  fillTable(
+    'returning',
+    fresh.runs || returning.runs
+      ? [
+          // A first finish is always a record, so for new players the column would only repeat Tamat.
+          ['Baru', number(fresh.runs), number(fresh.finished), percent(fresh.finished, fresh.runs), '—'],
+          [
+            'Lama',
+            number(returning.runs),
+            number(returning.finished),
+            percent(returning.finished, returning.runs),
+            number(returning.records),
+          ],
+        ]
+      : [],
+    PLAY_NOT_YET,
+  );
+}
+
+// ---------- the floor map ----------
+
+/** What the map draws, keyed in its legend. */
+const MAP_KEYS = [
+  { css: 'catch', name: 'Tempat kena OTT' },
+  { css: 'ledge', name: 'Pijakan' },
+  { css: 'amplop', name: 'Amplop' },
+  { css: 'beat', name: 'Jalur auditor' },
+  { css: 'stamp', name: 'Stempel' },
+  { css: 'machine', name: 'Mesin absen' },
+  { css: 'door', name: 'Pintu' },
+];
+
+function renderMapLegend() {
+  byId('map-legend').replaceChildren(
+    ...MAP_KEYS.map(({ css, name }) => {
+      const item = el('li');
+      item.append(el('span', 'swatch ' + css), el('span', null, name));
+      return item;
+    }),
+  );
+}
+
+function renderMap(stats) {
+  const host = byId('map');
+  const floor = stats.floor;
+  if (!floor) {
+    host.replaceChildren(el('p', 'empty', 'Denah lantai tidak tersedia.'));
+    return;
+  }
+  const pad = 8;
+  // The game measures height up from the ground floor; the page measures down from the top.
+  const Y = (height) => floor.height - height;
+  const ledgeY = (index) => floor.ledges[index]?.y ?? 0;
+  const catches = stats.spots.reduce((sum, cell) => sum + cell.n, 0);
+
+  const map = svg('svg', {
+    class: 'floor',
+    viewBox: `${-pad} ${-pad} ${floor.width + pad * 2} ${floor.height + pad * 2}`,
+    role: 'img',
+    'aria-label': `Denah lantai ${floor.name} dengan ${number(catches)} kejadian kena OTT. Daftar rintangan di atas memuat angka yang sama per rintangan.`,
+  });
+
+  floor.ledges.forEach((ledge, i) => {
+    if (ledge.travel) {
+      const y = Y(ledge.y) + 1.5;
+      map.append(
+        svg('line', {
+          class: 'travel',
+          x1: ledge.x - ledge.travel,
+          x2: ledge.x + ledge.w + ledge.travel,
+          y1: y,
+          y2: y,
+        }),
+      );
+    }
+    map.append(
+      svg('rect', { class: `ledge ${ledge.kind ?? 'solid'}`, x: ledge.x, y: Y(ledge.y), width: ledge.w, height: 3 }),
+    );
+    if (i === 0) return;
+    // The number sits past the right end, or before the left end where the wall is close.
+    const right = ledge.x + ledge.w + 14 <= floor.width;
+    const label = svg('text', {
+      class: 'label',
+      x: right ? ledge.x + ledge.w + 3 : ledge.x - 3,
+      y: Y(ledge.y) + 3,
+      'text-anchor': right ? 'start' : 'end',
+    });
+    label.textContent = String(i);
+    map.append(label);
+  });
+
+  for (const beat of floor.auditors) {
+    const y = Y(ledgeY(beat.ledge)) - 12;
+    map.append(svg('line', { class: 'beat', x1: beat.from, x2: beat.to, y1: y, y2: y }));
+  }
+  for (const stamp of floor.stamps) {
+    map.append(svg('rect', { class: 'stamp', x: stamp.x - 7, y: Y(ledgeY(stamp.ledge)) - 30, width: 14, height: 8 }));
+  }
+  floor.checkpoints.forEach((spot, i) => {
+    if (i === 0) return;
+    map.append(svg('rect', { class: 'machine', x: spot.x - 3, y: Y(ledgeY(spot.ledge)) - 12, width: 6, height: 12 }));
+  });
+  map.append(
+    svg('rect', { class: 'door', x: floor.exit.x - 6, y: Y(ledgeY(floor.exit.ledge)) - 20, width: 12, height: 20 }),
+  );
+  floor.amplop.forEach((spot, i) => {
+    map.append(svg('circle', { class: 'amplop', cx: spot.x, cy: Y(spot.y), r: 3.5 }));
+    const label = svg('text', { class: 'label', x: spot.x + 6, y: Y(spot.y) + 3 });
+    label.textContent = String(i + 1);
+    map.append(label);
+  });
+
+  // The busiest squares are drawn last, on top.
+  const most = Math.max(1, ...stats.spots.map((cell) => cell.n));
+  for (const cell of [...stats.spots].sort((a, b) => a.n - b.n)) {
+    const share = cell.n / most;
+    // A catch is recorded at the feet; the dot sits on the body.
+    const dot = svg('circle', {
+      class: 'catch',
+      cx: cell.x,
+      cy: Y(cell.y) - 10,
+      r: 2.5 + 7.5 * Math.sqrt(share),
+      'fill-opacity': (0.35 + 0.5 * share).toFixed(2),
+    });
+    const title = svg('title');
+    title.textContent = `${number(cell.n)} kali kena OTT di sekitar sini`;
+    dot.append(title);
+    map.append(dot);
+  }
+
+  host.replaceChildren(map);
 }
 
 // ---------- errors ----------
@@ -583,6 +846,12 @@ function render(stats) {
   renderQuit(stats);
   renderSections(stats);
   renderHazards(stats);
+  renderMap(stats);
+  renderRoute(stats);
+  renderLastCatch(stats);
+  renderEnvelopes(stats);
+  renderMoves(stats);
+  renderAttempts(stats);
   renderDevices(stats);
   renderTitles(stats);
   renderShares(stats);
@@ -653,4 +922,5 @@ window.addEventListener('resize', () => {
 });
 
 renderLegend();
+renderMapLegend();
 void load();

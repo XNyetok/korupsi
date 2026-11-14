@@ -6,7 +6,18 @@
 
 import { OVERHANG, PARAMS, PLAYER } from './params.ts';
 import { AUDITOR, auditorAt, FLOORS, ledgeX, STAMP, stampAt, stampBites, type StampPhase } from './tower.ts';
-import type { Best, BestStore, Cause, FloorDef, GameEvent, GameEventType, Input, Phase, Player } from './types.ts';
+import type {
+  Best,
+  BestStore,
+  Cause,
+  FloorDef,
+  GameEvent,
+  GameEventType,
+  Input,
+  Phase,
+  Player,
+  RunLog,
+} from './types.ts';
 
 const IDLE: Input = { move: 0, jump: false, dash: false };
 
@@ -64,6 +75,8 @@ export class Game {
   best: Best;
   /** Set when the last finish beat a record. */
   record = { time: false, money: false };
+  /** What this run did, for telemetry. */
+  log: RunLog;
 
   /** Tests and tuning switch this off to study the geometry alone. */
   hazards = true;
@@ -81,7 +94,26 @@ export class Game {
     this.store = options.store ?? null;
     this.best = this.store ? this.store.read() : { time: 0, money: 0 };
     this.player = this.spawnPlayer();
+    this.log = this.freshLog();
     this.reset();
+  }
+
+  private freshLog(): RunLog {
+    const { amplop, checkpoints, ledges } = this.floor;
+    return {
+      splits: checkpoints.slice(1).map(() => null),
+      spots: [],
+      lastHazard: null,
+      lastCaught: 0,
+      picked: amplop.map(() => false),
+      lost: 0,
+      carried: new Array(amplop.length + 1).fill(0),
+      caughtWith: new Array(amplop.length + 1).fill(0),
+      jumps: 0,
+      dashes: 0,
+      dwell: ledges.map(() => 0),
+      finishedBefore: this.best.time > 0,
+    };
   }
 
   get money(): number {
@@ -111,6 +143,7 @@ export class Game {
     this.caught = 0;
     this.cause = null;
     this.record = { time: false, money: false };
+    this.log = this.freshLog();
     this.taken = this.floor.amplop.map(() => false);
     this.savedTaken = [...this.taken];
     this.crumble = this.floor.ledges.map(() => 0);
@@ -174,8 +207,12 @@ export class Game {
       return;
     }
 
+    // Only time free to move counts: the pause after a catch is the floor's, not the player's.
+    this.log.carried[this.weight] = (this.log.carried[this.weight] ?? 0) + dt;
     this.stepPlayer(dt, input);
     this.prev = input;
+    const ground = this.player.ground;
+    if (ground >= 0) this.log.dwell[ground] = (this.log.dwell[ground] ?? 0) + dt;
     this.interact();
   }
 
@@ -255,6 +292,7 @@ export class Game {
       p.dashCool = PARAMS.dashCooldown;
       p.dashReady = p.ground >= 0;
       p.rising = false;
+      this.log.dashes += 1;
       this.emit('dash', p.x, p.y);
     }
 
@@ -288,6 +326,7 @@ export class Game {
       p.buffer = 0;
       p.rising = true;
       p.dashT = 0;
+      this.log.jumps += 1;
       this.emit('jump', p.x, p.y);
     }
 
@@ -360,6 +399,7 @@ export class Game {
       if (Math.abs(a.x - p.x) < 10 && a.y > p.y - 4 && a.y < p.y + PLAYER.height + 4) {
         this.taken[i] = true;
         this.weight += 1;
+        this.log.picked[i] = true;
         this.emit('collect', a.x, a.y);
       }
     }
@@ -369,6 +409,7 @@ export class Game {
         const spot = checkpoints[i];
         if (spot && spot.ledge === p.ground && Math.abs(spot.x - p.x) < 12) {
           this.checkpoint = i;
+          this.log.splits[i - 1] = this.time;
           this.savedTaken = [...this.taken];
           this.emit('checkpoint', spot.x, p.y);
         }
@@ -422,6 +463,10 @@ export class Game {
     const p = this.player;
     this.deaths += 1;
     this.catches[hazard] = (this.catches[hazard] ?? 0) + 1;
+    this.log.spots.push([Math.round(p.x), Math.round(p.y), this.weight]);
+    this.log.caughtWith[this.weight] = (this.log.caughtWith[this.weight] ?? 0) + 1;
+    this.log.lastHazard = hazard;
+    this.log.lastCaught = this.time;
     this.cause = cause;
     this.caught = PARAMS.caughtPause;
     p.vx = 0;
@@ -434,7 +479,9 @@ export class Game {
   private respawn(): void {
     this.caught = 0;
     this.taken = [...this.savedTaken];
-    this.weight = this.taken.filter(Boolean).length;
+    const kept = this.taken.filter(Boolean).length;
+    this.log.lost += this.weight - kept;
+    this.weight = kept;
     this.crumble = this.crumble.map(() => 0);
     this.player = this.spawnPlayer();
     this.emit('respawn', this.player.x, this.player.y);

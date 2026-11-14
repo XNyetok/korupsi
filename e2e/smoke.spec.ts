@@ -2,7 +2,19 @@ import { readFileSync } from 'node:fs';
 
 import { expect, test } from '@playwright/test';
 
-import { goToDoor, holdTouch, leaveAndReturn, open, placeOn, sound, start, state, waitForPhase } from './helpers.ts';
+import {
+  asLiveSite,
+  goToDoor,
+  holdTouch,
+  LIVE,
+  leaveAndReturn,
+  open,
+  placeOn,
+  sound,
+  start,
+  state,
+  waitForPhase,
+} from './helpers.ts';
 
 test.describe('title and input', () => {
   test('shows the title card, the version and a crisp canvas', async ({ page, isMobile }) => {
@@ -441,20 +453,8 @@ test.describe('result', () => {
 
 test.describe('telemetry', () => {
   test('reports errors from the game, not from scripts added to the page', async ({ page, baseURL }) => {
-    // Telemetry is on only over https. Serve the build from an https address
-    // that exists only in this browser, and answer every beacon here, so
-    // nothing reaches the real collector.
-    const reported: string[] = [];
-    await page.route('https://korupsi.test/**', async (route) => {
-      const url = new URL(route.request().url());
-      if (url.pathname === '/api/beacon') {
-        const event = route.request().postDataJSON() as { type: string; message?: string };
-        if (event.type === 'error') reported.push(event.message ?? '');
-        await route.fulfill({ status: 204 });
-        return;
-      }
-      await route.fulfill({ response: await route.fetch({ url: new URL(url.pathname + url.search, baseURL).href }) });
-    });
+    const events = await asLiveSite(page, baseURL);
+    const reported = () => events.filter((e) => e.type === 'error').map((e) => e.message);
     // A script from another site, the way an extension or an in-app browser adds one.
     await page.route('https://elsewhere.test/**', (route) =>
       route.fulfill({ contentType: 'text/javascript', body: 'setTimeout(function () { null.boom; });' }),
@@ -467,7 +467,7 @@ test.describe('telemetry', () => {
         w.__thrown += 1;
       });
     });
-    await page.goto('https://korupsi.test/?debug=1');
+    await page.goto(`${LIVE}?debug=1`);
     await expect(page.locator('.card.title')).toBeVisible();
 
     // Not the game's: a script from another origin, whose error the browser
@@ -486,6 +486,77 @@ test.describe('telemetry', () => {
     await page.evaluate(() => {
       (window as unknown as { __korupsi: { drain: unknown } }).__korupsi.drain = null;
     });
-    await expect.poll(() => reported).toEqual([expect.stringContaining('drain is not a function')]);
+    await expect.poll(reported).toEqual([expect.stringContaining('drain is not a function')]);
+  });
+
+  test('a run reports how it was played, and which run of the visit it was', async ({ page, baseURL, isMobile }) => {
+    test.skip(isMobile, 'played with the keyboard');
+    const events = await asLiveSite(page, baseURL);
+    const of = (type: string) => events.filter((e) => e.type === type);
+    await page.goto(`${LIVE}?debug=1`);
+    await expect(page.locator('.card.title')).toBeVisible();
+    await start(page);
+
+    // A jump and a dash, a pause asked for, and a moment in another app. Each
+    // move is let happen before the next key: a pause drops a press not yet played.
+    const logged = (key: 'jumps' | 'dashes') =>
+      page.waitForFunction(
+        (k) => (window as unknown as { __korupsi: { log: Record<string, number> } }).__korupsi.log[k] >= 1,
+        key,
+      );
+    await page.keyboard.press('Space');
+    await logged('jumps');
+    await page.waitForFunction(
+      () => (window as unknown as { __korupsi: { player: { ground: number } } }).__korupsi.player.ground === 0,
+    );
+    await page.keyboard.press('Shift');
+    await logged('dashes');
+    await page.keyboard.press('Escape');
+    await waitForPhase(page, 'paused');
+    await page.keyboard.press('Escape');
+    await waitForPhase(page, 'playing');
+    await leaveAndReturn(page);
+    await waitForPhase(page, 'paused');
+    await page.keyboard.press('Escape');
+    await waitForPhase(page, 'playing');
+
+    await goToDoor(page);
+    await page.evaluate(() => {
+      const g = (window as unknown as { __korupsi: { player: { x: number }; floor: { exit: { x: number } } } })
+        .__korupsi;
+      g.player.x = g.floor.exit.x;
+    });
+    await waitForPhase(page, 'won');
+    await expect.poll(() => of('run_ended').length).toBe(1);
+    const ended = of('run_ended')[0] as Record<string, unknown>;
+    expect(ended).toMatchObject({
+      cause: 'finished',
+      attempt: 1,
+      pauses: 1,
+      away: 1,
+      finishedBefore: false,
+      record: 'time',
+      splits: [null, null],
+      spots: [],
+      picked: [],
+      kept: [],
+      lost: 0,
+    });
+    expect(ended.jumps).toBeGreaterThanOrEqual(1);
+    expect(ended.dashes).toBeGreaterThanOrEqual(1);
+    expect((ended.carried as number[]).length).toBe(7);
+    expect((ended.caughtWith as number[]).length).toBe(7);
+    expect(ended.dwell).toBeInstanceOf(Object);
+
+    // Playing again is the second run of the same visit, by a player who has now finished.
+    await page.waitForTimeout(800);
+    await page.locator('#overlay button.primary').click();
+    await waitForPhase(page, 'playing');
+    await expect.poll(() => of('run_started').map((e) => e.attempt)).toEqual([1, 2]);
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __korupsi: { log: { finishedBefore: boolean } } }).__korupsi.log.finishedBefore,
+      ),
+    ).toBe(true);
   });
 });

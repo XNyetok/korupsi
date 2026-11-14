@@ -46,10 +46,18 @@ const renderer = new Renderer(ctx, game, reducedMotion);
 /** True from the start of a run until its result has been reported. */
 let runOpen = false;
 
+/** Runs started since the page was opened: the first is 1. Counted, never stored. */
+let attempt = 0;
+/** This run's pauses asked for by the player, and times the page was left mid-run and come back to. */
+let pauses = 0;
+let away = 0;
+/** Set while the page is hidden in the middle of a run. */
+let leftMidRun = false;
+
 function reportRun(cause: 'finished' | 'abandoned'): void {
   if (!runOpen) return;
   runOpen = false;
-  track('run_ended', { ...runReport(game, cause), muted: audio.muted, ...setting() });
+  track('run_ended', { ...runReport(game, cause), muted: audio.muted, ...setting(), attempt, pauses, away });
 }
 
 function start(): void {
@@ -61,7 +69,11 @@ function start(): void {
   renderer.snap(game);
   ui.hideOverlay();
   runOpen = true;
-  track('run_started', setting());
+  attempt += 1;
+  pauses = 0;
+  away = 0;
+  leftMidRun = false;
+  track('run_started', { ...setting(), attempt });
 }
 
 function restart(): void {
@@ -70,8 +82,10 @@ function restart(): void {
   start();
 }
 
-function pause(): void {
+/** `byPlayer` is false when the page was hidden: that is time away, not a pause. */
+function pause(byPlayer = true): void {
   if (game.phase !== 'playing') return;
+  if (byPlayer) pauses += 1;
   game.pause();
   pad.clear();
   audio.pauseMusic();
@@ -229,9 +243,15 @@ const loop = startLoop({
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    pause();
+    if (game.phase === 'playing') leftMidRun = true;
+    pause(false);
     audio.suspend();
     return;
+  }
+  // Closing the page hides it too, so time away is counted only once the player is back.
+  if (leftMidRun) {
+    leftMidRun = false;
+    away += 1;
   }
   // The pause card is up; nothing moves until the player says so.
   loop.resync();
