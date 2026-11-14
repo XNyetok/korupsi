@@ -31,10 +31,12 @@ Every event carries `type` and `rev`, the build label (`0.7.0+abc1234`).
 
 | `type` | Sent when | Extra fields |
 | --- | --- | --- |
-| `visit` | The page loads | `device`, `layout`, `width`, `installed`, `zone`, `finishedBefore`, `model` |
-| `run_started` | Mulai or Main lagi is pressed | `device`, `layout`, `attempt` |
-| `run_ended` | A run reaches the door, or is closed or restarted before it | all of the run fields below |
+| `visit` | The page loads | `device`, `layout`, `width`, `installed`, `zone`, `finishedBefore`, `model`, `from`, `source`, `campaign` |
+| `run_started` | Mulai or Main lagi is pressed | `device`, `layout`, `attempt`, `after`, `wait`, `from`, `source`, `campaign` |
+| `run_ended` | A run reaches the door, or is closed or restarted before it | all of the run fields below, and `from`, `source`, `campaign` |
 | `shared` | Bagikan hasil is used and something came of it | `via` |
+| `share_missed` | Bagikan hasil is used and nothing came of it | `via`: `cancelled` (the sheet was closed) or `failed` |
+| `hidden` | The page is hidden: closed, or left for another app | `screen`, `visible`, `part` |
 | `error` | The game's own code throws, or a promise rejection goes unhandled | `message`, with addresses removed |
 
 An error counts as the game's when the file it was thrown in is in the folder the game's
@@ -89,6 +91,13 @@ ledge 12. `jatuh` is a fall below the audit tape.
 | `zone` | -720 to 840 | Minutes the player's clock is ahead of UTC: 420 is WIB, 480 WITA, 540 WIT |
 | `finishedBefore` | `true`, `false` | On a visit as on a run: the floor had been finished on this device |
 | `model` | text | The phone's model, which Chrome names only when the page asks (and the page asks, waiting at most 1.5 seconds) |
+| `from` | host name, or `''` | The host of the site that linked here (`l.instagram.com`), never its path; `''` when nothing did. The collector keeps only the site (below) |
+| `source`, `campaign` | short words | The marks on the link: `utm_source`, `ref` or `dari`, and `utm_campaign`. Read once, then taken off the address bar, so a link copied from it does not carry them on. A result shared as text links to `?dari=bagikan` |
+| `after` | `win`, `restart` | How the run before ended, on a run that is not the first of the visit |
+| `wait` | 0 to 86400 | Seconds the card before the run was up: the title for the first run, the result after a win |
+| `screen` | `title`, `playing`, `paused`, `result` | What was on screen when the page was hidden |
+| `visible` | 0 to 86400 | Seconds the page had been shown since it opened or was last come back to |
+| `part` | 1 to 999 | Which time the page was hidden since it opened: 1 is the first |
 
 ### Read from the request
 
@@ -106,6 +115,7 @@ that carries `DNT: 1` or `Sec-GPC: 1`.
 | `os` | `Android`, `iOS`, `iPadOS`, `Windows`, `macOS`, `ChromeOS`, `Linux` |
 | `form` | `phone`, `tablet`, `desktop` |
 | `model` | The phone's model where the header names it (`SM-A135F`); `iPhone` or `iPad` for Apple |
+| `referrer` | The site in `from`: a known name (`instagram`, `facebook`, `tiktok`, `x`, `whatsapp`, `google`...), otherwise the domain (`contoh.co.id`); `direct` when nothing linked here |
 | `country` | ISO 3166 code: `ID`, `MY`... |
 | `region` | The province, as the GeoIP file names it, in English (`West Java`) |
 | `city` | The town or regency |
@@ -151,6 +161,10 @@ shape changes. A test fails if a key is added without a note.
 | `widths`, `visitors` | The screens the game is shown on; how many open it from the home screen or have finished before |
 | `hours`, `weekdays`, `zones` | When people play, on their own clock, and from which time zone of Indonesia |
 | `countries`, `regions`, `cities`, `geo` | Where visits come from, by country, province and town; whether the GeoIP file was there |
+| `sources`, `campaigns` | Which sites and which marked links bring players, and whether those players play and finish |
+| `leaving` | On which screen a visit is first left, how long it was looked at by then, and how many come back |
+| `cards` | How long the title and the result are looked at before the next run; how many restart from the pause card |
+| `shareMisses` | Presses of Bagikan hasil that came to nothing: with `shares`, every press and its outcome |
 
 Things to keep in mind when drawing conclusions:
 
@@ -173,6 +187,11 @@ Things to keep in mind when drawing conclusions:
 - **`attempt` is per visit, not per player.** A player who comes back tomorrow starts at
   1 again; `finishedBefore` is what says they have played before, and only once they
   have finished.
+- **`leaving` is the first time a visit is left, not always its end.** A player who answers
+  a message and comes back counts as leaving then; `returned` says how often that happens.
+- **`direct` is everything that did not say where it came from**, including apps that open
+  links without a referrer (WhatsApp often does). `browsers` names the app when the page
+  was opened inside one.
 - **`zones` is where a clock is set, not where a player is.** Nearly every phone sets it
   from the network, so it is a fair hint of WIB, WITA or WIT; a traveller counts where
   their phone says.

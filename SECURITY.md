@@ -22,11 +22,12 @@ public repository, and every issue is indexable.
 
 ## Data collected by the game
 
-The game posts a small number of anonymous events to its own server: a page visit, a run
-starting and ending (outcome, money, height, duration, weight, and how it was played:
-where the player was caught, which envelopes were taken, time per stretch), a shared
-result, and the first line of a JavaScript error. Events carry the build revision so a bug report
-can be matched to a release.
+The game posts a small number of anonymous events to its own server: a page visit (with the
+site that linked to it, never the page), a run starting and ending (outcome, money,
+height, duration, weight, and how it was played: where the player was caught, which
+envelopes were taken, time per stretch), the page being left, a shared result, and the
+first line of a JavaScript error. Events carry the build revision so a bug report can be
+matched to a release.
 
 Not collected: cookies, device fingerprints, or any identifier that survives a page load.
 IP addresses are not stored: the address a beacon comes from is looked up once in an

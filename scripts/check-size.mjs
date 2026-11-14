@@ -10,7 +10,10 @@
  * Raising a budget is fine when it is a decision: change the number here, and
  * say why in the pull request. The budget went from 18 KB to 30 KB when the
  * game became a pixel-art platformer: the art is drawn in code, so the tower,
- * the sprites and the fonts are all JavaScript.
+ * the sprites and the fonts are all JavaScript. It went to 32 KB, 28 KB of
+ * it JavaScript, for the telemetry asked for in November 2026 (T2 to T6 in
+ * docs/plan.md): how a run is played, the visit and where it came from, and
+ * how fast the game runs, about 1.5 KB of code that every visit carries.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -19,11 +22,11 @@ import { gzipSync } from 'node:zlib';
 
 const KB = 1024;
 const BUDGET = {
-  js: 26 * KB,
+  js: 28 * KB,
   css: 3.5 * KB,
   html: 1.5 * KB,
   other: 4 * KB,
-  total: 30 * KB,
+  total: 32 * KB,
 };
 
 const dist = process.argv[2] ?? 'dist';

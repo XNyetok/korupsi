@@ -496,19 +496,28 @@ test.describe('telemetry', () => {
     test.skip(isMobile, 'played with the keyboard');
     const events = await asLiveSite(page, baseURL);
     const of = (type: string) => events.filter((e) => e.type === type);
-    await page.goto(`${LIVE}?debug=1`);
+    // Arriving from a story on Instagram, through a marked link.
+    await page.goto(`${LIVE}?debug=1&utm_source=ig_story&utm_campaign=rilis`, {
+      referer: 'https://l.instagram.com/',
+    });
     await expect(page.locator('.card.title')).toBeVisible();
 
-    // The visit says what it is shown on and the player's clock, and nothing about who.
+    // The visit says what it is shown on, the player's clock and where it came from, and
+    // nothing about who. The marks come off the address once read.
     await expect.poll(() => of('visit').length).toBe(1);
     const viewport = page.viewportSize();
+    const arrived = { from: 'l.instagram.com', source: 'ig_story', campaign: 'rilis' };
     expect(of('visit')[0]).toMatchObject({
       width: viewport?.width,
       installed: false,
       zone: 420,
       finishedBefore: false,
+      ...arrived,
     });
+    expect(page.url()).toBe(`${LIVE}?debug=1`);
     await start(page);
+    expect(of('run_started')[0]).toMatchObject({ attempt: 1, wait: expect.any(Number), ...arrived });
+    expect(of('run_started')[0]).not.toHaveProperty('after');
 
     // A jump and a dash, a pause asked for, and a moment in another app. Each
     // move is let happen before the next key: a pause drops a press not yet played.
@@ -530,6 +539,9 @@ test.describe('telemetry', () => {
     await waitForPhase(page, 'playing');
     await leaveAndReturn(page);
     await waitForPhase(page, 'paused');
+    expect(of('hidden')).toEqual([
+      expect.objectContaining({ screen: 'playing', part: 1, visible: expect.any(Number) }),
+    ]);
     await page.keyboard.press('Escape');
     await waitForPhase(page, 'playing');
 
@@ -543,6 +555,7 @@ test.describe('telemetry', () => {
     await expect.poll(() => of('run_ended').length).toBe(1);
     const ended = of('run_ended')[0] as Record<string, unknown>;
     expect(ended).toMatchObject({
+      ...arrived,
       cause: 'finished',
       attempt: 1,
       pauses: 1,
@@ -566,10 +579,42 @@ test.describe('telemetry', () => {
     await page.locator('#overlay button.primary').click();
     await waitForPhase(page, 'playing');
     await expect.poll(() => of('run_started').map((e) => e.attempt)).toEqual([1, 2]);
+    expect(of('run_started')[1]).toMatchObject({ after: 'win', wait: expect.any(Number) });
     expect(
       await page.evaluate(
         () => (window as unknown as { __korupsi: { log: { finishedBefore: boolean } } }).__korupsi.log.finishedBefore,
       ),
     ).toBe(true);
+  });
+
+  test('a share sheet closed without sharing is counted as a miss, not a share', async ({
+    page,
+    baseURL,
+    isMobile,
+  }) => {
+    test.skip(!isMobile, 'the share sheet is a phone thing');
+    await page.addInitScript(() => {
+      navigator.canShare = () => true;
+      navigator.share = async () => {
+        throw new DOMException('closed', 'AbortError');
+      };
+    });
+    const events = await asLiveSite(page, baseURL);
+    await page.goto(`${LIVE}?debug=1`);
+    await expect(page.locator('.card.title')).toBeVisible();
+    await start(page);
+    await goToDoor(page);
+    await page.evaluate(() => {
+      const g = (window as unknown as { __korupsi: { player: { x: number }; floor: { exit: { x: number } } } })
+        .__korupsi;
+      g.player.x = g.floor.exit.x;
+    });
+    await waitForPhase(page, 'won');
+    await expect(page.locator('#overlay .share')).toBeEnabled();
+    await page.locator('#overlay .share').click();
+    await expect
+      .poll(() => events.filter((e) => e.type === 'share_missed'))
+      .toEqual([expect.objectContaining({ via: 'cancelled' })]);
+    expect(events.filter((e) => e.type === 'shared')).toEqual([]);
   });
 });

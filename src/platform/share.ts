@@ -1,4 +1,5 @@
-const SITE = 'https://korupsi.web.id/';
+/** The link a text share carries, marked so the panel can count the players it brings. */
+const SITE = 'https://korupsi.web.id/?dari=bagikan';
 
 /**
  * `saved` is the picture downloaded; `show` asks the caller to put the picture
