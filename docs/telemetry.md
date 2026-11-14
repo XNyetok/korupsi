@@ -5,8 +5,9 @@ has to decide what to build next from the numbers, person or program.
 
 The short version: the game says *what happened*, never *who it happened to*. There is no
 cookie, no stored address and no identifier, so two events can never be tied to the same
-player, and a run cannot be followed from one visit to the next. The browser's User-Agent
-header is reduced to a few words and never stored. Do Not Track and Global Privacy Control
+player, and a run cannot be followed from one visit to the next. The address a beacon
+comes from is looked up once, to a country, a province and a town, and then forgotten; the
+browser's User-Agent header is reduced to a few words. Neither is stored. Do Not Track and Global Privacy Control
 switch it off entirely, in the page and again in the collector. Raw rows are deleted after
 90 days.
 
@@ -91,10 +92,12 @@ ledge 12. `jatuh` is a fall below the audit tape.
 
 ### Read from the request
 
-The collector adds these to every event from the request's User-Agent header
-([`server/agent.mjs`](../server/agent.mjs)), then forgets the header: a whole one can single
-out a device, these few words cannot. A crawler's request is not stored at all, and
-neither is one that carries `DNT: 1` or `Sec-GPC: 1`.
+The collector adds these to every event from the request, then forgets the request. The
+User-Agent header is reduced by [`server/agent.mjs`](../server/agent.mjs): a whole one can
+single out a device, these few words cannot. The address nginx passes on (`X-Real-IP`) is
+looked up in an offline GeoIP file by [`server/geo.mjs`](../server/geo.mjs), and only the
+three names it gives are kept. A crawler's request is not stored at all, and neither is one
+that carries `DNT: 1` or `Sec-GPC: 1`.
 
 | Field | Values |
 | --- | --- |
@@ -103,6 +106,15 @@ neither is one that carries `DNT: 1` or `Sec-GPC: 1`.
 | `os` | `Android`, `iOS`, `iPadOS`, `Windows`, `macOS`, `ChromeOS`, `Linux` |
 | `form` | `phone`, `tablet`, `desktop` |
 | `model` | The phone's model where the header names it (`SM-A135F`); `iPhone` or `iPad` for Apple |
+| `country` | ISO 3166 code: `ID`, `MY`... |
+| `region` | The province, as the GeoIP file names it, in English (`West Java`) |
+| `city` | The town or regency |
+
+The GeoIP file is [IP to City Lite](https://db-ip.com/db/download/ip-to-city-lite) by DB-IP
+(CC BY 4.0, credited in the panel), in the MaxMind DB format. It is not part of a release;
+`docs/deploy.md` says where it lives and how it is updated. Without it the collector works
+and records no place. A place is an estimate: mobile networks in Indonesia often resolve to
+Jakarta or another big city wherever the phone is, so read a town as a hint.
 
 ## Reading the statistics
 
@@ -138,6 +150,7 @@ shape changes. A test fails if a key is added without a note.
 | `browsers`, `systems`, `forms`, `models` | What players come in, and whether one of them finishes less: an in-app browser, an old version, a phone |
 | `widths`, `visitors` | The screens the game is shown on; how many open it from the home screen or have finished before |
 | `hours`, `weekdays`, `zones` | When people play, on their own clock, and from which time zone of Indonesia |
+| `countries`, `regions`, `cities`, `geo` | Where visits come from, by country, province and town; whether the GeoIP file was there |
 
 Things to keep in mind when drawing conclusions:
 

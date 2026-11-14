@@ -165,9 +165,13 @@ and serves a read-only panel.
 /var/lib/korupsi-stats/        stats.db, owned by the korupsi service user
 /www/server/nginx/conf/.htpasswd-korupsi   panel credentials
 /www/server/panel/vhost/nginx/0.korupsi-limits.conf   rate limit zone
+/opt/korupsi-stats/geo/city.mmdb   the GeoIP file, put there by hand, not part of a release
 ```
 
-- Unit: `deploy/systemd/korupsi-stats.service`, listening on `127.0.0.1:8787` only.
+- Unit: `deploy/systemd/korupsi-stats.service`, listening on `127.0.0.1:8787` only. It
+  reads the GeoIP file from `GEO_DB`.
+- nginx passes the visitor's address to the beacon in `X-Real-IP`, for the province lookup.
+  The collector forgets it after the lookup, and the beacon's access log is off.
 - nginx proxies `/api/` and `/panel/`; the panel sits behind basic auth.
 - The panel password is kept in the operator's password manager, never in a file on the
   server or in this repository. Change it with `htpasswd -c <htpasswd file> <user>` (then
@@ -187,6 +191,26 @@ identifier. Rows older than 90 days are pruned every six hours.
 
 `/api/health` is not public: nginx answers 404 for every `/api/` path except the beacon and
 the authenticated stats. The deploy checks health over SSH on `127.0.0.1`.
+
+### The GeoIP file
+
+Provinces and towns come from DB-IP's free IP to City Lite database (`docs/telemetry.md`).
+It is about 120 MB and a new one comes out every month, so it lives on the server, not in
+a release. The collector reads it a few bytes at a time and opens it again every day, so a
+new file is picked up without a restart. To put it there the first time, and every month:
+
+```sh
+G=/opt/korupsi-stats/geo
+sudo install -d -m 755 "$G"
+curl -fsSL "https://download.db-ip.com/free/dbip-city-lite-$(date +%Y-%m).mmdb.gz" | gunzip | sudo tee "$G/city.mmdb.new" >/dev/null
+sudo chmod 644 "$G/city.mmdb.new" && sudo mv "$G/city.mmdb.new" "$G/city.mmdb"
+```
+
+The deploy never touches it: it writes and prunes only under `releases/`.
+
+Early in a month the new file may not be out yet; the previous month's (`date -d '-1 month'`)
+works just as well. `/api/health` on `127.0.0.1` says `"geo": true` once the collector has
+it.
 
 ## Changing the server config
 

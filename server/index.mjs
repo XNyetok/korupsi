@@ -4,16 +4,29 @@ import { extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { readAgent } from './agent.mjs';
+import { openGeo } from './geo.mjs';
 import { normaliseEvent, openStore } from './store.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const HOST = process.env.HOST ?? '127.0.0.1';
 const DB_PATH = process.env.DB_PATH ?? './data/stats.db';
+const GEO_DB = process.env.GEO_DB ?? './data/city.mmdb';
 const KEEP_DAYS = 90;
 const MAX_BODY = 2048;
 
 const PANEL_DIR = resolve(fileURLToPath(new URL('./panel/', import.meta.url)));
 const store = openStore(DB_PATH);
+
+// The GeoIP file is replaced every month (docs/deploy.md): open it again every
+// day, so a new one is picked up without a restart. Without it, nothing is
+// looked up and the collector carries on.
+let geo = openGeo(GEO_DB);
+setInterval(() => {
+  const fresh = openGeo(GEO_DB);
+  if (!fresh) return;
+  geo?.close();
+  geo = fresh;
+}, 24 * 3600_000).unref();
 
 /**
  * The deploy writes the release folder name into RELEASE, and checks it in the
@@ -94,7 +107,10 @@ async function beacon(req, res) {
     return;
   }
 
-  const event = normaliseEvent(input, agent);
+  // nginx passes the visitor's address in X-Real-IP. It is looked up once and
+  // then forgotten: it is not stored, and nothing here logs it.
+  const where = geo ? geo.lookup(header(req, 'x-real-ip')) : null;
+  const event = normaliseEvent(input, agent, where);
   if (!event) {
     json(res, 422, { error: 'ignored' });
     return;
@@ -138,7 +154,7 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'GET' && url.pathname === '/api/stats') {
       const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days') ?? 30) || 30));
-      json(res, 200, store.stats(days));
+      json(res, 200, store.stats(days, geo));
       return;
     }
 
@@ -149,7 +165,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      json(res, 200, { ok: true, release: RELEASE, uptime: Math.round(process.uptime()) });
+      json(res, 200, { ok: true, release: RELEASE, geo: !!geo, uptime: Math.round(process.uptime()) });
       return;
     }
 

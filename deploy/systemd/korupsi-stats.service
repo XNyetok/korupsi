@@ -13,6 +13,8 @@ WorkingDirectory=/opt/korupsi-stats/current
 Environment=PORT=8787
 Environment=HOST=127.0.0.1
 Environment=DB_PATH=/var/lib/korupsi-stats/stats.db
+# The GeoIP file, put there by hand and replaced monthly (docs/deploy.md).
+Environment=GEO_DB=/opt/korupsi-stats/geo/city.mmdb
 ExecStart=/usr/bin/node /opt/korupsi-stats/current/index.mjs
 Restart=on-failure
 RestartSec=3

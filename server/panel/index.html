@@ -255,6 +255,23 @@
   </div>
 
   <div class="columns">
+    <section class="card" aria-labelledby="h-regions">
+      <h2 id="h-regions">Provinsi</h2>
+      <p class="hint" id="geo-hint"></p>
+      <div id="regions" class="bars"></div>
+      <h3 class="gap">Negara</h3>
+      <div id="countries" class="bars"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-cities">
+      <h2 id="h-cities">Kota dan kabupaten</h2>
+      <p class="hint">Perkiraan kasar: jaringan seluler sering terbaca sebagai Jakarta atau kota besar lain, di mana pun HP-nya berada. Baca sebagai petunjuk, bukan sensus.</p>
+      <div id="cities" class="bars"></div>
+      <p class="credit">Data lokasi: <a href="https://db-ip.com" rel="noopener">IP Geolocation by DB-IP</a>, lisensi CC BY 4.0.</p>
+    </section>
+  </div>
+
+  <div class="columns">
     <section class="card" aria-labelledby="h-shares">
       <h2 id="h-shares">Cara hasil dibagikan</h2>
       <p class="hint">Lewat mana gambar hasil keluar dari game.</p>
@@ -280,7 +297,7 @@
 </main>
 
 <footer>
-  <p>Tanpa cookie, tanpa alamat IP, tanpa ID pengunjung. Data mentah disimpan 90 hari. Keterangan browser diringkas jadi nama browser, sistem, jenis perangkat, dan model HP, lalu dibuang. Pemain yang menyalakan Do Not Track atau Global Privacy Control tidak tercatat.</p>
+  <p>Tanpa cookie dan tanpa ID pengunjung. Alamat IP hanya dipakai sekali untuk memperkirakan provinsi dan kota, lalu dibuang: tidak disimpan dan tidak dicatat. Data mentah disimpan 90 hari. Keterangan browser diringkas jadi nama browser, sistem, jenis perangkat, dan model HP, lalu dibuang. Pemain yang menyalakan Do Not Track atau Global Privacy Control tidak tercatat.</p>
   <p>Untuk agent atau program: tombol <b>Unduh data (JSON)</b> menyimpan semua angka di atas dalam satu berkas, lengkap dengan penjelasan tiap bagiannya (kunci <code>about</code>). Arti tiap kejadian ada di <code>docs/telemetry.md</code>.</p>
   <p>Korupsi dibuat oleh <a href="https://nyetok.id" rel="noopener">nyetok.id</a>.</p>
 </footer>
