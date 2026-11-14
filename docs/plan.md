@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-11 · Last tagged release: `v0.7.0`. What is live is the latest
+Last updated: 2026-11-14 · Last tagged release: `v0.7.1`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -38,7 +38,8 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   Done under v0.6.0, v0.6.1 and v0.7.0. Confirmed on the phone: no double-tap zoom, the
   tune and the effects are good, the share sheet lists Instagram (the story is chosen
   inside that app; a web page cannot open it directly). Still untried: sharing in Chrome
-  on Android, and the panel against live data. From v0.7.0 the panel says which hazard
+  on Android. The panel was read against live data on 2026-11-14; the one error it
+  listed was not the game's (fixed in v0.7.1). From v0.7.0 the panel says which hazard
   catches people and where they leave: read it after a few days of play (the JSON export
   is the form to give an agent, `docs/telemetry.md` says how to read it), then tune the
   floor. The open questions are in `docs/design/game-design.md`. P3 waits for this.
@@ -60,24 +61,19 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
-- [x] **v0.7.0** — released and deployed 2026-11-11 (release run 42963565410, deploy run
-  42963759102): live as `0.7.0+19db25a`, `/api/health` 404, `/panel/` 401, the collector
-  answers after gaining its new columns; on the live site a finished run shows its title,
-  the credit links to nyetok.id and the decree is saved at 1080 x 1920.
-  - The shared picture is a surat keputusan that appoints the player to one of ten
-    titles, decided by the time, the OTT count and the envelopes; the portrait, the
-    number and the envelopes on the desk change with the result, and the result screen
-    shows the title (#39).
-  - The panel was redesigned to be read: four headline figures with what share each is of
-    the one before, the days as one chart with a table behind it, and finished runs
-    measured apart from abandoned ones (D6, #40).
-  - A run reports how often the player was caught and by which hazard, the last
-    checkpoint reached, the title and whether the sound was off; a visit and a run say
-    touch or keyboard. The statistics explain every key they carry and can be saved as
-    one JSON file; `docs/telemetry.md` lists every field (T1, #42). Collected from this
-    release on: earlier rows have none of it.
-  - "Dibuat oleh nyetok.id" on the title card, under the result and in the panel (D7,
-    #41).
+- [x] **v0.7.1** — released and deployed 2026-11-14 (release run 43588697563, deploy run
+  43588853158): live as `0.7.1+a2fb21d`, `/api/health` 404, `/panel/` 401. Nothing
+  changed for players.
+  - The game reports only errors thrown by its own code, and the collector drops
+    "Script error.", rows already stored included. The five the panel listed came from
+    scripts that extensions and in-app browsers add to the page (#45). Checked on the
+    live site: an error from a script on another origin is no longer sent, one from the
+    game still is.
+  - The panel's rate limit allows refreshing it (#44). That is nginx config, which a
+    release does not install (`docs/deploy.md`, Changing the server config).
+- [x] **v0.7.0** — 2026-11-11: finished runs earn one of ten titles, shared as a surat
+  keputusan (#39); a panel that can be read (D6, #40); telemetry on what catches players
+  and where they leave (T1, #42); the credit to nyetok.id (D7, #41).
 - [x] **v0.6.1** — 2026-11-11: the share sheet gets the picture alone, so apps that only
   take pictures stay in it; a phone that refuses it shows the picture instead (#37).
 - [x] **v0.6.0** — 2026-11-11: the four notes from the first session on a phone. No
