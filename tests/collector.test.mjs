@@ -270,6 +270,91 @@ test('the statistics say where players come from, where they leave and what they
   store.close();
 });
 
+/* ---------- Speed, sound and where errors happen ---------- */
+
+test('a visit says how fast it was ready; a run how it was drawn and heard; an error where it happened', () => {
+  const visit = normaliseEvent({ type: 'visit', ready: 1840.6, net: '3g', saveData: true, lang: 'id' });
+  assert.deepEqual([visit.ready, visit.net, visit.saveData, visit.lang], [1841, '3g', 1, 'id']);
+  const odd = normaliseEvent({ type: 'visit', ready: -5, net: '5g', saveData: 'on', lang: 'Bahasa Indonesia' });
+  assert.deepEqual([odd.ready, odd.net, odd.saveData, odd.lang], [0, null, null, null]);
+
+  const run = normaliseEvent({
+    type: 'run_ended',
+    cause: 'finished',
+    fps: 58,
+    slow: 7,
+    audio: 'running',
+    full: true,
+    turns: 1,
+  });
+  assert.deepEqual([run.fps, run.slow, run.audio, run.full, run.turns], [58, 7, 'running', 1, 1]);
+  assert.equal(normaliseEvent({ type: 'run_ended', audio: 'loud' }).audio, null);
+  assert.equal(normaliseEvent({ type: 'run_ended', slow: 400 }).slow, 100);
+
+  assert.equal(normaliseEvent({ type: 'error', message: 'boom', screen: 'paused' }).screen, 'paused');
+  assert.equal(normaliseEvent({ type: 'error', message: 'boom', screen: 'menu' }).screen, null);
+});
+
+test('the statistics say how fast the game is ready, how smoothly it runs and whether it is heard', () => {
+  const store = openStore(':memory:');
+  const add = (event, ua = IPHONE) => store.insert(normaliseEvent(event, readAgent(ua)));
+  add({ type: 'visit', ready: 900, net: '4g', saveData: false, lang: 'id' });
+  add({ type: 'visit', ready: 2100, net: '4g', lang: 'id' });
+  add({ type: 'visit', ready: 5000, net: '3g', saveData: true, lang: 'en' });
+  add({ type: 'visit', ready: 700 }, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/${build(131)}`);
+  const run = { type: 'run_ended', cause: 'abandoned', full: false, turns: 0 };
+  add({ ...run, cause: 'finished', fps: 60, slow: 2, audio: 'running', full: true });
+  add({ ...run, fps: 58, slow: 4, audio: 'running', turns: 2 });
+  add({ ...run, fps: 30, slow: 40, audio: 'suspended' });
+  add(
+    { ...run, cause: 'finished', fps: 120, slow: 0, audio: 'none' },
+    `Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/${build(131)}`,
+  );
+  add({ type: 'error', message: 'boom', screen: 'playing' });
+  add({ type: 'error', message: 'boom', screen: 'playing' });
+  add({ type: 'error', message: 'boom', screen: 'result' }, SAMSUNG);
+
+  const stats = store.stats(1);
+  assert.deepEqual(stats.speed, {
+    visits: 4,
+    ready: 1500,
+    nets: [
+      { net: '4g', visits: 2, ready: 1500 },
+      { net: '3g', visits: 1, ready: 5000 },
+    ],
+    saveData: { said: 2, yes: 1 },
+  });
+  assert.deepEqual(stats.frames, {
+    runs: 4,
+    fps: 59,
+    smooth: { runs: 3, finished: 2 },
+    choppy: { runs: 1, finished: 0 },
+    byForm: [
+      { form: 'phone', runs: 3, fps: 58 },
+      { form: 'desktop', runs: 1, fps: 120 },
+    ],
+  });
+  assert.deepEqual(stats.sounds, [
+    { audio: 'running', runs: 2 },
+    { audio: 'suspended', runs: 1 },
+    { audio: 'none', runs: 1 },
+  ]);
+  assert.deepEqual(stats.display, { runs: 4, fullscreen: 1, turned: 1 });
+  assert.deepEqual(plain(stats.languages), [
+    { name: 'id', n: 2 },
+    { name: 'en', n: 1 },
+  ]);
+  assert.deepEqual(stats.errors[0].screens, [
+    { name: 'playing', n: 2 },
+    { name: 'result', n: 1 },
+  ]);
+  assert.deepEqual(stats.errors[0].browsers, [
+    { name: 'Safari', n: 2 },
+    { name: 'Samsung Internet', n: 1 },
+  ]);
+  store.close();
+});
+
 /* ---------- The GeoIP lookup ---------- */
 
 const temp = (t) => {

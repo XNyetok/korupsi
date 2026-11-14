@@ -12,6 +12,8 @@ import { PARAMS } from './core/params.ts';
 import { audio } from './platform/audio.ts';
 import { type Action, bindInput, guardGestures, Pad } from './platform/input.ts';
 import { startLoop } from './platform/loop.ts';
+import { FrameMeter } from './platform/frames.ts';
+import { isFullscreen, onFullscreenChange } from './platform/fullscreen.ts';
 import { bestStore } from './platform/storage.ts';
 import { arrival, track, trackErrors, trackVisit } from './platform/telemetry.ts';
 import { applyView } from './platform/viewport.ts';
@@ -57,11 +59,19 @@ let leftMidRun = false;
 let lastEnding: 'win' | 'restart' | null = null;
 /** When the card now up appeared: the title when the page opened, the result after a win. */
 let cardSince = performance.now();
+/** How this run is drawn and heard, and what the screen did meanwhile. */
+const frames = new FrameMeter();
+let soundSeen: string | null = null;
+let wentFull = false;
+let turns = 0;
 
 function reportRun(cause: 'finished' | 'abandoned'): void {
   if (!runOpen) return;
   runOpen = false;
   lastEnding = cause === 'finished' ? 'win' : 'restart';
+  // Whether the sound could be heard: its state a moment into the run, not after
+  // the page was hidden, which suspends it.
+  const heard = soundSeen ?? audio.state;
   track('run_ended', {
     ...runReport(game, cause),
     muted: audio.muted,
@@ -70,6 +80,10 @@ function reportRun(cause: 'finished' | 'abandoned'): void {
     attempt,
     pauses,
     away,
+    ...frames.report(),
+    audio: heard === 'uninitialised' ? 'none' : heard,
+    full: wentFull,
+    turns,
   });
 }
 
@@ -86,6 +100,10 @@ function start(): void {
   pauses = 0;
   away = 0;
   leftMidRun = false;
+  frames.reset();
+  soundSeen = null;
+  wentFull = isFullscreen();
+  turns = 0;
   // How long the card before this run was looked at: the title, or the result of a win.
   const before: Record<string, unknown> = {};
   if (lastEnding) before.after = lastEnding;
@@ -137,7 +155,10 @@ function setting(): { device: 'touch' | 'keys'; layout: typeof layout } {
 function resize(): void {
   document.body.classList.toggle('is-touch', touch);
   const view = applyView(canvas, screen, stage, touch, touchPad);
+  const before = layout;
   layout = view.fill ? (view.viewH > view.viewW ? 'fill-tall' : 'fill-wide') : 'window';
+  // A phone turned on its side or back mid-run.
+  if (runOpen && layout !== before) turns += 1;
   renderer.resize(view.viewW, view.viewH, view.deck);
   renderer.snap(game);
 }
@@ -237,6 +258,10 @@ const loop = startLoop({
     }
   },
   draw(dt) {
+    if (game.phase === 'playing') {
+      frames.add(dt);
+      if (soundSeen === null && game.time >= 2) soundSeen = audio.state;
+    }
     const events = game.drain();
     for (const event of events) {
       sound(event);
@@ -296,7 +321,11 @@ window.addEventListener('pagehide', () => {
 });
 window.addEventListener('pageshow', () => loop.resetClock());
 
-trackErrors();
+onFullscreenChange(() => {
+  if (runOpen && isFullscreen()) wentFull = true;
+});
+
+trackErrors(() => SCREENS[game.phase]);
 trackVisit({ ...setting(), finishedBefore: game.best.time > 0 });
 
 // The first version of the game installed a service worker that cached the

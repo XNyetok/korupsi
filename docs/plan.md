@@ -43,10 +43,33 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   catches people and where they leave: read it after a few days of play (the JSON export
   is the form to give an agent, `docs/telemetry.md` says how to read it), then tune the
   floor. The open questions are in `docs/design/game-design.md`. P3 waits for this.
-- [~] **T2–T6 — More to read in the telemetry.** The maintainer asked on 2026-11-14 for
-  much richer telemetry, still without any identifier: the address a beacon comes from
-  may be used once to look up a province and a town, never stored. Five parts, one pull
-  request each, in this order; each collects from the release that ships it.
+- [ ] **T7 — Install the GeoIP pieces on the server** (from T4): the nginx line that
+  passes the visitor's address to the beacon, `GEO_DB` in the unit (and a
+  `daemon-reload`), and the GeoIP file, renewed monthly. Waiting on the maintainer
+  (`docs/deploy.md`, The GeoIP file); until then no visit has a province or a town.
+
+## Next
+
+- [ ] **P3 — Floor 02, Kecamatan.** Its own scenery and one new hazard, built on the
+  spacing rules at the top of `src/core/tower.ts`. Needs: more than one floor in a run
+  (the door leads to the next floor, the bag is paid upwards and the weight resets), a
+  promotion card between floors, and the floor name in the HUD from the floor itself.
+
+## Later
+
+- [ ] **P4 — Floors 03 to 05:** Dinas, Kementerian, the roof and the way out.
+- [ ] **P5 — A mode without checkpoints**, once the tower is whole.
+- [!] **C1 — Remove the service worker kill switch** after 2027-02: delete `public/sw.js`,
+  its nginx location, the smoke test line in `ci.yml`, and `tests/sw.test.mjs`. Blocked
+  on the date: old installs need the switch until then.
+
+## Done
+
+- [x] **T2–T6 — More to read in the telemetry.** Done 2026-11-14 (#47 to #51), not
+  released yet. The maintainer asked that day for much richer telemetry, still without
+  any identifier: the address a beacon comes from may be used once to look up a province
+  and a town, never stored. Five parts, one pull request each; each collects from the
+  release that ships it.
   - [x] **T2 — How a run is played.** Done 2026-11-14 (#47), not released yet. A run
     says when it reached each clock-in machine, where it was caught and carrying what,
     what caught it last, which envelopes it took and lost, its jumps and dashes, how
@@ -66,8 +89,7 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     collector looks the visitor's address up in DB-IP's free GeoIP file and keeps the
     country, the province and the town, never the address; the panel shows them. Needs
     installing on the server before any place is recorded: the nginx line that passes
-    the address, the unit's `GEO_DB`, and the file itself (`docs/deploy.md`, The GeoIP
-    file).
+    the address, the unit's `GEO_DB`, and the file itself (T7).
   - [x] **T5 — Visits and where players come from.** Done 2026-11-14 (#50), not released
     yet. A visit and its runs say which site linked here (the site, never the page) and
     the marks on the link, which then come off the address; a shared text links to
@@ -75,26 +97,11 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     result was up first. Leaving the page says on which screen and after how long, so a
     visit is summed up without tying events together; a share press that came to nothing
     is counted. The JavaScript budget went from 26 to 28 KB for T2 to T6.
-  - [ ] **T6 — Speed and sound.** Load time, network type, frame rate, whether the sound
-    runs, and where in the game errors happen.
-
-## Next
-
-- [ ] **P3 — Floor 02, Kecamatan.** Its own scenery and one new hazard, built on the
-  spacing rules at the top of `src/core/tower.ts`. Needs: more than one floor in a run
-  (the door leads to the next floor, the bag is paid upwards and the weight resets), a
-  promotion card between floors, and the floor name in the HUD from the floor itself.
-
-## Later
-
-- [ ] **P4 — Floors 03 to 05:** Dinas, Kementerian, the roof and the way out.
-- [ ] **P5 — A mode without checkpoints**, once the tower is whole.
-- [!] **C1 — Remove the service worker kill switch** after 2027-02: delete `public/sw.js`,
-  its nginx location, the smoke test line in `ci.yml`, and `tests/sw.test.mjs`. Blocked
-  on the date: old installs need the switch until then.
-
-## Done
-
+  - [x] **T6 — Speed and sound.** Done 2026-11-14 (#51), not released yet. A visit says
+    how fast its title card was up, the network as Chrome guesses it, whether data is
+    saved and the browser's language; a run its frames per second and share of stutters,
+    whether the sound was heard, full screen and turns of the phone; an error the screen
+    it happened on. The panel shows them, with each error's screens and browsers.
 - [x] **v0.7.1** — released and deployed 2026-11-14 (release run 43588697563, deploy run
   43588853158): live as `0.7.1+a2fb21d`, `/api/health` 404, `/panel/` 401. Nothing
   changed for players.

@@ -31,13 +31,13 @@ Every event carries `type` and `rev`, the build label (`0.7.0+abc1234`).
 
 | `type` | Sent when | Extra fields |
 | --- | --- | --- |
-| `visit` | The page loads | `device`, `layout`, `width`, `installed`, `zone`, `finishedBefore`, `model`, `from`, `source`, `campaign` |
+| `visit` | The page loads | `device`, `layout`, `width`, `installed`, `zone`, `finishedBefore`, `model`, `from`, `source`, `campaign`, `ready`, `net`, `saveData`, `lang` |
 | `run_started` | Mulai or Main lagi is pressed | `device`, `layout`, `attempt`, `after`, `wait`, `from`, `source`, `campaign` |
 | `run_ended` | A run reaches the door, or is closed or restarted before it | all of the run fields below, and `from`, `source`, `campaign` |
 | `shared` | Bagikan hasil is used and something came of it | `via` |
 | `share_missed` | Bagikan hasil is used and nothing came of it | `via`: `cancelled` (the sheet was closed) or `failed` |
 | `hidden` | The page is hidden: closed, or left for another app | `screen`, `visible`, `part` |
-| `error` | The game's own code throws, or a promise rejection goes unhandled | `message`, with addresses removed |
+| `error` | The game's own code throws, or a promise rejection goes unhandled | `message`, with addresses removed; `screen` |
 
 An error counts as the game's when the file it was thrown in is in the folder the game's
 scripts are served from (`/assets/`). Extensions and in-app browsers add scripts of their
@@ -74,6 +74,11 @@ before this rule.
 | `away` | Times the page was left mid-run (another app, a notification) and come back to. Closing the page is not counted | |
 | `finishedBefore` | Whether the floor had been finished on this device before the run began, read from the record the game keeps there for its own result screen | |
 | `record` | On a finish that beat the player's own record: `time`, `money` or `both` | |
+| `fps` | Frames drawn per second of play | 1 to 500 |
+| `slow` | Percent of frames slower than 1/30 s: what a player sees as a stutter | 0 to 100 |
+| `audio` | The sound a moment into play: `running` (heard), `suspended`, `interrupted` (Safari after a call), `closed`, or `none` (never started) | |
+| `full` | Whether any of the run was played in full screen | |
+| `turns` | Times the phone was turned on its side or back during the run | |
 
 A hazard is named `kind:ledge`. The kind is `auditor` or `stempel`; the ledge is its index
 in the floor's `ledges` array in `src/core/tower.ts`, so `stempel:12` is the stamp over
@@ -98,6 +103,10 @@ ledge 12. `jatuh` is a fall below the audit tape.
 | `screen` | `title`, `playing`, `paused`, `result` | What was on screen when the page was hidden |
 | `visible` | 0 to 86400 | Seconds the page had been shown since it opened or was last come back to |
 | `part` | 1 to 999 | Which time the page was hidden since it opened: 1 is the first |
+| `ready` | 0 to 120000 | Milliseconds from the moment the page was asked for until its title card was up |
+| `net` | `slow-2g`, `2g`, `3g`, `4g` | The network as Chrome guesses it; other browsers do not say |
+| `saveData` | `true`, `false` | The player asked the browser to save data |
+| `lang` | `id`, `en`, `ms`... | The first part of the browser's language |
 
 ### Read from the request
 
@@ -165,6 +174,10 @@ shape changes. A test fails if a key is added without a note.
 | `leaving` | On which screen a visit is first left, how long it was looked at by then, and how many come back |
 | `cards` | How long the title and the result are looked at before the next run; how many restart from the pause card |
 | `shareMisses` | Presses of Bagikan hasil that came to nothing: with `shares`, every press and its outcome |
+| `speed` | How fast the title card is up, overall and per network; how many save data |
+| `frames` | How smoothly runs are drawn, by kind of device, and whether choppy runs are given up more |
+| `sounds`, `display` | Whether the sound is heard; how many play in full screen or turn the phone |
+| `languages` | The languages of the browsers that come |
 
 Things to keep in mind when drawing conclusions:
 
@@ -192,6 +205,9 @@ Things to keep in mind when drawing conclusions:
 - **`direct` is everything that did not say where it came from**, including apps that open
   links without a referrer (WhatsApp often does). `browsers` names the app when the page
   was opened inside one.
+- **Read `slow`, not `fps`, for smoothness.** A phone with a 120 Hz screen draws 120 frames
+  a second as smoothly as a 60 Hz one draws 60; the share of frames slower than 1/30 s is
+  what a player feels, whatever the screen.
 - **`zones` is where a clock is set, not where a player is.** Nearly every phone sets it
   from the network, so it is a fair hint of WIB, WITA or WIT; a traveller counts where
   their phone says.
