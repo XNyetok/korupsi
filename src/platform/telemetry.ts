@@ -1,8 +1,8 @@
 /**
  * Anonymous, aggregate telemetry: what happened, never who. No cookie, no
- * stored address, no identifier. Do Not Track turns it off, and a failure here
- * must never reach the player. Error messages are redacted before they leave
- * the page (see redact.ts).
+ * stored address, no identifier. Do Not Track and Global Privacy Control turn
+ * it off, and a failure here must never reach the player. Error messages are
+ * redacted before they leave the page (see redact.ts).
  */
 
 import { redactMessage } from './redact.ts';
@@ -19,7 +19,22 @@ const MAX_PER_PAGE = 40;
  */
 const OWN_SCRIPTS = import.meta.url.replace(/[^/]*$/, '');
 
-const enabled = import.meta.env.PROD && location.protocol === 'https:' && navigator.doNotTrack !== '1';
+/** What some browsers have that the standard types do not. */
+interface NavigatorExtras {
+  globalPrivacyControl?: boolean;
+  /** Safari on iOS, opened from the home screen. */
+  standalone?: boolean;
+  /** Chrome's client hints: the phone's model only on request. */
+  userAgentData?: { getHighEntropyValues?(hints: string[]): Promise<{ model?: string }> };
+}
+
+const nav = navigator as Navigator & NavigatorExtras;
+
+const enabled =
+  import.meta.env.PROD && location.protocol === 'https:' && nav.doNotTrack !== '1' && nav.globalPrivacyControl !== true;
+
+/** How long a visit waits for Chrome to name the phone. */
+const MODEL_WAIT_MS = 1500;
 
 let sent = 0;
 
@@ -44,6 +59,43 @@ export function track(type: string, data: Record<string, unknown> = {}): void {
   } catch {
     /* a beacon is never worth breaking the game for */
   }
+}
+
+/**
+ * The page was opened: what it is shown on, and the player's clock. Chrome
+ * names the phone's model only when asked, so ask, but never hold the visit
+ * back for long, and send it anyway if the page goes first.
+ */
+export function trackVisit(data: Record<string, unknown>): void {
+  if (!enabled) return;
+  const visit = {
+    ...data,
+    width: window.innerWidth,
+    installed: window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true,
+    // Minutes ahead of UTC: 420 is WIB. A rough region, without any address.
+    zone: -new Date().getTimezoneOffset(),
+  };
+  let sentVisit = false;
+  const send = (model?: string) => {
+    if (sentVisit) return;
+    sentVisit = true;
+    track('visit', model ? { ...visit, model } : visit);
+  };
+  try {
+    const ask = nav.userAgentData?.getHighEntropyValues;
+    if (ask) {
+      ask.call(nav.userAgentData, ['model']).then(
+        (values) => send(values.model),
+        () => send(),
+      );
+      window.setTimeout(send, MODEL_WAIT_MS);
+      window.addEventListener('pagehide', () => send(), { once: true });
+      return;
+    }
+  } catch {
+    /* send what there is */
+  }
+  send();
 }
 
 function trackError(raw: unknown): void {

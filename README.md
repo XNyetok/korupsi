@@ -103,11 +103,12 @@ The tower lives in [`src/core/tower.ts`](src/core/tower.ts), the numbers in
 - On an iPhone, the silent switch mutes the game: Safari treats Web Audio as ambient
   sound, so the ringer switch wins.
 - Telemetry is anonymous and aggregate: a visit, a run and how it went (how long, how
-  high, where and by what it was caught), a share, a JavaScript error, and whether it was a
-  touch screen or a keyboard. No cookies, no addresses, no identifiers; Do Not Track
-  disables it; raw rows are deleted after 90 days. Every field is listed in
-  [`docs/telemetry.md`](docs/telemetry.md). The dashboard is private, but the collector's
-  code is in [`server/`](server/) like everything else.
+  high, where and by what it was caught), a share, a JavaScript error, whether it was a
+  touch screen or a keyboard, and the browser and device it was played on. No cookies, no
+  addresses, no identifiers; Do Not Track and Global Privacy Control disable it; raw rows
+  are deleted after 90 days. Every field is listed in [`docs/telemetry.md`](docs/telemetry.md).
+  The dashboard is private, but the collector's code is in [`server/`](server/) like
+  everything else.
 
 ## Credits
 

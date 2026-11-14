@@ -5,8 +5,10 @@ has to decide what to build next from the numbers, person or program.
 
 The short version: the game says *what happened*, never *who it happened to*. There is no
 cookie, no stored address and no identifier, so two events can never be tied to the same
-player, and a run cannot be followed from one visit to the next. Do Not Track switches it
-off entirely. Raw rows are deleted after 90 days.
+player, and a run cannot be followed from one visit to the next. The browser's User-Agent
+header is reduced to a few words and never stored. Do Not Track and Global Privacy Control
+switch it off entirely, in the page and again in the collector. Raw rows are deleted after
+90 days.
 
 ## Where it lives
 
@@ -28,7 +30,7 @@ Every event carries `type` and `rev`, the build label (`0.7.0+abc1234`).
 
 | `type` | Sent when | Extra fields |
 | --- | --- | --- |
-| `visit` | The page loads | `device`, `layout` |
+| `visit` | The page loads | `device`, `layout`, `width`, `installed`, `zone`, `finishedBefore`, `model` |
 | `run_started` | Mulai or Main lagi is pressed | `device`, `layout`, `attempt` |
 | `run_ended` | A run reaches the door, or is closed or restarted before it | all of the run fields below |
 | `shared` | Bagikan hasil is used and something came of it | `via` |
@@ -81,6 +83,26 @@ ledge 12. `jatuh` is a fall below the audit tape.
 | `device` | `touch`, `keys` | A phone or tablet, or a keyboard |
 | `layout` | `window`, `fill-tall`, `fill-wide` | Boxed with a mouse; filling a phone held upright; filling a phone on its side |
 | `via` | `shared`, `saved`, `show`, `copied` | The phone's share sheet; the picture downloaded; the picture shown for a long press; the text copied |
+| `width` | 100 to 9999 | The width of the page in CSS pixels |
+| `installed` | `true`, `false` | Opened from an icon on the home screen |
+| `zone` | -720 to 840 | Minutes the player's clock is ahead of UTC: 420 is WIB, 480 WITA, 540 WIT |
+| `finishedBefore` | `true`, `false` | On a visit as on a run: the floor had been finished on this device |
+| `model` | text | The phone's model, which Chrome names only when the page asks (and the page asks, waiting at most 1.5 seconds) |
+
+### Read from the request
+
+The collector adds these to every event from the request's User-Agent header
+([`server/agent.mjs`](../server/agent.mjs)), then forgets the header: a whole one can single
+out a device, these few words cannot. A crawler's request is not stored at all, and
+neither is one that carries `DNT: 1` or `Sec-GPC: 1`.
+
+| Field | Values |
+| --- | --- |
+| `browser` | `Chrome`, `Safari`, `Samsung Internet`, `Firefox`, `Edge`, `Opera`... An app that shows the page inside itself is named instead of its engine: `Instagram`, `TikTok`, `Facebook`, `WhatsApp`, `Line`, `Telegram`, `X`, `Snapchat`, `Google app`, or `Android WebView` when it does not say which |
+| `browserVersion` | The browser's major version |
+| `os` | `Android`, `iOS`, `iPadOS`, `Windows`, `macOS`, `ChromeOS`, `Linux` |
+| `form` | `phone`, `tablet`, `desktop` |
+| `model` | The phone's model where the header names it (`SM-A135F`); `iPhone` or `iPad` for Apple |
 
 ## Reading the statistics
 
@@ -113,6 +135,9 @@ shape changes. A test fails if a key is added without a note.
 | `breaks` | How many runs are paused, and how many are interrupted by another app |
 | `attempts` | Runs started, ended and finished by which run of the visit it was: how many tries the floor takes |
 | `returning` | Runs and finishes of players who had finished before on that device, and of those who had not |
+| `browsers`, `systems`, `forms`, `models` | What players come in, and whether one of them finishes less: an in-app browser, an old version, a phone |
+| `widths`, `visitors` | The screens the game is shown on; how many open it from the home screen or have finished before |
+| `hours`, `weekdays`, `zones` | When people play, on their own clock, and from which time zone of Indonesia |
 
 Things to keep in mind when drawing conclusions:
 
@@ -135,6 +160,9 @@ Things to keep in mind when drawing conclusions:
 - **`attempt` is per visit, not per player.** A player who comes back tomorrow starts at
   1 again; `finishedBefore` is what says they have played before, and only once they
   have finished.
+- **`zones` is where a clock is set, not where a player is.** Nearly every phone sets it
+  from the network, so it is a fair hint of WIB, WITA or WIT; a traveller counts where
+  their phone says.
 - **Small numbers are small.** The sample size is always next to the figure (`n`, `runs`);
   below a few dozen, treat a percentage as a hint.
 

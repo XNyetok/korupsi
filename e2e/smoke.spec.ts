@@ -452,6 +452,9 @@ test.describe('result', () => {
 });
 
 test.describe('telemetry', () => {
+  // A clock set to WIB, wherever the tests run.
+  test.use({ timezoneId: 'Asia/Jakarta' });
+
   test('reports errors from the game, not from scripts added to the page', async ({ page, baseURL }) => {
     const events = await asLiveSite(page, baseURL);
     const reported = () => events.filter((e) => e.type === 'error').map((e) => e.message);
@@ -495,6 +498,16 @@ test.describe('telemetry', () => {
     const of = (type: string) => events.filter((e) => e.type === type);
     await page.goto(`${LIVE}?debug=1`);
     await expect(page.locator('.card.title')).toBeVisible();
+
+    // The visit says what it is shown on and the player's clock, and nothing about who.
+    await expect.poll(() => of('visit').length).toBe(1);
+    const viewport = page.viewportSize();
+    expect(of('visit')[0]).toMatchObject({
+      width: viewport?.width,
+      installed: false,
+      zone: 420,
+      finishedBefore: false,
+    });
     await start(page);
 
     // A jump and a dash, a pause asked for, and a moment in another app. Each

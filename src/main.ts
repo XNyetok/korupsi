@@ -13,7 +13,7 @@ import { audio } from './platform/audio.ts';
 import { type Action, bindInput, guardGestures, Pad } from './platform/input.ts';
 import { startLoop } from './platform/loop.ts';
 import { bestStore } from './platform/storage.ts';
-import { track, trackErrors } from './platform/telemetry.ts';
+import { track, trackErrors, trackVisit } from './platform/telemetry.ts';
 import { applyView } from './platform/viewport.ts';
 import { mountDebug } from './ui/debug.ts';
 import { Ui } from './ui/ui.ts';
@@ -265,7 +265,7 @@ window.addEventListener('pagehide', () => {
 window.addEventListener('pageshow', () => loop.resetClock());
 
 trackErrors();
-track('visit', setting());
+trackVisit({ ...setting(), finishedBefore: game.best.time > 0 });
 
 // The first version of the game installed a service worker that cached the
 // build. Remove any registration and cache it left behind, so every visit

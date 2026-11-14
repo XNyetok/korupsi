@@ -54,10 +54,14 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     was, and whether the player had finished before. The statistics carry the floor
     plan; the panel draws the catches on it and shows the route, the envelopes, what
     the weight costs, the moves and the attempts.
-  - [ ] **T3 — Browser and device.** The User-Agent reduced to a browser, a system, a
-    kind of device and a phone model, in-app browsers named; crawlers dropped; Global
-    Privacy Control honoured; the hour of play in the player's time zone; opened from
-    the home screen; the width of the screen.
+  - [x] **T3 — Browser and device.** Done 2026-11-14 (#48), not released yet. The
+    collector reduces the User-Agent to a browser and its version, a system, a kind of
+    device and a phone model, names the apps that open links inside themselves, and
+    drops crawlers and requests with Do Not Track or Global Privacy Control, which the
+    page honours too. A visit says the width of the page, whether it was opened from the
+    home screen, the player's time zone and whether they had finished before; Chrome
+    names the phone's model when asked. The panel shows them, with the hour and the day
+    of play on the player's own clock.
   - [ ] **T4 — Province and town**, from an offline GeoIP file. Needs an nginx change and
     the file on the server, installed by the maintainer.
   - [ ] **T5 — Visits and where players come from.** A summary of each visit, the

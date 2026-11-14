@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { readAgent } from './agent.mjs';
 import { normaliseEvent, openStore } from './store.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -70,6 +71,40 @@ function readBody(req) {
   });
 }
 
+const header = (req, name) => {
+  const value = req.headers[name];
+  return typeof value === 'string' ? value : '';
+};
+
+async function beacon(req, res) {
+  let input;
+  try {
+    input = JSON.parse(await readBody(req));
+  } catch {
+    json(res, 400, { error: 'bad payload' });
+    return;
+  }
+
+  // A browser that asks not to be tracked is not counted, and neither is a
+  // crawler. The page checks the same before it sends; this is for the rest.
+  const agent = readAgent(header(req, 'user-agent'));
+  if (agent.bot || header(req, 'dnt') === '1' || header(req, 'sec-gpc') === '1') {
+    res.writeHead(204, PANEL_HEADERS);
+    res.end();
+    return;
+  }
+
+  const event = normaliseEvent(input, agent);
+  if (!event) {
+    json(res, 422, { error: 'ignored' });
+    return;
+  }
+
+  store.insert(event);
+  res.writeHead(204, PANEL_HEADERS);
+  res.end();
+}
+
 async function servePanel(pathname, res) {
   const rel = pathname.replace(/^\/panel\/?/, '') || 'index.html';
   const file = resolve(join(PANEL_DIR, rel));
@@ -97,22 +132,7 @@ const server = createServer(async (req, res) => {
 
   try {
     if (req.method === 'POST' && url.pathname === '/api/beacon') {
-      let event = null;
-      try {
-        event = normaliseEvent(JSON.parse(await readBody(req)));
-      } catch {
-        json(res, 400, { error: 'bad payload' });
-        return;
-      }
-
-      if (!event) {
-        json(res, 422, { error: 'ignored' });
-        return;
-      }
-
-      store.insert(event);
-      res.writeHead(204, PANEL_HEADERS);
-      res.end();
+      await beacon(req, res);
       return;
     }
 
