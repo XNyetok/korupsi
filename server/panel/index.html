@@ -272,9 +272,44 @@
   </div>
 
   <div class="columns">
+    <section class="card" aria-labelledby="h-sources">
+      <h2 id="h-sources">Dari mana pemain datang</h2>
+      <p class="hint">Situs yang menautkan ke game, hanya namanya, tanpa halaman. "Langsung" berarti tidak ada yang menautkan: diketik, dari markah, atau dari aplikasi yang tidak menyebut asalnya. % tamat dihitung dari permainan yang dimulai.</p>
+      <div class="scroll">
+        <table id="sources">
+          <thead>
+            <tr><th scope="col">Sumber</th><th scope="col">Kunjungan</th><th scope="col">Mulai main</th><th scope="col">% tamat</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3 class="gap">Tautan bertanda</h3>
+      <p class="hint">Tautan yang diberi tanda <code>utm_source</code>, <code>ref</code> atau <code>dari</code> (dan <code>utm_campaign</code>). "bagikan" adalah tautan di hasil yang dibagikan pemain, jadi kunjungannya datang dari hasil yang dibagikan.</p>
+      <div class="scroll">
+        <table id="campaigns">
+          <thead>
+            <tr><th scope="col">Tanda</th><th scope="col">Kunjungan</th><th scope="col">Mulai main</th><th scope="col">% tamat</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-leaving">
+      <h2 id="h-leaving">Kapan pemain pergi</h2>
+      <p class="hint" id="leaving-hint"></p>
+      <div id="leaving" class="bars"></div>
+      <div class="tiles small" id="leaving-tiles"></div>
+      <h3 class="gap">Di antara permainan</h3>
+      <p class="hint">Berapa lama layar judul dan layar hasil dilihat sebelum permainan berikutnya (nilai tengah, menit:detik).</p>
+      <div class="tiles small" id="cards"></div>
+    </section>
+  </div>
+
+  <div class="columns">
     <section class="card" aria-labelledby="h-shares">
       <h2 id="h-shares">Cara hasil dibagikan</h2>
-      <p class="hint">Lewat mana gambar hasil keluar dari game.</p>
+      <p class="hint">Apa yang terjadi tiap kali tombol Bagikan hasil ditekan: lewat mana hasilnya keluar dari game, atau batal dan gagal.</p>
       <div id="shares" class="bars"></div>
       <h3 class="gap">Suara</h3>
       <p class="hint" id="sound"></p>

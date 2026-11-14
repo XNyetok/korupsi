@@ -7,6 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { cleanModel, readAgent } from '../server/agent.mjs';
+import { mark, siteOf } from '../server/arrival.mjs';
 import { addressBytes, openGeo } from '../server/geo.mjs';
 import { normaliseEvent, openStore } from '../server/store.mjs';
 
@@ -174,6 +175,97 @@ test('the statistics say what players come in, and when', () => {
   assert.deepEqual(stats.zones, [
     { zone: 420, n: 3 },
     { zone: 480, n: 1 },
+  ]);
+  store.close();
+});
+
+/* ---------- Where a visit came from ---------- */
+
+test('the site that linked here is kept as a name or a domain, never more', () => {
+  assert.equal(siteOf('l.instagram.com'), 'instagram');
+  assert.equal(siteOf('lm.facebook.com'), 'facebook');
+  assert.equal(siteOf('t.co'), 'x');
+  assert.equal(siteOf('www.google.co.id'), 'google');
+  assert.equal(siteOf('www.tiktok.com'), 'tiktok');
+  assert.equal(siteOf('berita.contoh.co.id'), 'contoh.co.id', 'a site under an Indonesian second level');
+  assert.equal(siteOf('blog.example.com'), 'example.com');
+  assert.equal(siteOf(''), 'direct', 'nothing linked here');
+  assert.equal(siteOf('korupsi.web.id'), 'direct', 'the game itself is not a source');
+  for (const junk of ['localhost', '192.168.1.1', 'example.com/path?q=1', 'a b.com', 42, null, undefined]) {
+    assert.equal(siteOf(junk), null, String(junk));
+  }
+
+  assert.equal(mark(' IG_Story '), 'ig_story');
+  assert.equal(mark('bagikan'), 'bagikan');
+  for (const junk of ['', 'two words', 'x'.repeat(41), '<b>', 7]) assert.equal(mark(junk), null, String(junk));
+});
+
+test('a visit says where it came from, a run what came before it, a hidden page where it was left', () => {
+  const visit = normaliseEvent({ type: 'visit', from: 'l.instagram.com', source: 'IG_story', campaign: 'Rilis' });
+  assert.deepEqual([visit.referrer, visit.source, visit.campaign], ['instagram', 'ig_story', 'rilis']);
+
+  const start = normaliseEvent({ type: 'run_started', from: '', attempt: 2, after: 'win', wait: 7 });
+  assert.deepEqual([start.referrer, start.after, start.wait], ['direct', 'win', 7]);
+  assert.equal(normaliseEvent({ type: 'run_started', after: 'lost' }).after, null);
+  assert.equal(normaliseEvent({ type: 'run_ended', after: 'win', wait: 3 }).after, null, 'only a start says it');
+
+  const hidden = normaliseEvent({ type: 'hidden', screen: 'result', visible: 95, part: 1, from: 'x.com' });
+  assert.deepEqual([hidden.screen, hidden.visible, hidden.part, hidden.referrer], ['result', 95, 1, null]);
+  assert.equal(normaliseEvent({ type: 'hidden', screen: 'menu' }).screen, null);
+
+  assert.equal(normaliseEvent({ type: 'share_missed', via: 'cancelled' }).via, 'cancelled');
+  assert.equal(normaliseEvent({ type: 'share_missed', via: 'saved' }).via, null);
+  assert.equal(normaliseEvent({ type: 'shared', via: 'cancelled' }).via, null, 'a share is never a miss');
+});
+
+test('the statistics say where players come from, where they leave and what they do between runs', () => {
+  const store = openStore(':memory:');
+  const add = (event) => store.insert(normaliseEvent(event));
+  add({ type: 'visit', from: 'l.instagram.com', source: 'ig_story', campaign: 'rilis' });
+  add({ type: 'visit', from: 'l.instagram.com' });
+  add({ type: 'visit', from: '', source: 'bagikan' });
+  add({ type: 'run_started', from: 'l.instagram.com', attempt: 1, wait: 12 });
+  add({ type: 'run_ended', from: 'l.instagram.com', cause: 'finished', attempt: 1 });
+  add({ type: 'run_started', from: 'l.instagram.com', attempt: 2, after: 'win', wait: 5 });
+  add({ type: 'run_started', from: '', source: 'bagikan', attempt: 1, wait: 30 });
+  add({ type: 'run_started', from: '', source: 'bagikan', attempt: 2, after: 'restart' });
+  add({ type: 'hidden', screen: 'title', visible: 4, part: 1 });
+  add({ type: 'hidden', screen: 'result', visible: 90, part: 1 });
+  add({ type: 'hidden', screen: 'playing', visible: 40, part: 1 });
+  add({ type: 'hidden', screen: 'playing', visible: 20, part: 2 });
+  add({ type: 'shared', via: 'shared' });
+  add({ type: 'share_missed', via: 'cancelled' });
+  add({ type: 'share_missed', via: 'cancelled' });
+  add({ type: 'share_missed', via: 'failed' });
+
+  const stats = store.stats(1);
+  assert.deepEqual(plain(stats.sources), [
+    { site: 'instagram', visits: 2, runs: 2, finished: 1 },
+    { site: 'direct', visits: 1, runs: 2, finished: 0 },
+  ]);
+  assert.deepEqual(plain(stats.campaigns), [
+    { source: 'bagikan', campaign: null, visits: 1, runs: 2, finished: 0 },
+    { source: 'ig_story', campaign: 'rilis', visits: 1, runs: 0, finished: 0 },
+  ]);
+  assert.deepEqual(stats.leaving, {
+    visits: 3,
+    screens: [
+      { screen: 'title', n: 1 },
+      { screen: 'playing', n: 1 },
+      { screen: 'paused', n: 0 },
+      { screen: 'result', n: 1 },
+    ],
+    visible: 40,
+    returned: 1,
+  });
+  assert.deepEqual(stats.cards, {
+    title: { runs: 2, wait: 21 },
+    result: { runs: 1, wait: 5 },
+    restarts: 1,
+  });
+  assert.deepEqual(plain(stats.shareMisses), [
+    { via: 'cancelled', n: 2 },
+    { via: 'failed', n: 1 },
   ]);
   store.close();
 });

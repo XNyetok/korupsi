@@ -13,7 +13,7 @@ import { audio } from './platform/audio.ts';
 import { type Action, bindInput, guardGestures, Pad } from './platform/input.ts';
 import { startLoop } from './platform/loop.ts';
 import { bestStore } from './platform/storage.ts';
-import { track, trackErrors, trackVisit } from './platform/telemetry.ts';
+import { arrival, track, trackErrors, trackVisit } from './platform/telemetry.ts';
 import { applyView } from './platform/viewport.ts';
 import { mountDebug } from './ui/debug.ts';
 import { Ui } from './ui/ui.ts';
@@ -53,11 +53,24 @@ let pauses = 0;
 let away = 0;
 /** Set while the page is hidden in the middle of a run. */
 let leftMidRun = false;
+/** How the run before ended, if there was one: at the door, or restarted. */
+let lastEnding: 'win' | 'restart' | null = null;
+/** When the card now up appeared: the title when the page opened, the result after a win. */
+let cardSince = performance.now();
 
 function reportRun(cause: 'finished' | 'abandoned'): void {
   if (!runOpen) return;
   runOpen = false;
-  track('run_ended', { ...runReport(game, cause), muted: audio.muted, ...setting(), attempt, pauses, away });
+  lastEnding = cause === 'finished' ? 'win' : 'restart';
+  track('run_ended', {
+    ...runReport(game, cause),
+    muted: audio.muted,
+    ...setting(),
+    ...arrival(),
+    attempt,
+    pauses,
+    away,
+  });
 }
 
 function start(): void {
@@ -73,7 +86,11 @@ function start(): void {
   pauses = 0;
   away = 0;
   leftMidRun = false;
-  track('run_started', { ...setting(), attempt });
+  // How long the card before this run was looked at: the title, or the result of a win.
+  const before: Record<string, unknown> = {};
+  if (lastEnding) before.after = lastEnding;
+  if (lastEnding !== 'restart') before.wait = Math.round((performance.now() - cardSince) / 1000);
+  track('run_started', { ...setting(), ...arrival(), attempt, ...before });
 }
 
 function restart(): void {
@@ -226,6 +243,7 @@ const loop = startLoop({
       if (event.type === 'win') {
         ui.update(game);
         ui.showResult(game, RESULT_LOCK_MS);
+        cardSince = performance.now();
         reportRun('finished');
       }
     }
@@ -241,13 +259,27 @@ const loop = startLoop({
 
 // ---------- leaving and coming back ----------
 
+/** What the player was looking at, in the words the collector counts. */
+const SCREENS = { ready: 'title', playing: 'playing', paused: 'paused', won: 'result' } as const;
+/** When the page was last shown, and how often it has been hidden since it opened. */
+let shownSince = performance.now();
+let hides = 0;
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    // Where and when the page is left: the first time often ends the visit.
+    hides += 1;
+    track('hidden', {
+      screen: SCREENS[game.phase],
+      visible: Math.round((performance.now() - shownSince) / 1000),
+      part: hides,
+    });
     if (game.phase === 'playing') leftMidRun = true;
     pause(false);
     audio.suspend();
     return;
   }
+  shownSince = performance.now();
   // Closing the page hides it too, so time away is counted only once the player is back.
   if (leftMidRun) {
     leftMidRun = false;

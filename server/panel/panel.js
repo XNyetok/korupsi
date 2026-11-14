@@ -93,6 +93,31 @@ const WIDTH_NAMES = {
 };
 const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const ZONE_NAMES = { 420: 'WIB', 480: 'WITA', 540: 'WIT' };
+const SITE_NAMES = {
+  direct: 'Langsung',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  tiktok: 'TikTok',
+  x: 'X (Twitter)',
+  whatsapp: 'WhatsApp',
+  telegram: 'Telegram',
+  youtube: 'YouTube',
+  threads: 'Threads',
+  line: 'LINE',
+  reddit: 'Reddit',
+  linkedin: 'LinkedIn',
+  google: 'Google',
+  bing: 'Bing',
+  duckduckgo: 'DuckDuckGo',
+  yahoo: 'Yahoo',
+};
+const SCREEN_NAMES = {
+  title: ['Layar judul', 'sebelum mulai main'],
+  playing: ['Sedang main', 'di tengah permainan'],
+  paused: ['Dijeda', 'kartu jeda terbuka'],
+  result: ['Layar hasil', 'setelah tamat'],
+};
+const MISSED_NAMES = { cancelled: 'Dibatalkan', failed: 'Gagal' };
 
 /** 420 -> "WIB (UTC+7)"; a zone outside Indonesia by its offset alone. */
 function zoneName(minutes) {
@@ -321,7 +346,14 @@ function renderTitles(stats) {
 function renderShares(stats) {
   bars(
     byId('shares'),
-    stats.shares.map((row) => ({ name: SHARE_NAMES[row.via] ?? row.via, n: row.n })),
+    [
+      ...stats.shares.map((row) => ({ name: SHARE_NAMES[row.via] ?? row.via, n: row.n })),
+      ...stats.shareMisses.map((row) => ({
+        name: MISSED_NAMES[row.via] ?? row.via,
+        note: row.via === 'cancelled' ? 'menu berbagi ditutup' : 'tidak ada cara berbagi',
+        n: row.n,
+      })),
+    ],
     NOT_YET,
   );
   const { runs, muted } = stats.sound;
@@ -697,6 +729,64 @@ function renderPlaces(stats) {
     byId('countries'),
     stats.countries.map((row) => ({ name: countryName(row.name), n: row.n })),
     empty,
+  );
+}
+
+// ---------- arriving and leaving ----------
+
+function renderSources(stats) {
+  const row = (name, item) => [name, number(item.visits), number(item.runs), percent(item.finished, item.runs)];
+  fillTable(
+    'sources',
+    stats.sources.map((item) => row(SITE_NAMES[item.site] ?? item.site, item)),
+    NEXT,
+  );
+  fillTable(
+    'campaigns',
+    stats.campaigns.map((item) => row(item.campaign ? `${item.source} · ${item.campaign}` : item.source, item)),
+    'Belum ada kunjungan dari tautan bertanda.',
+  );
+}
+
+function renderLeaving(stats) {
+  const { visits, screens, visible, returned } = stats.leaving;
+  byId('leaving-hint').textContent = visits
+    ? `Di layar mana pemain pertama kali meninggalkan halaman (menutupnya atau pindah aplikasi), dari ${number(visits)} kunjungan.`
+    : 'Di layar mana pemain pertama kali meninggalkan halaman: menutupnya atau pindah aplikasi.';
+  bars(
+    byId('leaving'),
+    screens.map((row) => ({
+      name: SCREEN_NAMES[row.screen]?.[0] ?? row.screen,
+      note: SCREEN_NAMES[row.screen]?.[1],
+      n: row.n,
+    })),
+    NEXT,
+  );
+  byId('leaving-tiles').replaceChildren(
+    tile({
+      label: 'Dilihat selama',
+      value: visible != null ? clock(visible) : '—',
+      what: 'menit:detik sebelum halaman pertama kali ditinggal',
+    }),
+    tile({
+      label: 'Kembali lagi',
+      value: percent(returned, visits),
+      what: 'kunjungan yang dibuka lagi setelah ditinggal',
+    }),
+  );
+  const { title, result, restarts } = stats.cards;
+  byId('cards').replaceChildren(
+    tile({
+      label: 'Di layar judul',
+      value: title.wait != null ? clock(title.wait) : '—',
+      what: `sebelum menekan Mulai, dari ${number(title.runs)} kunjungan`,
+    }),
+    tile({
+      label: 'Di layar hasil',
+      value: result.wait != null ? clock(result.wait) : '—',
+      what: `sebelum Main lagi, dari ${number(result.runs)} kali main lagi setelah tamat`,
+    }),
+    tile({ label: 'Mulai ulang', value: number(restarts), what: 'kali Ulang dari lobi dari kartu jeda' }),
   );
 }
 
@@ -1078,6 +1168,8 @@ function render(stats) {
   renderVisitors(stats);
   renderBrowsers(stats);
   renderPlaces(stats);
+  renderSources(stats);
+  renderLeaving(stats);
   renderShares(stats);
   renderErrors(stats);
   renderRevs(stats);

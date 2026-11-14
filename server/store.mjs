@@ -2,9 +2,19 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 import { cleanModel, IN_APP } from './agent.mjs';
+import { mark, siteOf } from './arrival.mjs';
 import { redactMessage } from './redact.mjs';
 
-export const EVENT_TYPES = new Set(['visit', 'run_started', 'run_ended', 'shared', 'error', 'band_warned']);
+export const EVENT_TYPES = new Set([
+  'visit',
+  'run_started',
+  'run_ended',
+  'shared',
+  'share_missed',
+  'hidden',
+  'error',
+  'band_warned',
+]);
 
 // `finished` is a floor cleared, `abandoned` a run the player left. The others
 // are how runs of the first version of the game ended; its rows are still stored.
@@ -29,6 +39,11 @@ const clip = (value, max) => {
 const DEVICES = new Set(['touch', 'keys']);
 const LAYOUTS = new Set(['window', 'fill-tall', 'fill-wide']);
 const SHARE_VIA = new Set(['shared', 'saved', 'show', 'copied']);
+/** A press of Bagikan hasil that came to nothing: the sheet was closed, or nothing could share. */
+const MISSED_VIA = new Set(['cancelled', 'failed']);
+/** How the run before a run ended, and what the player was looking at when the page was left. */
+const AFTER = new Set(['win', 'restart']);
+const SCREENS = new Set(['title', 'playing', 'paused', 'result']);
 
 const oneOf = (set, value) => (set.has(value) ? value : null);
 
@@ -165,6 +180,14 @@ const ADDED_COLUMNS = {
   country: 'TEXT',
   region: 'TEXT',
   city: 'TEXT',
+  referrer: 'TEXT',
+  source: 'TEXT',
+  campaign: 'TEXT',
+  after: 'TEXT',
+  wait: 'INTEGER',
+  screen: 'TEXT',
+  visible: 'INTEGER',
+  part: 'INTEGER',
 };
 
 /** Every column an event fills, in the order they are inserted. */
@@ -209,9 +232,28 @@ export function normaliseEvent(input, agent = {}, where = null) {
     event.finishedBefore = flag(input.finishedBefore);
   }
 
+  if (input.type === 'visit' || input.type === 'run_started' || input.type === 'run_ended') {
+    // Where the visit came from: said with the visit and with its runs, so a run can be read by it.
+    event.referrer = siteOf(input.from);
+    event.source = mark(input.source);
+    event.campaign = mark(input.campaign);
+  }
+
   if (input.type === 'run_started' || input.type === 'run_ended') {
     // Which run of the visit this is, the first being 1: counted in the page, never stored there.
     event.attempt = clampInt(input.attempt, 1, 999);
+  }
+
+  if (input.type === 'run_started') {
+    // How the run before ended, and how long the card before this run was up.
+    event.after = oneOf(AFTER, input.after);
+    event.wait = clampInt(input.wait, 0, 86_400);
+  }
+
+  if (input.type === 'hidden') {
+    event.screen = oneOf(SCREENS, input.screen);
+    event.visible = clampInt(input.visible, 0, 86_400);
+    event.part = clampInt(input.part, 1, 999);
   }
 
   if (input.type === 'run_ended') {
@@ -245,6 +287,7 @@ export function normaliseEvent(input, agent = {}, where = null) {
   }
 
   if (input.type === 'shared') event.via = oneOf(SHARE_VIA, input.via);
+  if (input.type === 'share_missed') event.via = oneOf(MISSED_VIA, input.via);
 
   if (input.type === 'error') {
     event.message = errorMessage(input.message);
@@ -268,7 +311,7 @@ function readFloor() {
 }
 
 /** Bumped when the shape of the statistics changes, so a reader knows what it is holding. */
-const STATS_FORMAT = 5;
+const STATS_FORMAT = 6;
 
 /**
  * What every part of the statistics means, sent with them. The answer is read
@@ -347,8 +390,18 @@ const ABOUT = {
   cities:
     'Visits from Indonesia by town or regency. Mobile networks often show up as Jakarta or another big city wherever the phone is, so read this as a hint, not a census.',
   geo: 'Whether the GeoIP database (DB-IP IP to City Lite, CC BY 4.0) was there when these numbers were read, and the date it was built. Without it, no visit has a place.',
+  sources:
+    'Visits, runs started and runs finished by the site that linked to the game: a known name (instagram, facebook, tiktok, x, whatsapp, google...) or the site\u2019s domain, never a path. direct: nothing linked here (typed, bookmarked, or an app that does not say).',
+  campaigns:
+    'Visits, runs started and runs finished by the marks a link carried: source (utm_source, ref or dari) and campaign (utm_campaign). bagikan is the link inside a shared result, so its visits are players a share brought.',
+  leaving:
+    'Where pages are left, from the first time each visit was hidden (closed, or left for another app): visits, the screen it was on (title, playing, paused, result), and the median seconds it had been looked at. returned: visits hidden a second time, so ones that came back after leaving.',
+  cards:
+    'The cards between runs: title, the first runs started and the median seconds the title was up before; result, the runs started from the result of a win (Main lagi) and the median seconds it was looked at first; restarts, runs started over from the pause card.',
+  shareMisses:
+    'Presses of Bagikan hasil that came to nothing: cancelled, the share sheet was closed; failed, nothing could share. With `shares`, every press and what came of it.',
   missing:
-    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on. Rows stored before the collector read the User-Agent have no browser, system, form or model, and visits from builds before the page said them have no width, installed, zone or finishedBefore. Rows stored before addresses were looked up, or while the GeoIP database was missing, have no country, region or city.',
+    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on. Rows stored before the collector read the User-Agent have no browser, system, form or model, and visits from builds before the page said them have no width, installed, zone or finishedBefore. Rows stored before addresses were looked up, or while the GeoIP database was missing, have no country, region or city. Visits and runs from builds before the page said where it came from have no referrer, source or campaign, and those builds sent no hidden or share_missed events.',
 };
 
 /** How far up abandoned runs got is reported in bands this many metres tall; the last band is open-ended. */
@@ -842,6 +895,60 @@ export function openStore(path) {
         return { said: said.length, yes: said.filter((visit) => visit[field] === 1).length };
       };
 
+      // Where visits come from, and whether the players they bring play and finish.
+      const sources = db
+        .prepare(
+          `SELECT referrer AS site,
+                  SUM(type = 'visit')       AS visits,
+                  SUM(type = 'run_started') AS runs,
+                  SUM(type = 'run_ended' AND cause = 'finished') AS finished
+             FROM events
+            WHERE day >= ? AND referrer IS NOT NULL
+            GROUP BY referrer
+            ORDER BY visits DESC, site
+            LIMIT 25`,
+        )
+        .all(since);
+      const campaigns = db
+        .prepare(
+          `SELECT source, campaign,
+                  SUM(type = 'visit')       AS visits,
+                  SUM(type = 'run_started') AS runs,
+                  SUM(type = 'run_ended' AND cause = 'finished') AS finished
+             FROM events
+            WHERE day >= ? AND source IS NOT NULL
+            GROUP BY source, campaign
+            ORDER BY visits DESC, source
+            LIMIT 25`,
+        )
+        .all(since);
+
+      // Where pages are left, and how often players come back.
+      const hides = db
+        .prepare(`SELECT screen, visible, part FROM events WHERE type = 'hidden' AND day >= ? LIMIT 100000`)
+        .all(since);
+      const firstHides = hides.filter((hide) => hide.part === 1);
+
+      // The cards between runs, and how long each was up before the next run.
+      const cardRows = db
+        .prepare(
+          `SELECT attempt, after, wait FROM events
+            WHERE type = 'run_started' AND day >= ? AND (after IS NOT NULL OR wait IS NOT NULL)
+            LIMIT 50000`,
+        )
+        .all(since);
+      const firstRuns = cardRows.filter((row) => row.after == null);
+      const replays = cardRows.filter((row) => row.after === 'win');
+      const waits = (rows) => median(rows.map((row) => row.wait).filter((wait) => wait != null));
+
+      const shareMisses = db
+        .prepare(
+          `SELECT via, COUNT(*) AS n FROM events
+            WHERE type = 'share_missed' AND day >= ? AND via IS NOT NULL
+            GROUP BY via ORDER BY n DESC, via`,
+        )
+        .all(since);
+
       const revs = db
         .prepare(
           `SELECT rev, COUNT(*) AS n
@@ -904,6 +1011,23 @@ export function openStore(path) {
         regions: visitsBy('region', 40, "AND country = 'ID'"),
         cities: visitsBy('city', 25, "AND country = 'ID'"),
         geo: { available: !!geo, built: geo?.built ?? null },
+        sources,
+        campaigns,
+        leaving: {
+          visits: firstHides.length,
+          screens: [...SCREENS].map((screen) => ({
+            screen,
+            n: firstHides.filter((hide) => hide.screen === screen).length,
+          })),
+          visible: median(firstHides.map((hide) => hide.visible).filter((seconds) => seconds != null)),
+          returned: hides.filter((hide) => hide.part === 2).length,
+        },
+        cards: {
+          title: { runs: firstRuns.length, wait: waits(firstRuns) },
+          result: { runs: replays.length, wait: waits(replays) },
+          restarts: cardRows.filter((row) => row.after === 'restart').length,
+        },
+        shareMisses,
       };
     },
 

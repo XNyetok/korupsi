@@ -220,7 +220,9 @@ export class Ui {
         void shareResult({ text, file }).then((outcome) => {
           share.disabled = false;
           if (outcome === 'show' && card) this.showPicture(card.toDataURL('image/png'));
-          if (outcome !== 'cancelled' && outcome !== 'failed') track('shared', { via: outcome });
+          // A press that came to nothing is counted too: the sheet closed, or nothing could share.
+          if (outcome === 'cancelled' || outcome === 'failed') track('share_missed', { via: outcome });
+          else track('shared', { via: outcome });
           if (outcome === 'saved') this.toast('Gambar hasil disimpan');
           if (outcome === 'copied') this.toast('Disalin ke papan klip');
           if (outcome === 'failed') this.toast('Tidak bisa membagikan');

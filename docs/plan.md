@@ -68,9 +68,13 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     installing on the server before any place is recorded: the nginx line that passes
     the address, the unit's `GEO_DB`, and the file itself (`docs/deploy.md`, The GeoIP
     file).
-  - [ ] **T5 — Visits and where players come from.** A summary of each visit, the
-    referring site and campaign, a mark on shared links, the whole share funnel, and
-    what happens on the result screen.
+  - [x] **T5 — Visits and where players come from.** Done 2026-11-14 (#50), not released
+    yet. A visit and its runs say which site linked here (the site, never the page) and
+    the marks on the link, which then come off the address; a shared text links to
+    `?dari=bagikan`. A run says how the one before ended and how long the title or the
+    result was up first. Leaving the page says on which screen and after how long, so a
+    visit is summed up without tying events together; a share press that came to nothing
+    is counted. The JavaScript budget went from 26 to 28 KB for T2 to T6.
   - [ ] **T6 — Speed and sound.** Load time, network type, frame rate, whether the sound
     runs, and where in the game errors happen.
 

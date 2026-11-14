@@ -36,6 +36,47 @@ const enabled =
 /** How long a visit waits for Chrome to name the phone. */
 const MODEL_WAIT_MS = 1500;
 
+/** Marks a link may carry to say where it was posted: the first one present is the source. */
+const SOURCE_MARKS = ['utm_source', 'ref', 'dari'];
+/** Every mark of that kind, taken off the address once read. */
+const MARKS = [...SOURCE_MARKS, 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term'];
+
+export interface Arrival {
+  /** The host of the site that linked here, or '' when none did (typed, bookmarked, an app that hides it). */
+  from: string;
+  source?: string;
+  campaign?: string;
+}
+
+let arrived: Arrival | null = null;
+
+/**
+ * Where the player arrived from: the host of the page that linked here, never
+ * its path, and the marks the link carried. The marks are then taken off the
+ * address, so a link copied from the address bar does not pass them on.
+ */
+export function arrival(): Arrival {
+  if (arrived) return arrived;
+  arrived = { from: '' };
+  try {
+    const referrer = document.referrer ? new URL(document.referrer) : null;
+    if (referrer && referrer.origin !== location.origin) arrived.from = referrer.hostname;
+    const url = new URL(location.href);
+    const source = SOURCE_MARKS.map((name) => url.searchParams.get(name)).find(Boolean);
+    const campaign = url.searchParams.get('utm_campaign');
+    if (source) arrived.source = source;
+    if (campaign) arrived.campaign = campaign;
+    const marked = MARKS.filter((name) => url.searchParams.has(name));
+    if (marked.length) {
+      for (const name of marked) url.searchParams.delete(name);
+      history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    }
+  } catch {
+    /* nothing more to say */
+  }
+  return arrived;
+}
+
 let sent = 0;
 
 export function track(type: string, data: Record<string, unknown> = {}): void {
@@ -70,6 +111,7 @@ export function trackVisit(data: Record<string, unknown>): void {
   if (!enabled) return;
   const visit = {
     ...data,
+    ...arrival(),
     width: window.innerWidth,
     installed: window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true,
     // Minutes ahead of UTC: 420 is WIB. A rough region, without any address.

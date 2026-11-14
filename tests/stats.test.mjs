@@ -566,7 +566,7 @@ test('the statistics say what catches players, where they leave, and on what', (
 
   const stats = store.stats(7);
 
-  assert.equal(stats.format, 5);
+  assert.equal(stats.format, 6);
   assert.equal(stats.finished.deaths, 2);
   assert.equal(stats.abandoned.deaths, 3);
 
@@ -654,6 +654,12 @@ test('an empty store still answers with every field', () => {
   assert.deepEqual(stats.visitors, { installed: { said: 0, yes: 0 }, finishedBefore: { said: 0, yes: 0 } });
   assert.equal(stats.hours.length, 24);
   assert.equal(stats.weekdays.length, 7);
+  for (const list of ['countries', 'regions', 'cities', 'sources', 'campaigns', 'shareMisses']) {
+    assert.deepEqual(stats[list], [], list);
+  }
+  assert.equal(stats.leaving.visits, 0);
+  assert.equal(stats.leaving.visible, null);
+  assert.deepEqual(stats.cards, { title: { runs: 0, wait: null }, result: { runs: 0, wait: null }, restarts: 0 });
   store.close();
 });
 
