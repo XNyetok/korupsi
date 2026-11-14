@@ -490,6 +490,8 @@ test.describe('telemetry', () => {
       (window as unknown as { __korupsi: { drain: unknown } }).__korupsi.drain = null;
     });
     await expect.poll(reported).toEqual([expect.stringContaining('drain is not a function')]);
+    // It broke on the title card: the error says so.
+    expect(events.find((e) => e.type === 'error')).toMatchObject({ screen: 'title' });
   });
 
   test('a run reports how it was played, and which run of the visit it was', async ({ page, baseURL, isMobile }) => {
@@ -512,6 +514,8 @@ test.describe('telemetry', () => {
       installed: false,
       zone: 420,
       finishedBefore: false,
+      ready: expect.any(Number),
+      lang: expect.any(String),
       ...arrived,
     });
     expect(page.url()).toBe(`${LIVE}?debug=1`);
@@ -567,6 +571,11 @@ test.describe('telemetry', () => {
       picked: [],
       kept: [],
       lost: 0,
+      fps: expect.any(Number),
+      slow: expect.any(Number),
+      audio: expect.any(String),
+      full: false,
+      turns: 0,
     });
     expect(ended.jumps).toBeGreaterThanOrEqual(1);
     expect(ended.dashes).toBeGreaterThanOrEqual(1);

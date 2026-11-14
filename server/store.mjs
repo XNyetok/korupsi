@@ -44,6 +44,11 @@ const MISSED_VIA = new Set(['cancelled', 'failed']);
 /** How the run before a run ended, and what the player was looking at when the page was left. */
 const AFTER = new Set(['win', 'restart']);
 const SCREENS = new Set(['title', 'playing', 'paused', 'result']);
+/** The network as Chrome guesses it, and the states an audio context can be in ('none': never made). */
+const NETS = new Set(['slow-2g', '2g', '3g', '4g']);
+const AUDIO = new Set(['running', 'suspended', 'interrupted', 'closed', 'none']);
+/** A run with more than this percent of stuttering frames counts as choppy. */
+const CHOPPY = 10;
 
 const oneOf = (set, value) => (set.has(value) ? value : null);
 
@@ -188,6 +193,15 @@ const ADDED_COLUMNS = {
   screen: 'TEXT',
   visible: 'INTEGER',
   part: 'INTEGER',
+  ready: 'INTEGER',
+  net: 'TEXT',
+  saveData: 'INTEGER',
+  lang: 'TEXT',
+  fps: 'INTEGER',
+  slow: 'INTEGER',
+  audio: 'TEXT',
+  full: 'INTEGER',
+  turns: 'INTEGER',
 };
 
 /** Every column an event fills, in the order they are inserted. */
@@ -230,6 +244,11 @@ export function normaliseEvent(input, agent = {}, where = null) {
     // Minutes ahead of UTC on the player's clock: 420 is WIB, 480 WITA, 540 WIT.
     event.zone = clampInt(input.zone, -720, 840);
     event.finishedBefore = flag(input.finishedBefore);
+    // How fast the page was ready, on what network, in what language.
+    event.ready = clampInt(input.ready, 0, 120_000);
+    event.net = oneOf(NETS, input.net);
+    event.saveData = flag(input.saveData);
+    event.lang = typeof input.lang === 'string' && /^[a-z]{2,3}$/.test(input.lang) ? input.lang : null;
   }
 
   if (input.type === 'visit' || input.type === 'run_started' || input.type === 'run_ended') {
@@ -284,6 +303,12 @@ export function normaliseEvent(input, agent = {}, where = null) {
     event.away = clampInt(input.away, 0, 999);
     event.finishedBefore = flag(input.finishedBefore);
     event.record = event.cause === 'finished' ? oneOf(RECORDS, input.record) : null;
+    // How smoothly it was drawn, whether it could be heard, and what the screen did.
+    event.fps = clampInt(input.fps, 1, 500);
+    event.slow = clampInt(input.slow, 0, 100);
+    event.audio = oneOf(AUDIO, input.audio);
+    event.full = flag(input.full);
+    event.turns = clampInt(input.turns, 0, 999);
   }
 
   if (input.type === 'shared') event.via = oneOf(SHARE_VIA, input.via);
@@ -292,6 +317,7 @@ export function normaliseEvent(input, agent = {}, where = null) {
   if (input.type === 'error') {
     event.message = errorMessage(input.message);
     if (!event.message) return null;
+    event.screen = oneOf(SCREENS, input.screen);
   }
 
   return event;
@@ -311,7 +337,7 @@ function readFloor() {
 }
 
 /** Bumped when the shape of the statistics changes, so a reader knows what it is holding. */
-const STATS_FORMAT = 6;
+const STATS_FORMAT = 7;
 
 /**
  * What every part of the statistics means, sent with them. The answer is read
@@ -345,7 +371,7 @@ const ABOUT = {
     'How results were shared: shared (the phone\u2019s share sheet), saved (downloaded), show (shown for a long press), copied (text to the clipboard).',
   sound: 'Of the runs that said so, how many ended with the sound switched off.',
   errors:
-    'Errors thrown by the game\u2019s own code, and unhandled promise rejections, by message, most frequent first, with the last time seen and a build that showed it. Errors from scripts that extensions or in-app browsers add to the page are left out. Addresses are removed before storage.',
+    'Errors thrown by the game\u2019s own code, and unhandled promise rejections, by message, most frequent first, with the last time seen, a build that showed it, and the screens (title, playing, paused, result) and browsers it happened on most. Errors from scripts that extensions or in-app browsers add to the page are left out. Addresses are removed before storage.',
   revs: 'Events per build label (`version+commit`), to tell which release the data comes from.',
   floor:
     'The floor the numbers are about, in game pixels as in src/core/tower.ts: ledges (x the left edge, y the height above the ground floor, w the width; a troli rolls `travel` either side of x), the auditors\u2019 beats between `from` and `to`, the stamps, the envelopes (`amplop`, by index), the clock-in machines (`checkpoints`, the first being where a run starts) and the door (`exit`). Read `spots`, `dwell`, `envelopes` and `hazards` against it.',
@@ -400,8 +426,17 @@ const ABOUT = {
     'The cards between runs: title, the first runs started and the median seconds the title was up before; result, the runs started from the result of a win (Main lagi) and the median seconds it was looked at first; restarts, runs started over from the pause card.',
   shareMisses:
     'Presses of Bagikan hasil that came to nothing: cancelled, the share sheet was closed; failed, nothing could share. With `shares`, every press and what came of it.',
+  speed:
+    'How fast the page showed its title card, in milliseconds from the moment it was asked for: the median of `visits`, and per network as Chrome guesses it (other browsers do not say). saveData: visits that asked to save data, of those that said.',
+  frames:
+    'How smoothly runs were drawn, of `runs`: the median frames per second; choppy, the runs with more than 10% of frames slower than 1/30 s, and smooth, the rest, each with how many finished, to tell whether stutters make players give up; byForm, the median by kind of device.',
+  sounds:
+    'Runs by the state of the sound a moment into play: running is heard; suspended or interrupted means the browser kept it silent (Safari after a call, or no tap yet); none means it was never started. Muted runs are in `sound`.',
+  display:
+    'Of `runs`: fullscreen, runs played at least partly in full screen; turned, runs in which the phone was turned on its side or back.',
+  languages: 'Visits by the browser\u2019s language (its first part: id, en, ms...).',
   missing:
-    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on. Rows stored before the collector read the User-Agent have no browser, system, form or model, and visits from builds before the page said them have no width, installed, zone or finishedBefore. Rows stored before addresses were looked up, or while the GeoIP database was missing, have no country, region or city. Visits and runs from builds before the page said where it came from have no referrer, source or campaign, and those builds sent no hidden or share_missed events.',
+    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on. Rows stored before the collector read the User-Agent have no browser, system, form or model, and visits from builds before the page said them have no width, installed, zone or finishedBefore. Rows stored before addresses were looked up, or while the GeoIP database was missing, have no country, region or city. Visits and runs from builds before the page said where it came from have no referrer, source or campaign, and those builds sent no hidden or share_missed events. Visits and runs from builds before the speed and the sound were measured have no ready, net, saveData, lang, fps, slow, audio, full or turns, and their errors no screen.',
 };
 
 /** How far up abandoned runs got is reported in bands this many metres tall; the last band is open-ended. */
@@ -949,6 +984,59 @@ export function openStore(path) {
         )
         .all(since);
 
+      // How fast the page is ready, and on what network.
+      const speedRows = db
+        .prepare(
+          `SELECT ready, net, saveData FROM events WHERE type = 'visit' AND day >= ? AND ready IS NOT NULL LIMIT 100000`,
+        )
+        .all(since);
+      const netMap = new Map();
+      for (const row of speedRows) {
+        if (row.net == null) continue;
+        const entry = netMap.get(row.net) ?? { net: row.net, visits: 0, times: [] };
+        entry.visits += 1;
+        entry.times.push(row.ready);
+        netMap.set(row.net, entry);
+      }
+      const savers = speedRows.filter((row) => row.saveData != null);
+
+      // How smoothly runs are drawn, and whether a choppy run is given up more often.
+      const frameRows = db
+        .prepare(
+          `SELECT fps, slow, form, cause, audio, full, turns FROM events
+            WHERE type = 'run_ended' AND day >= ? AND fps IS NOT NULL LIMIT 50000`,
+        )
+        .all(since);
+      const choppy = frameRows.filter((row) => row.slow > CHOPPY);
+      const smooth = frameRows.filter((row) => !(row.slow > CHOPPY));
+      const tally = (rows) => ({ runs: rows.length, finished: rows.filter((row) => row.cause === 'finished').length });
+      const formMap = new Map();
+      for (const row of frameRows) {
+        if (row.form == null) continue;
+        const entry = formMap.get(row.form) ?? { form: row.form, runs: 0, rates: [] };
+        entry.runs += 1;
+        entry.rates.push(row.fps);
+        formMap.set(row.form, entry);
+      }
+      const soundMap = new Map();
+      for (const row of frameRows) if (row.audio) soundMap.set(row.audio, (soundMap.get(row.audio) ?? 0) + 1);
+
+      // Each error: on which screens and in which browsers it happens most.
+      const where = (column, message) =>
+        db
+          .prepare(
+            `SELECT ${column} AS name, COUNT(*) AS n FROM events
+              WHERE type = 'error' AND day >= ? AND message = ? AND ${column} IS NOT NULL
+              GROUP BY ${column} ORDER BY n DESC, name LIMIT 3`,
+          )
+          .all(since, message)
+          .map((row) => ({ ...row }));
+      const placedErrors = errors.map((row) => ({
+        ...row,
+        screens: where('screen', row.message),
+        browsers: where('browser', row.message),
+      }));
+
       const revs = db
         .prepare(
           `SELECT rev, COUNT(*) AS n
@@ -994,7 +1082,7 @@ export function openStore(path) {
         layouts,
         shares,
         sound: { runs: heard.length, muted: heard.filter((r) => r.muted === 1).length },
-        errors,
+        errors: placedErrors,
         revs,
         ...playStats(runs, starts),
         floor,
@@ -1028,6 +1116,30 @@ export function openStore(path) {
           restarts: cardRows.filter((row) => row.after === 'restart').length,
         },
         shareMisses,
+        speed: {
+          visits: speedRows.length,
+          ready: median(speedRows.map((row) => row.ready)),
+          nets: [...netMap.values()]
+            .map(({ times, ...row }) => ({ ...row, ready: median(times) }))
+            .sort((a, b) => b.visits - a.visits || a.net.localeCompare(b.net)),
+          saveData: { said: savers.length, yes: savers.filter((row) => row.saveData === 1).length },
+        },
+        frames: {
+          runs: frameRows.length,
+          fps: median(frameRows.map((row) => row.fps)),
+          smooth: tally(smooth),
+          choppy: tally(choppy),
+          byForm: [...formMap.values()]
+            .map(({ rates, ...row }) => ({ ...row, fps: median(rates) }))
+            .sort((a, b) => b.runs - a.runs || a.form.localeCompare(b.form)),
+        },
+        sounds: [...soundMap].map(([audio, runs]) => ({ audio, runs })).sort((a, b) => b.runs - a.runs),
+        display: {
+          runs: frameRows.length,
+          fullscreen: frameRows.filter((row) => row.full === 1).length,
+          turned: frameRows.filter((row) => row.turns > 0).length,
+        },
+        languages: visitsBy('lang', 15),
       };
     },
 

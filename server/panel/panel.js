@@ -118,6 +118,17 @@ const SCREEN_NAMES = {
   result: ['Layar hasil', 'setelah tamat'],
 };
 const MISSED_NAMES = { cancelled: 'Dibatalkan', failed: 'Gagal' };
+const AUDIO_NAMES = {
+  running: ['Terdengar', 'suara berjalan'],
+  suspended: ['Ditahan browser', 'menunggu sentuhan, atau tab di belakang'],
+  interrupted: ['Terputus', 'Safari setelah telepon atau Siri'],
+  closed: ['Ditutup', 'suara sudah dimatikan browser'],
+  none: ['Tidak dimulai', 'browser tanpa suara web, atau belum ada sentuhan'],
+};
+const NET_NAMES = { '4g': '4G', '3g': '3G', '2g': '2G', 'slow-2g': '2G lambat' };
+
+/** 1840 ms -> "1,8 detik". */
+const seconds = (ms) => `${decimal(ms / 1000)} detik`;
 
 /** 420 -> "WIB (UTC+7)"; a zone outside Indonesia by its offset alone. */
 function zoneName(minutes) {
@@ -790,6 +801,109 @@ function renderLeaving(stats) {
   );
 }
 
+// ---------- speed and sound ----------
+
+const languageNames = (() => {
+  try {
+    return new Intl.DisplayNames(['id'], { type: 'language' });
+  } catch {
+    return null;
+  }
+})();
+
+/** "id" -> "Indonesia"; a code the browser cannot name stays a code. */
+const languageName = (code) => {
+  try {
+    return languageNames?.of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
+
+function renderSpeed(stats) {
+  const { speed, frames, sounds, display } = stats;
+  byId('speed-hint').textContent = speed.visits
+    ? `Dari ${number(speed.visits)} kunjungan dan ${number(frames.runs)} permainan. Siap dimainkan: sejak halaman diminta sampai layar judul tampil (nilai tengah).`
+    : NEXT;
+  byId('speed').replaceChildren(
+    tile({
+      label: 'Siap dimainkan',
+      value: speed.ready != null ? seconds(speed.ready) : '—',
+      what: 'nilai tengah per kunjungan',
+    }),
+    tile({
+      label: 'Gambar per detik',
+      value: frames.fps != null ? number(frames.fps) : '—',
+      what: 'nilai tengah per permainan',
+    }),
+    tile({
+      label: 'Tersendat',
+      value: percent(frames.choppy.runs, frames.runs),
+      what: 'permainan dengan lebih dari 10% gambar lambat',
+    }),
+  );
+  fillTable(
+    'nets',
+    speed.nets.map((row) => [
+      NET_NAMES[row.net] ?? row.net,
+      number(row.visits),
+      row.ready != null ? seconds(row.ready) : '—',
+    ]),
+    NEXT,
+  );
+  fillTable(
+    'frames',
+    frames.runs
+      ? [
+          ['Lancar', number(frames.smooth.runs), percent(frames.smooth.finished, frames.smooth.runs)],
+          ['Tersendat', number(frames.choppy.runs), percent(frames.choppy.finished, frames.choppy.runs)],
+        ]
+      : [],
+    NEXT,
+  );
+  fillTable(
+    'frames-form',
+    frames.byForm.map((row) => [
+      FORM_NAMES[row.form] ?? row.form,
+      number(row.runs),
+      row.fps != null ? number(row.fps) : '—',
+    ]),
+    NEXT,
+  );
+
+  bars(
+    byId('sounds'),
+    sounds.map((row) => ({
+      name: AUDIO_NAMES[row.audio]?.[0] ?? row.audio,
+      note: AUDIO_NAMES[row.audio]?.[1],
+      n: row.runs,
+    })),
+    NEXT,
+  );
+  byId('display').replaceChildren(
+    tile({
+      label: 'Layar penuh',
+      value: percent(display.fullscreen, display.runs),
+      what: 'permainan yang memakai layar penuh',
+    }),
+    tile({
+      label: 'HP diputar',
+      value: percent(display.turned, display.runs),
+      what: 'permainan yang HP-nya diputar di tengah main',
+    }),
+    tile({
+      label: 'Hemat data',
+      value: percent(speed.saveData.yes, speed.saveData.said),
+      what: 'kunjungan dengan mode hemat data',
+    }),
+  );
+  bars(
+    byId('languages'),
+    stats.languages.map((row) => ({ name: languageName(row.name), n: row.n })),
+    NEXT,
+  );
+}
+
 // ---------- the floor map ----------
 
 /** What the map draws, keyed in its legend. */
@@ -919,6 +1033,16 @@ function state(kind, text) {
   return row;
 }
 
+/** How often, when last, which build, and where in the game and in which browsers, as far as known. */
+function errorMeta(row) {
+  const parts = [`${number(row.n)} kali`, `terakhir ${timeLabel(row.last)}`, `versi ${row.rev ?? '—'}`];
+  const screens = (row.screens ?? []).map((item) => SCREEN_NAMES[item.name]?.[0] ?? item.name);
+  const browsers = (row.browsers ?? []).map((item) => item.name);
+  if (screens.length) parts.push(`di ${screens.join(', ')}`);
+  if (browsers.length) parts.push(browsers.join(', '));
+  return parts.join(' · ');
+}
+
 function renderErrors(stats) {
   const list = byId('errors');
   if (!stats.errors.length) {
@@ -929,10 +1053,7 @@ function renderErrors(stats) {
     state('critical', `${number(stats.totals.errors)} error, ${number(stats.errors.length)} jenis.`),
     ...stats.errors.map((row) => {
       const item = el('li');
-      item.append(
-        el('span', 'msg', row.message),
-        el('span', 'meta', `${number(row.n)} kali · terakhir ${timeLabel(row.last)} · versi ${row.rev ?? '—'}`),
-      );
+      item.append(el('span', 'msg', row.message), el('span', 'meta', errorMeta(row)));
       return item;
     }),
   );
@@ -1170,6 +1291,7 @@ function render(stats) {
   renderPlaces(stats);
   renderSources(stats);
   renderLeaving(stats);
+  renderSpeed(stats);
   renderShares(stats);
   renderErrors(stats);
   renderRevs(stats);

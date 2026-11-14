@@ -26,6 +26,8 @@ interface NavigatorExtras {
   standalone?: boolean;
   /** Chrome's client hints: the phone's model only on request. */
   userAgentData?: { getHighEntropyValues?(hints: string[]): Promise<{ model?: string }> };
+  /** Chrome's guess at the network, and whether the player asked to save data. */
+  connection?: { effectiveType?: string; saveData?: boolean };
 }
 
 const nav = navigator as Navigator & NavigatorExtras;
@@ -62,8 +64,10 @@ export function arrival(): Arrival {
     const referrer = document.referrer ? new URL(document.referrer) : null;
     if (referrer && referrer.origin !== location.origin) arrived.from = referrer.hostname;
     const url = new URL(location.href);
-    const source = SOURCE_MARKS.map((name) => url.searchParams.get(name)).find(Boolean);
-    const campaign = url.searchParams.get('utm_campaign');
+    // A mark longer than the collector keeps is dropped here, so it cannot swell every beacon.
+    const short = (value: string | null | undefined) => (value && value.length <= 40 ? value : undefined);
+    const source = short(SOURCE_MARKS.map((name) => url.searchParams.get(name)).find(Boolean));
+    const campaign = short(url.searchParams.get('utm_campaign'));
     if (source) arrived.source = source;
     if (campaign) arrived.campaign = campaign;
     const marked = MARKS.filter((name) => url.searchParams.has(name));
@@ -112,6 +116,11 @@ export function trackVisit(data: Record<string, unknown>): void {
   const visit = {
     ...data,
     ...arrival(),
+    // How long the page took to show its title card, from the moment it was asked for.
+    ready: Math.round(performance.now()),
+    net: nav.connection?.effectiveType,
+    saveData: nav.connection?.saveData,
+    lang: nav.language?.split('-')[0]?.toLowerCase(),
     width: window.innerWidth,
     installed: window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true,
     // Minutes ahead of UTC: 420 is WIB. A rough region, without any address.
@@ -140,12 +149,24 @@ export function trackVisit(data: Record<string, unknown>): void {
   send();
 }
 
+/** What the player was looking at when something broke, if the page can say. */
+let screenNow: () => string | undefined = () => undefined;
+
 function trackError(raw: unknown): void {
   const message = redactMessage(raw);
-  if (message) track('error', { message });
+  if (!message) return;
+  let screen: string | undefined;
+  try {
+    screen = screenNow();
+  } catch {
+    /* the game itself may be what broke */
+  }
+  track('error', { message, screen });
 }
 
-export function trackErrors(): void {
+/** `screen` says what is on screen, so an error can say where in the game it happened. */
+export function trackErrors(screen?: () => string | undefined): void {
+  if (screen) screenNow = screen;
   window.addEventListener('error', (event) => {
     // Only errors thrown by the game's own code. Safari names the file of
     // code evaluated into the page "undefined", so this asks where an error

@@ -397,6 +397,15 @@ test('the longest report of the real floor still fits in a beacon', () => {
     attempt: 999,
     pauses: 999,
     away: 999,
+    // Where the visit came from, at the longest the page sends it.
+    from: `${'a'.repeat(63)}.${'b'.repeat(63)}.${'c'.repeat(63)}.${'d'.repeat(61)}`,
+    source: 'x'.repeat(40),
+    campaign: 'y'.repeat(40),
+    fps: 500,
+    slow: 100,
+    audio: 'interrupted',
+    full: true,
+    turns: 999,
   });
   // nginx and the collector refuse anything over 2 KB.
   assert.ok(body.length < 2048, `${body.length} bytes`);

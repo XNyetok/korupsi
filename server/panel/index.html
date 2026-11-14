@@ -307,6 +307,51 @@
   </div>
 
   <div class="columns">
+    <section class="card" aria-labelledby="h-speed">
+      <h2 id="h-speed">Kecepatan</h2>
+      <p class="hint" id="speed-hint"></p>
+      <div class="tiles small" id="speed"></div>
+      <h3 class="gap">Per jaringan</h3>
+      <p class="hint">Jenis jaringan menurut perkiraan Chrome; browser lain tidak menyebutnya.</p>
+      <div class="scroll">
+        <table id="nets">
+          <thead>
+            <tr><th scope="col">Jaringan</th><th scope="col">Kunjungan</th><th scope="col">Siap dalam</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3 class="gap">Lancar atau tersendat</h3>
+      <p class="hint">Tersendat: lebih dari 10% gambar butuh lebih dari 1/30 detik. Kalau yang tersendat jauh lebih jarang tamat, game ini terlalu berat untuk HP mereka.</p>
+      <div class="scroll">
+        <table id="frames">
+          <thead>
+            <tr><th scope="col">Permainan</th><th scope="col">Jumlah</th><th scope="col">% tamat</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="scroll">
+        <table id="frames-form">
+          <thead>
+            <tr><th scope="col">Perangkat</th><th scope="col">Permainan</th><th scope="col">Gambar per detik</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-sound">
+      <h2 id="h-sound">Suara dan layar</h2>
+      <p class="hint">Keadaan suara sesaat setelah permainan dimulai. Di iPhone, suara bisa ditahan browser sampai layar disentuh, atau setelah ada telepon.</p>
+      <div id="sounds" class="bars"></div>
+      <div class="tiles small" id="display"></div>
+      <h3 class="gap">Bahasa browser</h3>
+      <div id="languages" class="bars"></div>
+    </section>
+  </div>
+
+  <div class="columns">
     <section class="card" aria-labelledby="h-shares">
       <h2 id="h-shares">Cara hasil dibagikan</h2>
       <p class="hint">Apa yang terjadi tiap kali tombol Bagikan hasil ditekan: lewat mana hasilnya keluar dari game, atau batal dan gagal.</p>

@@ -16,7 +16,7 @@
     "check": "tsc --noEmit && tsc -p src/core --noEmit",
     "lint": "biome ci .",
     "format": "biome format --write .",
-    "test": "node --test tests/game.test.ts tests/gelar.test.ts tests/tower.test.ts tests/layers.test.ts tests/input.test.ts tests/music.test.ts tests/stats.test.mjs tests/sw.test.mjs tests/redact.test.ts tests/remote.test.mjs tests/panel.test.mjs tests/collector.test.mjs",
+    "test": "node --test tests/game.test.ts tests/gelar.test.ts tests/tower.test.ts tests/layers.test.ts tests/input.test.ts tests/music.test.ts tests/stats.test.mjs tests/sw.test.mjs tests/redact.test.ts tests/remote.test.mjs tests/panel.test.mjs tests/collector.test.mjs tests/frames.test.ts",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
