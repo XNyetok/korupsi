@@ -23,6 +23,7 @@
   --track: #cde2fb;
   --critical: #d03b3b;
   --good: #006300;
+  --gold: #a87d00;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -45,6 +46,7 @@
     --track: #104281;
     --critical: #e66767;
     --good: #0ca30c;
+    --gold: #e0b43a;
   }
 }
 
@@ -218,6 +220,31 @@ body[data-loading="true"] main { opacity: 0.55; }
 .tip ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
 .tip li { display: flex; align-items: center; gap: 6px; color: var(--ink-2); }
 .tip b { color: var(--ink); font-variant-numeric: tabular-nums; min-width: 2ch; }
+
+/* ---------- floor map ---------- */
+
+.map { margin-top: 14px; }
+.floor { display: block; width: 100%; max-height: 640px; }
+.floor .ledge { fill: var(--axis); }
+.floor .ledge.troli { fill: var(--muted); }
+.floor .ledge.fiktif { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 2; }
+.floor .travel { stroke: var(--grid); stroke-width: 3; }
+.floor .label { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+.floor .beat { stroke: var(--starts); stroke-width: 2; stroke-dasharray: 4 3; }
+.floor .stamp { fill: var(--ink-2); }
+.floor .amplop { fill: var(--gold); }
+.floor .machine { fill: var(--finished); }
+.floor .door { fill: var(--visits); }
+.floor .catch { fill: var(--critical); }
+#map-legend { margin-top: 10px; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: var(--swatch); }
+.swatch.catch { --swatch: var(--critical); border-radius: 50%; }
+.swatch.ledge { --swatch: var(--axis); height: 4px; }
+.swatch.amplop { --swatch: var(--gold); border-radius: 50%; }
+.swatch.beat { --swatch: var(--starts); height: 3px; }
+.swatch.stamp { --swatch: var(--ink-2); }
+.swatch.machine { --swatch: var(--finished); width: 6px; }
+.swatch.door { --swatch: var(--visits); width: 8px; }
 
 /* ---------- table view ---------- */
 

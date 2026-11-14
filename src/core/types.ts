@@ -116,6 +116,34 @@ export interface GameEvent {
   cause?: Cause;
 }
 
+/**
+ * What a run did beyond its outcome, filled in as it is played. Telemetry
+ * reads it (report.ts) to say where the floor costs time, catches people and
+ * makes them give up; nothing in the game depends on it.
+ */
+export interface RunLog {
+  /** Run-clock seconds at which each checkpoint after the lobby was first reached; null when skipped. */
+  splits: (number | null)[];
+  /** Where each catch happened: x and y of the player in game pixels, and the envelopes carried. */
+  spots: [number, number, number][];
+  /** What caught the player last (named as in `Game.catches`), and the run clock then. */
+  lastHazard: string | null;
+  lastCaught: number;
+  /** Which envelopes were picked up at least once. */
+  picked: boolean[];
+  /** Envelopes a catch put back on the floor. */
+  lost: number;
+  /** Seconds spent free to move while carrying 0, 1, 2... envelopes, and the catches at each weight. */
+  carried: number[];
+  caughtWith: number[];
+  jumps: number;
+  dashes: number;
+  /** Seconds stood on each ledge, by index. */
+  dwell: number[];
+  /** True when the floor had been finished on this device before the run began. */
+  finishedBefore: boolean;
+}
+
 export interface Best {
   /** Fastest finish in seconds, or 0 when the floor was never finished. */
   time: number;

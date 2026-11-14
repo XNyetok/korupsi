@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { clock, Game, jumpFactor, rupiah } from '../src/core/game.ts';
 import { PARAMS } from '../src/core/params.ts';
-import { runReport } from '../src/core/report.ts';
+import { MAX_SPOTS, runReport } from '../src/core/report.ts';
 import { auditorAt, KELURAHAN, ledgeX, STAMP, stampAt } from '../src/core/tower.ts';
 import type { Best, FloorDef, Input } from '../src/core/types.ts';
 import { idle, jumpApex, quietGame, run, STEP } from './helpers.ts';
@@ -281,6 +281,125 @@ test('a run remembers which hazard caught the player, and reports itself', () =>
   game.start();
   assert.deepEqual(game.catches, {});
   assert.equal(runReport(game, 'abandoned').deaths, 0);
+});
+
+test('a run logs how it was played, and reports it', () => {
+  let saved: Best | null = null;
+  const store = { read: () => saved ?? { time: 0, money: 0 }, write: (best: Best) => (saved = best) };
+  const game = new Game({ floor: YARD, store });
+  game.start();
+  assert.equal(game.log.finishedBefore, false, 'the floor was never finished on this device');
+
+  // One envelope in the lobby, a jump and a dash.
+  run(game, 0.3, hold({ move: 1 }));
+  assert.deepEqual(game.log.picked, [false, true]);
+  game.step(STEP, hold({ jump: true }));
+  until(game, () => game.player.ground >= 0);
+  run(game, PARAMS.dashCooldown);
+  game.step(STEP, hold({ dash: true, move: -1 }));
+  until(game, () => game.player.dashT <= 0);
+  assert.equal(game.log.jumps, 1);
+  assert.equal(game.log.dashes, 1);
+
+  // Clock in and wait at the machine.
+  game.placeOn(3, 80);
+  game.step(STEP);
+  const clockedIn = game.time;
+  assert.deepEqual(game.log.splits, [clockedIn]);
+  run(game, 1.5);
+
+  // The other envelope lies below the audit tape now: picking it up is a fall,
+  // so the catch comes with both envelopes in the bag, and the new one goes back.
+  game.placeOn(0, 60);
+  game.step(STEP);
+  assert.equal(game.deaths, 1);
+  const caughtAt = game.time;
+  assert.deepEqual(game.log.spots, [[60, 0, 2]]);
+  assert.equal(game.log.lastHazard, 'jatuh');
+  assert.deepEqual(game.log.caughtWith, [0, 0, 1], 'caught carrying two');
+  run(game, PARAMS.caughtPause + 2 * STEP);
+  assert.equal(game.weight, 1);
+  assert.equal(game.log.lost, 1);
+
+  // Free time is counted by what was carried; the pause after the catch is not.
+  const free = game.log.carried.reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(free - (game.time - PARAMS.caughtPause)) < 3 * STEP, `${free} of ${game.time}`);
+  assert.ok((game.log.dwell[3] ?? 0) >= 1.5, 'standing at the machine counts on its ledge');
+
+  game.placeOn(3, 165);
+  run(game, 1, hold({ move: 1 }));
+  assert.equal(game.phase, 'won');
+
+  const report = runReport(game, 'finished');
+  assert.deepEqual(report.splits, [Math.round(clockedIn)]);
+  assert.deepEqual(report.spots, [[60, 0, 2]]);
+  assert.equal(report.lastHazard, 'jatuh');
+  assert.equal(report.sinceCaught, Math.round(game.time - caughtAt));
+  assert.deepEqual(report.picked, [0, 1]);
+  assert.deepEqual(report.kept, [1]);
+  assert.equal(report.lost, 1);
+  assert.equal(report.carried.length, 3, 'one entry per possible weight, nothing to two');
+  assert.deepEqual(report.caughtWith, [0, 0, 1]);
+  assert.equal(report.jumps, 1);
+  assert.equal(report.dashes, 1);
+  assert.ok((report.dwell['3'] ?? 0) >= 2, 'whole seconds, rounded');
+  assert.ok(
+    Object.values(report.dwell).every((s) => s >= 1),
+    'only ledges stood on for a second or more',
+  );
+  assert.equal(report.finishedBefore, false);
+  assert.equal(report.record, 'both', 'the first finish sets both records');
+
+  // The next run starts a clean log, from a player who has now finished here.
+  game.start();
+  assert.equal(game.log.finishedBefore, true);
+  const fresh = runReport(game, 'abandoned');
+  assert.deepEqual(fresh.splits, [null]);
+  assert.deepEqual(fresh.spots, []);
+  assert.deepEqual(fresh.picked, []);
+  assert.equal(fresh.lastHazard, undefined);
+  assert.equal(fresh.record, undefined, 'only a finish can set a record');
+});
+
+test('a run with many catches reports an even sample of where they were', () => {
+  const game = yard();
+  for (let i = 0; i < 100; i++) game.log.spots.push([i, i, 0]);
+  const spots = runReport(game, 'abandoned').spots;
+  assert.equal(spots.length, MAX_SPOTS);
+  assert.deepEqual(spots[0], [0, 0, 0], 'the first catch');
+  assert.deepEqual(spots[MAX_SPOTS - 1], [99, 99, 0], 'the last catch');
+});
+
+test('the longest report of the real floor still fits in a beacon', () => {
+  // An hour on the Kelurahan with every ledge stood on and every hazard met many times.
+  const game = new Game();
+  game.start();
+  game.time = 3599;
+  game.deaths = 9999;
+  game.catches = { 'auditor:10': 999, 'auditor:17': 999, 'stempel:12': 999, 'stempel:19': 999, jatuh: 999 };
+  game.log.splits = game.log.splits.map(() => 3599);
+  for (let i = 0; i < 2000; i++) game.log.spots.push([383, 595, 6]);
+  game.log.lastHazard = 'stempel:19';
+  game.log.picked = game.log.picked.map(() => true);
+  game.log.lost = 999;
+  game.log.carried = game.log.carried.map(() => 3599);
+  game.log.caughtWith = game.log.caughtWith.map(() => 9999);
+  game.log.jumps = 99999;
+  game.log.dashes = 99999;
+  game.log.dwell = game.log.dwell.map(() => 3599);
+  const body = JSON.stringify({
+    type: 'run_ended',
+    rev: '10.10.10+abcdef0',
+    ...runReport(game, 'finished'),
+    muted: false,
+    device: 'touch',
+    layout: 'fill-tall',
+    attempt: 999,
+    pauses: 999,
+    away: 999,
+  });
+  // nginx and the collector refuse anything over 2 KB.
+  assert.ok(body.length < 2048, `${body.length} bytes`);
 });
 
 test('falling far below the last checkpoint is a catch, and not before one', () => {

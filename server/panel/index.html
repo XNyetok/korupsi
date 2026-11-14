@@ -96,6 +96,87 @@
   </section>
 
   <div class="columns">
+    <section class="card" aria-labelledby="h-map">
+      <h2 id="h-map">Peta tempat tertangkap</h2>
+      <p class="hint">Denah lantai dengan titik merah di tempat pemain kena OTT: makin besar dan pekat, makin sering. Angka kecil di ujung pijakan adalah nomor pijakannya, sama dengan di daftar rintangan.</p>
+      <div id="map" class="map"></div>
+      <ul class="legend" id="map-legend" aria-label="Keterangan denah"></ul>
+    </section>
+
+    <section class="card" aria-labelledby="h-route">
+      <h2 id="h-route">Jalur lantai</h2>
+      <p class="hint" id="route-hint"></p>
+      <div id="route" class="bars"></div>
+      <h3 class="gap">Yang terakhir menangkap sebelum pemain pergi</h3>
+      <p class="hint" id="last-hint"></p>
+      <div id="last" class="bars"></div>
+    </section>
+  </div>
+
+  <div class="columns">
+    <section class="card" aria-labelledby="h-envelopes">
+      <h2 id="h-envelopes">Amplop</h2>
+      <p class="hint">Seberapa sering tiap amplop diambil (persen dari semua permainan), dan berapa yang dibawa sampai pintu (persen dari yang tamat). Nomor amplop sama dengan di denah.</p>
+      <div class="scroll">
+        <table id="envelopes">
+          <thead>
+            <tr><th scope="col">Amplop</th><th scope="col">Diambil</th><th scope="col">Dibawa ke pintu</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="hint" id="lost"></p>
+      <h3 class="gap">Beban dan OTT</h3>
+      <p class="hint">Tiap amplop memendekkan lompatan. Kalau OTT per menit naik tajam seiring amplop yang dibawa, beban amplop terlalu berat.</p>
+      <div class="scroll">
+        <table id="carrying">
+          <thead>
+            <tr><th scope="col">Amplop dibawa</th><th scope="col">Lama bermain</th><th scope="col">Kena OTT</th><th scope="col">OTT per menit</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-moves">
+      <h2 id="h-moves">Cara bermain</h2>
+      <p class="hint" id="moves-hint"></p>
+      <div class="tiles small" id="moves"></div>
+      <h3 class="gap">Paling lama berdiri di pijakan</h3>
+      <p class="hint">Nilai tengah lama berdiri, dari permainan yang berdiri di sana sedetik atau lebih. Waktu yang panjang menandai tempat pemain ragu, atau menunggu rintangan lewat.</p>
+      <div id="dwell" class="bars"></div>
+    </section>
+  </div>
+
+  <div class="columns">
+    <section class="card" aria-labelledby="h-attempts">
+      <h2 id="h-attempts">Percobaan ke berapa</h2>
+      <p class="hint">Urutan permainan dalam satu kunjungan, dihitung di halaman tanpa disimpan. Kalau tamat baru muncul di percobaan ketiga, lantai ini butuh beberapa kali coba.</p>
+      <div class="scroll">
+        <table id="attempts">
+          <thead>
+            <tr><th scope="col">Percobaan</th><th scope="col">Dimulai</th><th scope="col">Berakhir</th><th scope="col">Tamat</th><th scope="col">% tamat</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-returning">
+      <h2 id="h-returning">Pemain baru dan pemain lama</h2>
+      <p class="hint">Pemain lama sudah pernah tamat di perangkat yang sama, dilihat dari rekor yang disimpan game di perangkat itu, bukan dari ID. Rekor baru: tamat yang memecahkan rekor pemain itu sendiri.</p>
+      <div class="scroll">
+        <table id="returning">
+          <thead>
+            <tr><th scope="col">Pemain</th><th scope="col">Permainan</th><th scope="col">Tamat</th><th scope="col">% tamat</th><th scope="col">Rekor baru</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="columns">
     <section class="card" aria-labelledby="h-devices">
       <h2 id="h-devices">Di perangkat apa</h2>
       <p class="hint">Layar sentuh berarti HP atau tablet; keyboard berarti komputer. Kalau persen tamat di layar sentuh jauh lebih rendah, kontrol sentuhnya yang perlu dibenahi.</p>

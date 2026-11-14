@@ -239,6 +239,218 @@ test('what a run says about itself is kept only when it is well formed', () => {
   assert.ok(Object.keys(stored).length <= 24);
 });
 
+test('how a run was played is kept only when it is what the game sends', () => {
+  const event = normaliseEvent({
+    type: 'run_ended',
+    cause: 'finished',
+    attempt: 2,
+    splits: [23, null, 'x', 99999],
+    spots: [[150, 28, 2], [1, 2], 'nope', [-5, 20000, 3], [10, 10, 1, 9]],
+    lastHazard: 'stempel:12',
+    sinceCaught: 4,
+    picked: [3, 1, 1, 70, -1, 2.5, 'a'],
+    kept: [],
+    lost: 2,
+    carried: [30, 12, 'x'],
+    caughtWith: [1, 3],
+    jumps: 41,
+    dashes: 3,
+    dwell: { 0: 9, 3: 2.4, 17: 0, abc: 5, 100: 4 },
+    pauses: 1,
+    away: 0,
+    finishedBefore: true,
+    record: 'time',
+  });
+  assert.equal(event.attempt, 2);
+  assert.equal(event.splits, '[23,null,null,3600]', 'nonsense becomes a gap, and time is bounded');
+  assert.equal(event.spots, '[[150,28,2],[0,9999,3]]', 'only triples, bounded');
+  assert.equal(event.lastHazard, 'stempel:12');
+  assert.equal(event.sinceCaught, 4);
+  assert.equal(event.picked, '[1,3]', 'whole indices in range, once each, in order');
+  assert.equal(event.kept, '[]', 'carrying nothing out is an answer');
+  assert.equal(event.carried, '[30,12,0]');
+  assert.equal(event.caughtWith, '[1,3]');
+  assert.deepEqual([event.lost, event.jumps, event.dashes, event.pauses, event.away], [2, 41, 3, 1, 0]);
+  assert.equal(event.dwell, '{"0":9,"3":2}', 'ledge numbers only, and no empty seconds');
+  assert.equal(event.finishedBefore, 1);
+  assert.equal(event.record, 'time');
+
+  const odd = normaliseEvent({
+    type: 'run_ended',
+    cause: 'abandoned',
+    lastHazard: 'DROP TABLE',
+    record: 'time',
+    spots: 'many',
+    dwell: [1, 2],
+    finishedBefore: 'yes',
+    jumps: null,
+  });
+  assert.equal(odd.lastHazard, null);
+  assert.equal(odd.record, null, 'only a finish can set a record');
+  assert.equal(odd.spots, null);
+  assert.equal(odd.dwell, null);
+  assert.equal(odd.finishedBefore, null);
+  assert.equal(odd.jumps, null, 'missing stays missing');
+
+  // A list cannot be used to store an essay either.
+  const long = normaliseEvent({ type: 'run_ended', spots: Array.from({ length: 500 }, () => [1, 1, 1]) });
+  assert.equal(JSON.parse(long.spots).length, 30);
+  assert.equal(normaliseEvent({ type: 'run_started', attempt: 0 }).attempt, 1);
+  assert.equal(normaliseEvent({ type: 'visit', attempt: 3 }).attempt, null, 'a visit is not a run');
+});
+
+test('the statistics say how runs were played', () => {
+  const store = openStore(':memory:');
+  const now = Date.now();
+  const add = (event) => store.insert(normaliseEvent(event), now);
+
+  for (const attempt of [1, 1, 1, 2, 6]) add({ type: 'run_started', attempt });
+  const play = { type: 'run_ended', deaths: 0, pauses: 0, away: 0, finishedBefore: false };
+  // A clean finish on the first try, with two envelopes carried out.
+  add({
+    ...play,
+    cause: 'finished',
+    attempt: 1,
+    duration: 90,
+    checkpoint: 2,
+    splits: [30, 60],
+    picked: [0, 1],
+    kept: [0, 1],
+    lost: 0,
+    carried: [40, 30, 20],
+    caughtWith: [0, 0, 0],
+    jumps: 40,
+    dashes: 2,
+    dwell: { 0: 10, 11: 4 },
+    record: 'both',
+  });
+  // A finish by someone who had finished before, slower, caught twice on the way.
+  add({
+    ...play,
+    cause: 'finished',
+    attempt: 2,
+    duration: 150,
+    checkpoint: 2,
+    splits: [50, 100],
+    spots: [
+      [150, 312, 1],
+      [151, 313, 1],
+    ],
+    lastHazard: 'stempel:12',
+    sinceCaught: 60,
+    picked: [0],
+    kept: [0],
+    lost: 1,
+    carried: [60, 80, 0],
+    caughtWith: [0, 2, 0],
+    jumps: 60,
+    dashes: 0,
+    dwell: { 11: 8 },
+    pauses: 1,
+    finishedBefore: true,
+  });
+  // Left right after the stamp caught them, past the first machine.
+  add({
+    ...play,
+    cause: 'abandoned',
+    attempt: 1,
+    duration: 70,
+    checkpoint: 1,
+    splits: [40, null],
+    spots: [[140, 310, 0]],
+    lastHazard: 'stempel:12',
+    sinceCaught: 3,
+    picked: [],
+    kept: [],
+    lost: 0,
+    carried: [69, 0, 0],
+    caughtWith: [1, 0, 0],
+    jumps: 20,
+    dashes: 0,
+    away: 2,
+  });
+  // Left in the lobby, never caught.
+  add({
+    ...play,
+    cause: 'abandoned',
+    attempt: 6,
+    duration: 10,
+    checkpoint: 0,
+    splits: [null, null],
+    picked: [1],
+    kept: [1],
+    lost: 0,
+    carried: [5, 5, 0],
+    caughtWith: [0, 0, 0],
+    jumps: 4,
+    dashes: 1,
+  });
+  // A run from before the details were sent: counted in the totals only.
+  add({ type: 'run_ended', cause: 'abandoned', duration: 5, checkpoint: 0 });
+
+  const stats = store.stats(7);
+
+  assert.deepEqual(stats.route, {
+    runs: 4,
+    stretches: [
+      { to: 1, reached: 3, seconds: 40 },
+      { to: 2, reached: 2, seconds: 40 },
+      { to: 'door', reached: 2, seconds: 40 },
+    ],
+  });
+
+  // The two catches on the stamp's desk share a square; the third is beside it.
+  assert.deepEqual(stats.spots, [
+    { x: 148, y: 316, n: 2 },
+    { x: 140, y: 308, n: 1 },
+  ]);
+
+  assert.deepEqual(stats.carrying, [
+    { envelopes: 0, seconds: 174, catches: 1 },
+    { envelopes: 1, seconds: 115, catches: 2 },
+    { envelopes: 2, seconds: 20, catches: 0 },
+  ]);
+
+  assert.deepEqual(stats.lastCatch, {
+    left: 2,
+    uncaught: 1,
+    soon: 15,
+    hazards: [{ hazard: 'stempel:12', runs: 1, soon: 1, kind: 'stempel', ledge: 12 }],
+  });
+
+  assert.deepEqual(stats.envelopes, {
+    runs: 4,
+    finished: 2,
+    lost: 1,
+    lostRuns: 1,
+    list: [
+      { envelope: 0, picked: 2, kept: 2 },
+      { envelope: 1, picked: 2, kept: 1 },
+    ],
+  });
+
+  assert.deepEqual(stats.moves, { runs: 4, dashed: 2, jumps: 30, dashes: 1 });
+  assert.deepEqual(stats.dwell, [
+    { ledge: 0, runs: 1, total: 10, seconds: 10 },
+    { ledge: 11, runs: 2, total: 12, seconds: 6 },
+  ]);
+  assert.deepEqual(stats.breaks, { runs: 4, paused: 1, away: 1 });
+
+  assert.deepEqual(stats.attempts, [
+    { from: 1, to: 1, started: 3, ended: 2, finished: 1 },
+    { from: 2, to: 2, started: 1, ended: 1, finished: 1 },
+    { from: 3, to: 3, started: 0, ended: 0, finished: 0 },
+    { from: 4, to: 4, started: 0, ended: 0, finished: 0 },
+    { from: 5, to: null, started: 1, ended: 1, finished: 0 },
+  ]);
+
+  assert.deepEqual(stats.returning, {
+    new: { runs: 3, finished: 1, records: 1 },
+    returning: { runs: 1, finished: 1, records: 0 },
+  });
+  store.close();
+});
+
 test('a database from an earlier release gains the new columns and keeps its rows', () => {
   const dir = mkdtempSync(join(tmpdir(), 'korupsi-stats-'));
   const path = join(dir, 'stats.db');
@@ -354,7 +566,7 @@ test('the statistics say what catches players, where they leave, and on what', (
 
   const stats = store.stats(7);
 
-  assert.equal(stats.format, 2);
+  assert.equal(stats.format, 3);
   assert.equal(stats.finished.deaths, 2);
   assert.equal(stats.abandoned.deaths, 3);
 
@@ -422,6 +634,18 @@ test('an empty store still answers with every field', () => {
     assert.deepEqual(stats[list], [], list);
   }
   assert.deepEqual(stats.sound, { runs: 0, muted: 0 });
+  assert.deepEqual(stats.route, { runs: 0, stretches: [] });
+  for (const list of ['spots', 'carrying', 'dwell']) assert.deepEqual(stats[list], [], list);
+  assert.deepEqual(stats.lastCatch, { left: 0, uncaught: 0, soon: 15, hazards: [] });
+  assert.deepEqual(stats.envelopes, { runs: 0, finished: 0, lost: 0, lostRuns: 0, list: [] });
+  assert.deepEqual(stats.moves, { runs: 0, dashed: 0, jumps: null, dashes: null });
+  assert.deepEqual(stats.breaks, { runs: 0, paused: 0, away: 0 });
+  assert.equal(stats.attempts.length, 5);
+  assert.ok(stats.attempts.every((row) => row.started === 0 && row.ended === 0));
+  assert.deepEqual(stats.returning, {
+    new: { runs: 0, finished: 0, records: 0 },
+    returning: { runs: 0, finished: 0, records: 0 },
+  });
   store.close();
 });
 

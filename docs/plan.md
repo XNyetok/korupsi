@@ -43,6 +43,28 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   catches people and where they leave: read it after a few days of play (the JSON export
   is the form to give an agent, `docs/telemetry.md` says how to read it), then tune the
   floor. The open questions are in `docs/design/game-design.md`. P3 waits for this.
+- [~] **T2–T6 — More to read in the telemetry.** The maintainer asked on 2026-11-14 for
+  much richer telemetry, still without any identifier: the address a beacon comes from
+  may be used once to look up a province and a town, never stored. Five parts, one pull
+  request each, in this order; each collects from the release that ships it.
+  - [x] **T2 — How a run is played.** Done 2026-11-14 (#47), not released yet. A run
+    says when it reached each clock-in machine, where it was caught and carrying what,
+    what caught it last, which envelopes it took and lost, its jumps and dashes, how
+    long it stood on each ledge, its pauses and time away, which run of the visit it
+    was, and whether the player had finished before. The statistics carry the floor
+    plan; the panel draws the catches on it and shows the route, the envelopes, what
+    the weight costs, the moves and the attempts.
+  - [ ] **T3 — Browser and device.** The User-Agent reduced to a browser, a system, a
+    kind of device and a phone model, in-app browsers named; crawlers dropped; Global
+    Privacy Control honoured; the hour of play in the player's time zone; opened from
+    the home screen; the width of the screen.
+  - [ ] **T4 — Province and town**, from an offline GeoIP file. Needs an nginx change and
+    the file on the server, installed by the maintainer.
+  - [ ] **T5 — Visits and where players come from.** A summary of each visit, the
+    referring site and campaign, a mark on shared links, the whole share funnel, and
+    what happens on the result screen.
+  - [ ] **T6 — Speed and sound.** Load time, network type, frame rate, whether the sound
+    runs, and where in the game errors happen.
 
 ## Next
 
