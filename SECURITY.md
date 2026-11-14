@@ -28,8 +28,10 @@ where the player was caught, which envelopes were taken, time per stretch), a sh
 result, and the first line of a JavaScript error. Events carry the build revision so a bug report
 can be matched to a release.
 
-Not collected: IP addresses, cookies, device fingerprints, or any identifier that survives
-a page load. The browser's User-Agent header is reduced to a browser and its version, a
+Not collected: cookies, device fingerprints, or any identifier that survives a page load.
+IP addresses are not stored: the address a beacon comes from is looked up once in an
+offline database, to estimate a country, a province and a town, and is neither stored nor
+logged. The browser's User-Agent header is reduced to a browser and its version, a
 system, a kind of device and a phone model, and is not stored. `Do Not Track` and Global
 Privacy Control disable the events entirely, in the page and again in the collector, and
 crawlers are not counted. Raw rows are deleted after 90 days.

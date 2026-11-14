@@ -566,7 +566,7 @@ test('the statistics say what catches players, where they leave, and on what', (
 
   const stats = store.stats(7);
 
-  assert.equal(stats.format, 4);
+  assert.equal(stats.format, 5);
   assert.equal(stats.finished.deaths, 2);
   assert.equal(stats.abandoned.deaths, 3);
 

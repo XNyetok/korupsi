@@ -624,6 +624,82 @@ function renderBrowsers(stats) {
   );
 }
 
+// ---------- where from ----------
+
+const countryNames = (() => {
+  try {
+    return new Intl.DisplayNames(['id'], { type: 'region' });
+  } catch {
+    return null;
+  }
+})();
+
+/** The GeoIP database names provinces in English; the panel reads them in Indonesian. */
+const PROVINCE_NAMES = {
+  Jakarta: 'DKI Jakarta',
+  'Special Capital Region of Jakarta': 'DKI Jakarta',
+  'West Java': 'Jawa Barat',
+  'Central Java': 'Jawa Tengah',
+  'East Java': 'Jawa Timur',
+  Yogyakarta: 'DI Yogyakarta',
+  'Special Region of Yogyakarta': 'DI Yogyakarta',
+  'North Sumatra': 'Sumatera Utara',
+  'West Sumatra': 'Sumatera Barat',
+  'South Sumatra': 'Sumatera Selatan',
+  'Riau Islands': 'Kepulauan Riau',
+  'Bangka Belitung Islands': 'Kepulauan Bangka Belitung',
+  'West Kalimantan': 'Kalimantan Barat',
+  'Central Kalimantan': 'Kalimantan Tengah',
+  'South Kalimantan': 'Kalimantan Selatan',
+  'East Kalimantan': 'Kalimantan Timur',
+  'North Kalimantan': 'Kalimantan Utara',
+  'North Sulawesi': 'Sulawesi Utara',
+  'Central Sulawesi': 'Sulawesi Tengah',
+  'South Sulawesi': 'Sulawesi Selatan',
+  'Southeast Sulawesi': 'Sulawesi Tenggara',
+  'West Sulawesi': 'Sulawesi Barat',
+  'West Nusa Tenggara': 'Nusa Tenggara Barat',
+  'East Nusa Tenggara': 'Nusa Tenggara Timur',
+  'North Maluku': 'Maluku Utara',
+  'West Papua': 'Papua Barat',
+  'Southwest Papua': 'Papua Barat Daya',
+  'Central Papua': 'Papua Tengah',
+  'Highland Papua': 'Papua Pegunungan',
+  'South Papua': 'Papua Selatan',
+};
+
+/** "ID" -> "Indonesia"; a code the browser cannot name stays a code. */
+const countryName = (code) => {
+  try {
+    return countryNames?.of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
+
+function renderPlaces(stats) {
+  const { available, built } = stats.geo;
+  byId('geo-hint').textContent = available
+    ? `Kunjungan dari Indonesia per provinsi, diperkirakan dari jaringan internet pengunjung. Alamatnya dipakai sekali untuk perkiraan ini, lalu dibuang. Basis data lokasi bertanggal ${built ?? '—'}.`
+    : 'Basis data lokasi (GeoIP) belum dipasang di server, jadi kunjungan belum punya provinsi atau kota. Cara memasangnya ada di docs/deploy.md.';
+  const empty = available ? NEXT : 'Menunggu basis data lokasi dipasang di server.';
+  bars(
+    byId('regions'),
+    stats.regions.slice(0, 20).map((row) => ({ name: PROVINCE_NAMES[row.name] ?? row.name, n: row.n })),
+    empty,
+  );
+  bars(
+    byId('cities'),
+    stats.cities.slice(0, 20).map((row) => ({ name: row.name, n: row.n })),
+    empty,
+  );
+  bars(
+    byId('countries'),
+    stats.countries.map((row) => ({ name: countryName(row.name), n: row.n })),
+    empty,
+  );
+}
+
 // ---------- the floor map ----------
 
 /** What the map draws, keyed in its legend. */
@@ -1001,6 +1077,7 @@ function render(stats) {
   renderWhen(stats);
   renderVisitors(stats);
   renderBrowsers(stats);
+  renderPlaces(stats);
   renderShares(stats);
   renderErrors(stats);
   renderRevs(stats);

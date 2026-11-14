@@ -162,6 +162,9 @@ const ADDED_COLUMNS = {
   installed: 'INTEGER',
   width: 'INTEGER',
   zone: 'INTEGER',
+  country: 'TEXT',
+  region: 'TEXT',
+  city: 'TEXT',
 };
 
 /** Every column an event fills, in the order they are inserted. */
@@ -171,10 +174,11 @@ const COLUMNS = [...FIRST_COLUMNS, ...Object.keys(ADDED_COLUMNS)];
  * Returns the row to store, or null when the event is not worth keeping.
  * Everything that is not on this list is dropped, including extra fields.
  *
- * `agent` is what server/agent.mjs read from the User-Agent header; the
- * header itself is not part of the row.
+ * `agent` is what server/agent.mjs read from the User-Agent header, and
+ * `where` what server/geo.mjs found for the address the beacon came from;
+ * neither the header nor the address is part of the row.
  */
-export function normaliseEvent(input, agent = {}) {
+export function normaliseEvent(input, agent = {}, where = null) {
   if (!input || typeof input !== 'object') return null;
   if (!EVENT_TYPES.has(input.type)) return null;
 
@@ -191,6 +195,9 @@ export function normaliseEvent(input, agent = {}) {
   event.os = agent.os ?? null;
   event.form = agent.form ?? null;
   event.model = agent.model ?? null;
+  event.country = typeof where?.country === 'string' && /^[A-Z]{2}$/.test(where.country) ? where.country : null;
+  event.region = clip(where?.region, 60);
+  event.city = clip(where?.city, 60);
 
   if (input.type === 'visit') {
     // Chrome names the phone only when the page asks, so the page may say it.
@@ -261,7 +268,7 @@ function readFloor() {
 }
 
 /** Bumped when the shape of the statistics changes, so a reader knows what it is holding. */
-const STATS_FORMAT = 4;
+const STATS_FORMAT = 5;
 
 /**
  * What every part of the statistics means, sent with them. The answer is read
@@ -334,8 +341,14 @@ const ABOUT = {
   weekdays: 'Visits by day of the week on the player\u2019s own clock: 0 is Sunday, 6 is Saturday.',
   zones:
     'Visits by the time zone of the player\u2019s clock, in minutes ahead of UTC: 420 is WIB, 480 WITA, 540 WIT. A rough region, without any address.',
+  countries: 'Visits by country (ISO 3166 code), looked up from the address the beacon came from.',
+  regions:
+    'Visits from Indonesia by province, as the GeoIP database names it. The address is used for this lookup once and then forgotten.',
+  cities:
+    'Visits from Indonesia by town or regency. Mobile networks often show up as Jakarta or another big city wherever the phone is, so read this as a hint, not a census.',
+  geo: 'Whether the GeoIP database (DB-IP IP to City Lite, CC BY 4.0) was there when these numbers were read, and the date it was built. Without it, no visit has a place.',
   missing:
-    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on. Rows stored before the collector read the User-Agent have no browser, system, form or model, and visits from builds before the page said them have no width, installed, zone or finishedBefore.',
+    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on. Rows stored before the collector read the User-Agent have no browser, system, form or model, and visits from builds before the page said them have no width, installed, zone or finishedBefore. Rows stored before addresses were looked up, or while the GeoIP database was missing, have no country, region or city.',
 };
 
 /** How far up abandoned runs got is reported in bands this many metres tall; the last band is open-ended. */
@@ -592,7 +605,7 @@ export function openStore(path) {
       insertStmt.run(now, day, ...COLUMNS.map((column) => event[column] ?? null));
     },
 
-    stats(days = 30) {
+    stats(days = 30, geo = null) {
       const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10);
 
       const daily = db
@@ -777,12 +790,12 @@ export function openStore(path) {
         row.inApp = IN_APP.has(row.name);
       }
 
-      const visitsBy = (column, limit) =>
+      const visitsBy = (column, limit, where = '') =>
         db
           .prepare(
             `SELECT ${column} AS name, COUNT(*) AS n
                FROM events
-              WHERE type = 'visit' AND day >= ? AND ${column} IS NOT NULL
+              WHERE type = 'visit' AND day >= ? AND ${column} IS NOT NULL ${where}
               GROUP BY ${column}
               ORDER BY n DESC, name
               LIMIT ${limit}`,
@@ -887,6 +900,10 @@ export function openStore(path) {
         hours: hours.map((n, hour) => ({ hour, n })),
         weekdays: weekdays.map((n, weekday) => ({ weekday, n })),
         zones: [...zones].map(([zone, n]) => ({ zone, n })).sort((a, b) => b.n - a.n || a.zone - b.zone),
+        countries: visitsBy('country', 20),
+        regions: visitsBy('region', 40, "AND country = 'ID'"),
+        cities: visitsBy('city', 25, "AND country = 'ID'"),
+        geo: { available: !!geo, built: geo?.built ?? null },
       };
     },
 

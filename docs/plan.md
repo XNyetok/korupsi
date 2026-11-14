@@ -62,8 +62,12 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
     home screen, the player's time zone and whether they had finished before; Chrome
     names the phone's model when asked. The panel shows them, with the hour and the day
     of play on the player's own clock.
-  - [ ] **T4 — Province and town**, from an offline GeoIP file. Needs an nginx change and
-    the file on the server, installed by the maintainer.
+  - [x] **T4 — Province and town.** Done 2026-11-14 (#49), not released yet. The
+    collector looks the visitor's address up in DB-IP's free GeoIP file and keeps the
+    country, the province and the town, never the address; the panel shows them. Needs
+    installing on the server before any place is recorded: the nginx line that passes
+    the address, the unit's `GEO_DB`, and the file itself (`docs/deploy.md`, The GeoIP
+    file).
   - [ ] **T5 — Visits and where players come from.** A summary of each visit, the
     referring site and campaign, a mark on shared links, the whole share funnel, and
     what happens on the result screen.

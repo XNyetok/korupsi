@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { cleanModel, readAgent } from '../server/agent.mjs';
+import { addressBytes, openGeo } from '../server/geo.mjs';
 import { normaliseEvent, openStore } from '../server/store.mjs';
 
 /** Rows straight from the database have no prototype; copy them to compare with plain objects. */
@@ -177,18 +178,158 @@ test('the statistics say what players come in, and when', () => {
   store.close();
 });
 
-/** Starts the collector on a free port with an empty database, and waits until it answers. */
-async function collector(t) {
+/* ---------- The GeoIP lookup ---------- */
+
+const temp = (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'korupsi-collector-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  return dir;
+};
+
+/** Encodes a value the way a MaxMind DB stores it: enough of the format for a small fixture. */
+function field(value) {
+  const head = (type, size) => (type <= 7 ? Buffer.from([(type << 5) | size]) : Buffer.from([size, type - 7]));
+  if (typeof value === 'string') {
+    const text = Buffer.from(value, 'utf8');
+    return Buffer.concat([head(2, text.length), text]);
+  }
+  if (typeof value === 'number') {
+    const bytes = Buffer.alloc(4);
+    bytes.writeUInt32BE(value);
+    return Buffer.concat([head(6, 4), bytes]);
+  }
+  if (Array.isArray(value)) return Buffer.concat([head(11, value.length), ...value.map(field)]);
+  const entries = Object.entries(value);
+  return Buffer.concat([head(7, entries.length), ...entries.flatMap(([k, v]) => [field(k), field(v)])]);
+}
+
+/** Writes a MaxMind DB with the given IPv4 networks, each `a.b.c` (a /24) -> record. */
+function geoFixture(path, networks) {
+  const nodes = [[null, null]];
+  const data = [];
+  let offset = 0;
+  for (const [network, record] of Object.entries(networks)) {
+    const bytes = network.split('.').map(Number);
+    let node = 0;
+    for (let i = 0; i < 24; i++) {
+      const bit = (bytes[i >> 3] >> (7 - (i & 7))) & 1;
+      if (i === 23) {
+        nodes[node][bit] = { data: offset };
+      } else {
+        if (nodes[node][bit] === null) nodes[node][bit] = nodes.push([null, null]) - 1;
+        node = nodes[node][bit];
+      }
+    }
+    const encoded = field(record);
+    data.push(encoded);
+    offset += encoded.length;
+  }
+  const tree = Buffer.alloc(nodes.length * 6);
+  nodes.forEach((pair, n) => {
+    pair.forEach((record, side) => {
+      const value =
+        record === null ? nodes.length : typeof record === 'number' ? record : nodes.length + 16 + record.data;
+      tree.writeUIntBE(value, n * 6 + side * 3, 3);
+    });
+  });
+  const meta = field({ node_count: nodes.length, record_size: 24, ip_version: 4, build_epoch: 1793491200 });
+  writeFileSync(
+    path,
+    Buffer.concat([tree, Buffer.alloc(16), ...data, Buffer.from('\xab\xcd\xefMaxMind.com', 'latin1'), meta]),
+  );
+}
+
+const PLACES = {
+  '203.0.113': {
+    country: { iso_code: 'ID' },
+    subdivisions: [{ names: { en: 'Jambi' } }],
+    city: { names: { en: 'Sungai Penuh' } },
+    location: { latitude: 2 },
+  },
+  '198.51.100': { country: { iso_code: 'US' } },
+};
+
+test('an address is looked up to a country, a province and a town, and nothing else', (t) => {
+  const file = join(temp(t), 'city.mmdb');
+  geoFixture(file, PLACES);
+  const geo = openGeo(file);
+  t.after(() => geo.close());
+
+  assert.equal(geo.built, '2026-11-01');
+  assert.deepEqual(geo.lookup('203.0.113.77'), { country: 'ID', region: 'Jambi', city: 'Sungai Penuh' });
+  assert.deepEqual(geo.lookup('::ffff:203.0.113.77'), { country: 'ID', region: 'Jambi', city: 'Sungai Penuh' });
+  assert.deepEqual(geo.lookup('198.51.100.1'), { country: 'US', region: null, city: null });
+  assert.equal(geo.lookup('192.0.2.1'), null, 'an address the database does not know');
+  assert.equal(geo.lookup('2001:db8::1'), null, 'an IPv6 address in an IPv4 database');
+  for (const junk of ['', 'nonsense', [999, 1, 1, 1].join('.'), null, undefined, '203.0.113']) {
+    assert.equal(geo.lookup(junk), null);
+  }
+});
+
+test('a missing or broken GeoIP file means no lookup, not a crash', (t) => {
+  const dir = temp(t);
+  assert.equal(openGeo(join(dir, 'nothing.mmdb')), null);
+  writeFileSync(join(dir, 'junk.mmdb'), 'not a database');
+  const error = t.mock.method(console, 'error', () => {});
+  assert.equal(openGeo(join(dir, 'junk.mmdb')), null);
+  assert.equal(error.mock.callCount(), 1);
+});
+
+test('IPv6 addresses are read in every spelling', () => {
+  assert.deepEqual([...addressBytes('192.0.2.1')], [192, 0, 2, 1]);
+  assert.deepEqual([...addressBytes('::ffff:192.0.2.1')], [192, 0, 2, 1]);
+  assert.deepEqual([...addressBytes('2001:db8::1')], [0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+  assert.deepEqual([...addressBytes('::1')].slice(-2), [0, 1]);
+  assert.equal(addressBytes('2001:db8::g'), null);
+});
+
+test('a place is kept as a country code and two names, and counted for Indonesia', () => {
+  const event = normaliseEvent({ type: 'visit' }, {}, { country: 'ID', region: 'Jambi', city: 'Sungai Penuh' });
+  assert.deepEqual([event.country, event.region, event.city], ['ID', 'Jambi', 'Sungai Penuh']);
+  const odd = normaliseEvent({ type: 'visit' }, {}, { country: 'Indonesia', region: 42, city: 'x'.repeat(200) });
+  assert.deepEqual([odd.country, odd.region, odd.city.length], [null, null, 60]);
+  assert.equal(normaliseEvent({ type: 'visit' }).country, null, 'no lookup, no place');
+
+  const store = openStore(':memory:');
+  const add = (where) => store.insert(normaliseEvent({ type: 'visit' }, {}, where));
+  add({ country: 'ID', region: 'Jambi', city: 'Sungai Penuh' });
+  add({ country: 'ID', region: 'Jambi', city: 'Jambi' });
+  add({ country: 'ID', region: 'DKI Jakarta', city: 'Jakarta' });
+  add({ country: 'US', region: 'Ohio', city: 'Columbus' });
+  add(null);
+  const stats = store.stats(1, { built: '2026-11-01' });
+  assert.deepEqual(plain(stats.countries), [
+    { name: 'ID', n: 3 },
+    { name: 'US', n: 1 },
+  ]);
+  assert.deepEqual(plain(stats.regions), [
+    { name: 'Jambi', n: 2 },
+    { name: 'DKI Jakarta', n: 1 },
+  ]);
+  assert.equal(stats.cities.length, 3, 'only towns in Indonesia');
+  assert.deepEqual(stats.geo, { available: true, built: '2026-11-01' });
+  assert.deepEqual(store.stats(1).geo, { available: false, built: null });
+  store.close();
+});
+
+/* ---------- The collector as a service ---------- */
+
+/** Starts the collector on a free port with an empty database, and waits until it answers. */
+async function collector(t, env = {}) {
+  const dir = temp(t);
   const port = 20000 + Math.floor(Math.random() * 20000);
   const child = spawn(process.execPath, [fileURLToPath(new URL('../server/index.mjs', import.meta.url))], {
-    env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', DB_PATH: join(dir, 'stats.db') },
+    env: {
+      ...process.env,
+      PORT: String(port),
+      HOST: '127.0.0.1',
+      DB_PATH: join(dir, 'stats.db'),
+      GEO_DB: join(dir, 'none.mmdb'),
+      ...env,
+    },
     stdio: 'ignore',
   });
-  t.after(() => {
-    child.kill();
-    rmSync(dir, { recursive: true, force: true });
-  });
+  t.after(() => child.kill());
   const base = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) {
     try {
@@ -223,4 +364,23 @@ test('the collector stores beacons, and ignores crawlers, Do Not Track and Globa
     [['Samsung Internet', 1]],
   );
   assert.equal(stats.floor?.name, 'Kelurahan');
+  assert.deepEqual(stats.geo, { available: false, built: null }, 'no GeoIP file, no places');
+});
+
+test('the collector looks the address up, and keeps the place but not the address', async (t) => {
+  const file = join(temp(t), 'city.mmdb');
+  geoFixture(file, PLACES);
+  const base = await collector(t, { GEO_DB: file });
+  const status = await fetch(`${base}/api/beacon`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'user-agent': IPHONE, 'x-real-ip': '203.0.113.77' },
+    body: JSON.stringify({ type: 'visit' }),
+  }).then((response) => response.status);
+  assert.equal(status, 204);
+
+  const stats = await (await fetch(`${base}/api/stats?days=1`)).json();
+  assert.deepEqual(stats.regions, [{ name: 'Jambi', n: 1 }]);
+  assert.deepEqual(stats.cities, [{ name: 'Sungai Penuh', n: 1 }]);
+  assert.deepEqual(stats.geo, { available: true, built: '2026-11-01' });
+  assert.ok(!JSON.stringify(stats).includes('203.0.113'), 'the address appears nowhere in the statistics');
 });
