@@ -10,6 +10,15 @@ import { redactMessage } from './redact.ts';
 const ENDPOINT = '/api/beacon';
 const MAX_PER_PAGE = 40;
 
+/**
+ * The folder the game's own scripts are served from: `/assets/` in a build,
+ * where every script is. Extensions and in-app browsers add scripts of their
+ * own to the page, and an error thrown by one of those is not the game's:
+ * from another origin it even arrives as "Script error." with no file, line
+ * or detail, so there is nothing to act on.
+ */
+const OWN_SCRIPTS = import.meta.url.replace(/[^/]*$/, '');
+
 const enabled = import.meta.env.PROD && location.protocol === 'https:' && navigator.doNotTrack !== '1';
 
 let sent = 0;
@@ -44,7 +53,10 @@ function trackError(raw: unknown): void {
 
 export function trackErrors(): void {
   window.addEventListener('error', (event) => {
-    if (event.message) trackError(event.message);
+    // Only errors thrown by the game's own code. Safari names the file of
+    // code evaluated into the page "undefined", so this asks where an error
+    // comes from rather than whether it has a file.
+    if (event.message && event.filename.startsWith(OWN_SCRIPTS)) trackError(event.message);
   });
 
   window.addEventListener('unhandledrejection', (event) => {
