@@ -51,6 +51,20 @@ function hazardTally(input) {
   return Object.keys(clean).length ? JSON.stringify(clean) : null;
 }
 
+/**
+ * What a browser reports instead of an error thrown by a script from another
+ * origin: no detail, no file, no line. The game loads no such script; these
+ * come from what extensions and in-app browsers add to the page. The game no
+ * longer sends them, but a page opened before that still can.
+ */
+const HIDDEN_ERROR = /^Script error\.?$/;
+
+/** The message to keep for an error, or null when it says nothing worth keeping. */
+function errorMessage(raw) {
+  const message = redactMessage(raw);
+  return message && !HIDDEN_ERROR.test(message) ? message : null;
+}
+
 /** The columns added after the first schema, with their types: old databases get them on opening. */
 const ADDED_COLUMNS = {
   deaths: 'INTEGER',
@@ -108,7 +122,7 @@ export function normaliseEvent(input) {
   if (input.type === 'shared') event.via = oneOf(SHARE_VIA, input.via);
 
   if (input.type === 'error') {
-    event.message = redactMessage(input.message) || null;
+    event.message = errorMessage(input.message);
     if (!event.message) return null;
   }
 
@@ -129,7 +143,7 @@ const ABOUT = {
   units:
     'Durations are seconds. Heights are metres above the lobby floor (12 game pixels to the metre); the door of the first floor is at about 42 m. Money is rupiah: 500000 per envelope. Medians are null when there are no rows to take them from.',
   totals:
-    'visits: page loads. runs: presses of Mulai or Main lagi, so one visit can start several. ended: runs that reported an ending. finished: runs that reached the door. shared: uses of Bagikan hasil. errors: JavaScript errors in players\u2019 browsers.',
+    'visits: page loads. runs: presses of Mulai or Main lagi, so one visit can start several. ended: runs that reported an ending. finished: runs that reached the door. shared: uses of Bagikan hasil. errors: JavaScript errors from the game in players\u2019 browsers.',
   daily: 'The same counts per UTC day. Days without events are absent, not zero.',
   causes:
     'How runs ended. finished: reached the door. abandoned: the page was closed, or the run restarted, before the door. auditor, band, fall: endings of the one-tap game before v0.5.0, kept until they age out.',
@@ -150,7 +164,7 @@ const ABOUT = {
     'How results were shared: shared (the phone\u2019s share sheet), saved (downloaded), show (shown for a long press), copied (text to the clipboard).',
   sound: 'Of the runs that said so, how many ended with the sound switched off.',
   errors:
-    'JavaScript errors by message, most frequent first, with the last time seen and a build that showed it. Addresses are removed before storage.',
+    'Errors thrown by the game\u2019s own code, and unhandled promise rejections, by message, most frequent first, with the last time seen and a build that showed it. Errors from scripts that extensions or in-app browsers add to the page are left out. Addresses are removed before storage.',
   revs: 'Events per build label (`version+commit`), to tell which release the data comes from.',
   missing:
     'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; they count in the totals and are left out of those breakdowns.',
@@ -201,12 +215,13 @@ export function openStore(path) {
   db.exec('CREATE INDEX IF NOT EXISTS events_day ON events (day)');
   db.exec('CREATE INDEX IF NOT EXISTS events_type_day ON events (type, day)');
 
-  // Rows stored before messages were redacted get the same treatment, so the
-  // promise holds for old data too. Cheap: errors are few and expire in 90 days.
+  // Rows stored under older rules get the current ones, so the promise holds
+  // for old data too: no addresses, and nothing kept that says nothing.
+  // Cheap: errors are few and expire in 90 days.
   const update = db.prepare('UPDATE events SET message = ? WHERE id = ?');
   const remove = db.prepare('DELETE FROM events WHERE id = ?');
   for (const row of db.prepare("SELECT id, message FROM events WHERE type = 'error'").all()) {
-    const clean = redactMessage(row.message);
+    const clean = errorMessage(row.message);
     if (!clean) remove.run(row.id);
     else if (clean !== row.message) update.run(clean, row.id);
   }

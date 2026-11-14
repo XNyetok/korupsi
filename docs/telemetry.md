@@ -31,7 +31,14 @@ Every event carries `type` and `rev`, the build label (`0.7.0+abc1234`).
 | `run_started` | Mulai or Main lagi is pressed | `device`, `layout` |
 | `run_ended` | A run reaches the door, or is closed or restarted before it | all of the run fields below |
 | `shared` | Bagikan hasil is used and something came of it | `via` |
-| `error` | A JavaScript error or unhandled rejection | `message`, with addresses removed |
+| `error` | The game's own code throws, or a promise rejection goes unhandled | `message`, with addresses removed |
+
+An error counts as the game's when the file it was thrown in is in the folder the game's
+scripts are served from (`/assets/`). Extensions and in-app browsers add scripts of their
+own to the page, and their errors are left out. That includes `Script error.`, all a
+browser reports of an error in a script from another origin: no detail, no file, no line,
+so nothing to act on. The collector drops `Script error.` as well, also from rows stored
+before this rule.
 
 ### Run fields
 

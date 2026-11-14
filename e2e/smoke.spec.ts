@@ -438,3 +438,54 @@ test.describe('result', () => {
     await expect(page.locator('#debug')).toBeHidden();
   });
 });
+
+test.describe('telemetry', () => {
+  test('reports errors from the game, not from scripts added to the page', async ({ page, baseURL }) => {
+    // Telemetry is on only over https. Serve the build from an https address
+    // that exists only in this browser, and answer every beacon here, so
+    // nothing reaches the real collector.
+    const reported: string[] = [];
+    await page.route('https://korupsi.test/**', async (route) => {
+      const url = new URL(route.request().url());
+      if (url.pathname === '/api/beacon') {
+        const event = route.request().postDataJSON() as { type: string; message?: string };
+        if (event.type === 'error') reported.push(event.message ?? '');
+        await route.fulfill({ status: 204 });
+        return;
+      }
+      await route.fulfill({ response: await route.fetch({ url: new URL(url.pathname + url.search, baseURL).href }) });
+    });
+    // A script from another site, the way an extension or an in-app browser adds one.
+    await page.route('https://elsewhere.test/**', (route) =>
+      route.fulfill({ contentType: 'text/javascript', body: 'setTimeout(function () { null.boom; });' }),
+    );
+    // Counts every error the page sees, whoever threw it.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __thrown: number };
+      w.__thrown = 0;
+      window.addEventListener('error', () => {
+        w.__thrown += 1;
+      });
+    });
+    await page.goto('https://korupsi.test/?debug=1');
+    await expect(page.locator('.card.title')).toBeVisible();
+
+    // Not the game's: a script from another origin, whose error the browser
+    // hides as "Script error.", and code evaluated into the page with no file.
+    await page.evaluate(() => {
+      const script = document.createElement('script');
+      script.src = 'https://elsewhere.test/added.js';
+      document.head.append(script);
+      setTimeout(() => {
+        throw new Error('added to the page');
+      });
+    });
+    await page.waitForFunction(() => (window as unknown as { __thrown: number }).__thrown >= 2);
+
+    // The game's own code failing: the frame loop finds nothing to call for the game's events.
+    await page.evaluate(() => {
+      (window as unknown as { __korupsi: { drain: unknown } }).__korupsi.drain = null;
+    });
+    await expect.poll(() => reported).toEqual([expect.stringContaining('drain is not a function')]);
+  });
+});

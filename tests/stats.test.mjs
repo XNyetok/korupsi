@@ -54,7 +54,15 @@ test('error messages are stored without addresses', () => {
   assert.equal(normaliseEvent({ type: 'error', message: '\n https://only.example/x' }), null);
 });
 
-test('messages stored before redaction are cleaned when the store opens', () => {
+test('an error the browser hid from the page is not stored', () => {
+  // A script from another origin threw, and this is all the page was told.
+  assert.equal(normaliseEvent({ type: 'error', message: 'Script error.' }), null);
+  assert.equal(normaliseEvent({ type: 'error', message: ' Script error ' }), null);
+  // Only the bare placeholder: a message that goes on says something.
+  assert.equal(normaliseEvent({ type: 'error', message: 'Script error. Retrying' }).message, 'Script error. Retrying');
+});
+
+test('messages stored under older rules are cleaned when the store opens', () => {
   const dir = mkdtempSync(join(tmpdir(), 'korupsi-stats-'));
   const path = join(dir, 'stats.db');
   try {
@@ -69,6 +77,7 @@ test('messages stored before redaction are cleaned when the store opens', () => 
     insert.run(Date.now(), day, 'error', 'https://only.example/x');
     insert.run(Date.now(), day, 'error', 'clean message');
     insert.run(Date.now(), day, 'error', '   ');
+    insert.run(Date.now(), day, 'error', 'Script error.');
     raw.close();
 
     const store = openStore(path);
