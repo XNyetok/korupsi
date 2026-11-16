@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-16 · Last tagged release: `v0.7.2`. What is live is the latest
+Last updated: 2026-11-16 · Last tagged release: `v0.8.0`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -38,10 +38,11 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
   untried: sharing in Chrome on Android. The numbers were read on 2026-11-16 (playtest log
   in `docs/design/game-design.md`): the floor is too hard, and most catches were at three
   spots near the first machine, each where the jump most players make comes down. Tuned
-  for them in #54, with a notice at the dash gap; not released yet. Next: release it,
-  then read the numbers again over the days since (the JSON export is the form to give an
-  agent, `docs/telemetry.md` says how to read it), and settle the open questions in
-  `docs/design/game-design.md`. P3 waits for this.
+  for them in #54, with a notice at the dash gap, live from v0.8.0 (2026-11-16). Next:
+  read the numbers again from 2026-11-23, when the panel's 7-day view holds only the new
+  floor (the JSON export is the form to give an agent, `docs/telemetry.md` says how to
+  read it), and settle the open questions in `docs/design/game-design.md`. P3 waits for
+  this.
 - [ ] **T8 — Renew the GeoIP file every month**, next in early December 2026: DB-IP
   publishes a new one monthly (`docs/deploy.md`, The GeoIP file). An old file keeps
   working, only less accurately. Waiting on the maintainer, or on an agent asked to.
@@ -63,58 +64,20 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
-- [x] **T9 — A run left on a phone still says how far it got.** Done 2026-11-16 (#55),
-  not released yet. 44% of the runs started on v0.7.2 never reported an ending: a run
-  reported only when its page was closed, and a phone may close a hidden page without
-  another word. A run now reports when its page is first hidden mid-run; if the player
-  comes back, a `run_resumed` says only how it then ended, so nothing is counted twice.
-  The panel shows how many came back and finished. Collects from the release that ships
-  it.
-- [x] **v0.7.2** — released and deployed 2026-11-14 (release run 43595575407, deploy run
-  43595726235): live as `0.7.2+74b439d`, `/api/health` 404, `/panel/` 401; the collector
-  answers `"geo": true` on the server. Nothing changed for players; the telemetry became
-  much richer.
-  - [x] **T2–T6 — More to read in the telemetry.** Done 2026-11-14 (#47 to #51). The
-    maintainer asked that day for much richer telemetry, still without any identifier: the
-    address a beacon comes from may be used once to look up a province and a town, never
-    stored. Five parts, one pull request each; each collects from the release that ships
-    it.
-    - [x] **T2 — How a run is played.** Done 2026-11-14 (#47). A run says when it reached
-      each clock-in machine, where it was caught and carrying what, what caught it last,
-      which envelopes it took and lost, its jumps and dashes, how long it stood on each
-      ledge, its pauses and time away, which run of the visit it was, and whether the
-      player had finished before. The statistics carry the floor plan; the panel draws the
-      catches on it and shows the route, the envelopes, what the weight costs, the moves
-      and the attempts.
-    - [x] **T3 — Browser and device.** Done 2026-11-14 (#48). The collector reduces the
-      User-Agent to a browser and its version, a system, a kind of device and a phone
-      model, names the apps that open links inside themselves, and drops crawlers and
-      requests with Do Not Track or Global Privacy Control, which the page honours too. A
-      visit says the width of the page, whether it was opened from the home screen, the
-      player's time zone and whether they had finished before; Chrome names the phone's
-      model when asked. The panel shows them, with the hour and the day of play on the
-      player's own clock.
-    - [x] **T4 — Province and town.** Done 2026-11-14 (#49). The collector looks the
-      visitor's address up in DB-IP's free GeoIP file and keeps the country, the province
-      and the town, never the address; the panel shows them. Its server pieces are T7.
-    - [x] **T5 — Visits and where players come from.** Done 2026-11-14 (#50). A visit and
-      its runs say which site linked here (the site, never the page) and the marks on the
-      link, which then come off the address; a shared text links to `?dari=bagikan`. A run
-      says how the one before ended and how long the title or the result was up first.
-      Leaving the page says on which screen and after how long, so a visit is summed up
-      without tying events together; a share press that came to nothing is counted. The
-      JavaScript budget went from 26 to 28 KB for T2 to T6.
-    - [x] **T6 — Speed and sound.** Done 2026-11-14 (#51). A visit says how fast its title
-      card was up, the network as Chrome guesses it, whether data is saved and the
-      browser's language; a run its frames per second and share of stutters, whether the
-      sound was heard, full screen and turns of the phone; an error the screen it happened
-      on. The panel shows them, with each error's screens and browsers.
-  - [x] **T7 — The GeoIP pieces on the server.** Installed 2026-11-14 by the agent at the
-    maintainer's request, touching only Korupsi's files: the rewrite rules with the line
-    that passes the address (dated backup, `nginx -t`, reload; the file keeps its mode),
-    the unit with `GEO_DB` (dated backup, `daemon-reload`, restart), and DB-IP's IP to
-    City Lite for 2026-11 (built 2026-11-01), read with the collector's own reader before
-    it went live. The rest of the server was already as the repository has it.
+- [x] **v0.8.0** — released and deployed 2026-11-16 (release run 43800860476, deploy run
+  43801096426): live as `0.8.0+ff72282`, `/api/health` 404, `/panel/` 401. Players get
+  the Kelurahan eased at the three spots where most of them were caught, and a notice at
+  the dash gap (P2, #54). Nothing to install on the server.
+  - [x] **T9 — A run left on a phone still says how far it got.** Done 2026-11-16 (#55).
+    44% of the runs started on v0.7.2 never reported an ending: a run reported only when
+    its page was closed, and a phone may close a hidden page without another word. A run
+    now reports when its page is first hidden mid-run; if the player comes back, a
+    `run_resumed` says only how it then ended, so nothing is counted twice. The panel
+    shows how many came back and finished. Collects from v0.8.0.
+- [x] **v0.7.2** — 2026-11-14: much richer telemetry, still without any identifier: how a
+  run is played, the browser and device, the province and town, where visits come from
+  and where they leave, speed and sound (T2–T6, #47 to #51); the GeoIP pieces installed
+  on the server (T7).
 - [x] **v0.7.1** — 2026-11-14: only errors thrown by the game's own code are reported, and
   the collector drops "Script error." (#45); the panel can be refreshed without hitting
   its rate limit (#44, nginx, installed by hand).
