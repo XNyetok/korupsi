@@ -493,6 +493,11 @@ function renderMoves(stats) {
       value: percent(breaks.away, breaks.runs),
       what: 'pindah aplikasi di tengah main, lalu kembali',
     }),
+    tile({
+      label: 'Kembali lalu selesai',
+      value: breaks.finishedAfter != null ? number(breaks.finishedAfter) : '—',
+      what: 'tercatat ditinggal saat halaman disembunyikan, tapi diteruskan sampai pintu',
+    }),
   );
   const longest = [...stats.dwell].sort((a, b) => b.seconds - a.seconds || a.ledge - b.ledge).slice(0, 8);
   bars(

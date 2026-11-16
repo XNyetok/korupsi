@@ -523,8 +523,8 @@ test.describe('telemetry', () => {
     expect(of('run_started')[0]).toMatchObject({ attempt: 1, wait: expect.any(Number), ...arrived });
     expect(of('run_started')[0]).not.toHaveProperty('after');
 
-    // A jump and a dash, a pause asked for, and a moment in another app. Each
-    // move is let happen before the next key: a pause drops a press not yet played.
+    // A jump and a dash, and a pause asked for. Each move is let happen before
+    // the next key: a pause drops a press not yet played.
     const logged = (key: 'jumps' | 'dashes') =>
       page.waitForFunction(
         (k) => (window as unknown as { __korupsi: { log: Record<string, number> } }).__korupsi.log[k] >= 1,
@@ -539,13 +539,6 @@ test.describe('telemetry', () => {
     await logged('dashes');
     await page.keyboard.press('Escape');
     await waitForPhase(page, 'paused');
-    await page.keyboard.press('Escape');
-    await waitForPhase(page, 'playing');
-    await leaveAndReturn(page);
-    await waitForPhase(page, 'paused');
-    expect(of('hidden')).toEqual([
-      expect.objectContaining({ screen: 'playing', part: 1, visible: expect.any(Number) }),
-    ]);
     await page.keyboard.press('Escape');
     await waitForPhase(page, 'playing');
 
@@ -563,7 +556,6 @@ test.describe('telemetry', () => {
       cause: 'finished',
       attempt: 1,
       pauses: 1,
-      away: 1,
       finishedBefore: false,
       record: 'time',
       splits: [null, null],
@@ -594,6 +586,64 @@ test.describe('telemetry', () => {
         () => (window as unknown as { __korupsi: { log: { finishedBefore: boolean } } }).__korupsi.log.finishedBefore,
       ),
     ).toBe(true);
+  });
+
+  test('a run whose page is hidden says how far it got then, and how it ended once the player is back', async ({
+    page,
+    baseURL,
+    isMobile,
+  }) => {
+    test.skip(isMobile, 'played with the keyboard');
+    const events = await asLiveSite(page, baseURL);
+    const of = (type: string) => events.filter((e) => e.type === type);
+    await page.goto(`${LIVE}?debug=1`);
+    await expect(page.locator('.card.title')).toBeVisible();
+    await start(page);
+
+    // Another app, mid-run: a phone may close the page without another word, so the run is reported now.
+    await leaveAndReturn(page);
+    await waitForPhase(page, 'paused');
+    expect(of('hidden')).toEqual([
+      expect.objectContaining({ screen: 'playing', part: 1, visible: expect.any(Number) }),
+    ]);
+    await expect.poll(() => of('run_ended').length).toBe(1);
+    expect(of('run_ended')[0]).toMatchObject({ cause: 'abandoned', attempt: 1 });
+    expect(of('run_ended')[0]).not.toHaveProperty('away');
+
+    // Back, and on to the door: the run is not counted again, only how it ended.
+    await page.keyboard.press('Escape');
+    await waitForPhase(page, 'playing');
+    await goToDoor(page);
+    await page.evaluate(() => {
+      const g = (window as unknown as { __korupsi: { player: { x: number }; floor: { exit: { x: number } } } })
+        .__korupsi;
+      g.player.x = g.floor.exit.x;
+    });
+    await waitForPhase(page, 'won');
+    await expect.poll(() => of('run_resumed').length).toBe(1);
+    expect(of('run_resumed')[0]).toMatchObject({ cause: 'finished' });
+    expect(of('run_ended')).toHaveLength(1);
+  });
+
+  test('a run left for good is reported once, though the page is then closed', async ({ page, baseURL, isMobile }) => {
+    test.skip(isMobile, 'played with the keyboard');
+    const events = await asLiveSite(page, baseURL);
+    const of = (type: string) => events.filter((e) => e.type === type);
+    await page.goto(`${LIVE}?debug=1`);
+    await expect(page.locator('.card.title')).toBeVisible();
+    await start(page);
+
+    // Hidden, then closed: a browser that says both must not report the run twice.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    await expect.poll(() => of('run_ended').length).toBe(1);
+    expect(of('run_ended')[0]).toMatchObject({ cause: 'abandoned' });
+    await page.waitForTimeout(300);
+    expect(of('run_ended')).toHaveLength(1);
+    expect(of('run_resumed')).toHaveLength(0);
   });
 
   test('a share sheet closed without sharing is counted as a miss, not a share', async ({

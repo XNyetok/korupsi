@@ -45,16 +45,22 @@ const game = new Game({ store: bestStore });
 const pad = new Pad();
 const renderer = new Renderer(ctx, game, reducedMotion);
 
-/** True from the start of a run until its result has been reported. */
+/** True from the start of a run until there is nothing more to report about it. */
 let runOpen = false;
+/**
+ * A run is reported once, with `run_ended`: when it ends, or when its page is
+ * hidden in the middle of it, whichever comes first, since a phone may close a
+ * hidden page without another word. `reported` is set once it has been, and
+ * `cameBack` once the player has returned to it; how it then ends is sent as
+ * `run_resumed`, once.
+ */
+let reported = false;
+let cameBack = false;
 
 /** Runs started since the page was opened: the first is 1. Counted, never stored. */
 let attempt = 0;
-/** This run's pauses asked for by the player, and times the page was left mid-run and come back to. */
+/** This run's pauses asked for by the player. */
 let pauses = 0;
-let away = 0;
-/** Set while the page is hidden in the middle of a run. */
-let leftMidRun = false;
 /** How the run before ended, if there was one: at the door, or restarted. */
 let lastEnding: 'win' | 'restart' | null = null;
 /** When the card now up appeared: the title when the page opened, the result after a win. */
@@ -65,10 +71,9 @@ let soundSeen: string | null = null;
 let wentFull = false;
 let turns = 0;
 
-function reportRun(cause: 'finished' | 'abandoned'): void {
-  if (!runOpen) return;
-  runOpen = false;
-  lastEnding = cause === 'finished' ? 'win' : 'restart';
+/** Everything a run says about itself, as it stands. */
+function sendRun(cause: 'finished' | 'abandoned'): void {
+  reported = true;
   // Whether the sound could be heard: its state a moment into the run, not after
   // the page was hidden, which suspends it.
   const heard = soundSeen ?? audio.state;
@@ -79,12 +84,33 @@ function reportRun(cause: 'finished' | 'abandoned'): void {
     ...arrival(),
     attempt,
     pauses,
-    away,
     ...frames.report(),
     audio: heard === 'uninitialised' ? 'none' : heard,
     full: wentFull,
     turns,
   });
+}
+
+/** The run ends: at the door, or by a restart. */
+function endRun(cause: 'finished' | 'abandoned'): void {
+  // Main lagi on the result card restarts too, after a run that was won.
+  if (cause === 'finished') lastEnding = 'win';
+  else if (game.phase !== 'won') lastEnding = 'restart';
+  if (!runOpen) return;
+  runOpen = false;
+  if (!reported) sendRun(cause);
+  else if (cameBack) track('run_resumed', { cause });
+}
+
+/** The page is hidden or closed in the middle of a run. */
+function leaveRun(): void {
+  if (!runOpen) return;
+  if (!reported) sendRun('abandoned');
+  else if (cameBack) {
+    // Left again after coming back: as far as the numbers can know, that is how it ended.
+    runOpen = false;
+    track('run_resumed', { cause: 'abandoned' });
+  }
 }
 
 function start(): void {
@@ -96,10 +122,10 @@ function start(): void {
   renderer.snap(game);
   ui.hideOverlay();
   runOpen = true;
+  reported = false;
+  cameBack = false;
   attempt += 1;
   pauses = 0;
-  away = 0;
-  leftMidRun = false;
   frames.reset();
   soundSeen = null;
   wentFull = isFullscreen();
@@ -112,7 +138,7 @@ function start(): void {
 }
 
 function restart(): void {
-  reportRun('abandoned');
+  endRun('abandoned');
   game.reset();
   start();
 }
@@ -269,7 +295,7 @@ const loop = startLoop({
         ui.update(game);
         ui.showResult(game, RESULT_LOCK_MS);
         cardSince = performance.now();
-        reportRun('finished');
+        endRun('finished');
       }
     }
     renderer.handle(events);
@@ -299,25 +325,25 @@ document.addEventListener('visibilitychange', () => {
       visible: Math.round((performance.now() - shownSince) / 1000),
       part: hides,
     });
-    if (game.phase === 'playing') leftMidRun = true;
+    // This may be the last the page hears: a phone can close a hidden page without
+    // another event, so a run in progress says how far it got now.
+    if (game.phase === 'playing' || game.phase === 'paused') leaveRun();
     pause(false);
     audio.suspend();
     return;
   }
   shownSince = performance.now();
-  // Closing the page hides it too, so time away is counted only once the player is back.
-  if (leftMidRun) {
-    leftMidRun = false;
-    away += 1;
-  }
+  // Back to a run that has already been reported.
+  if (runOpen && reported) cameBack = true;
   // The pause card is up; nothing moves until the player says so.
   loop.resync();
 });
 
 window.addEventListener('pagehide', () => {
   audio.suspend();
-  // A run left behind still says how far it got.
-  if (game.phase === 'playing' || game.phase === 'paused') reportRun('abandoned');
+  // Closing a page normally hides it first, which has reported the run; this
+  // covers a browser that does not.
+  if (game.phase === 'playing' || game.phase === 'paused') leaveRun();
 });
 window.addEventListener('pageshow', () => loop.resetClock());
 

@@ -63,6 +63,13 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
+- [x] **T9 — A run left on a phone still says how far it got.** Done 2026-11-16 (#55),
+  not released yet. 44% of the runs started on v0.7.2 never reported an ending: a run
+  reported only when its page was closed, and a phone may close a hidden page without
+  another word. A run now reports when its page is first hidden mid-run; if the player
+  comes back, a `run_resumed` says only how it then ended, so nothing is counted twice.
+  The panel shows how many came back and finished. Collects from the release that ships
+  it.
 - [x] **v0.7.2** — released and deployed 2026-11-14 (release run 43595575407, deploy run
   43595726235): live as `0.7.2+74b439d`, `/api/health` 404, `/panel/` 401; the collector
   answers `"geo": true` on the server. Nothing changed for players; the telemetry became

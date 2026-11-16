@@ -9,6 +9,7 @@ export const EVENT_TYPES = new Set([
   'visit',
   'run_started',
   'run_ended',
+  'run_resumed',
   'shared',
   'share_missed',
   'hidden',
@@ -269,6 +270,12 @@ export function normaliseEvent(input, agent = {}, where = null) {
     event.wait = clampInt(input.wait, 0, 86_400);
   }
 
+  if (input.type === 'run_resumed') {
+    // How a run ended that the player came back to: the run itself was
+    // reported when its page was hidden, so this says nothing more.
+    event.cause = CAUSES.has(input.cause) ? input.cause : null;
+  }
+
   if (input.type === 'hidden') {
     event.screen = oneOf(SCREENS, input.screen);
     event.visible = clampInt(input.visible, 0, 86_400);
@@ -337,7 +344,7 @@ function readFloor() {
 }
 
 /** Bumped when the shape of the statistics changes, so a reader knows what it is holding. */
-const STATS_FORMAT = 7;
+const STATS_FORMAT = 8;
 
 /**
  * What every part of the statistics means, sent with them. The answer is read
@@ -350,10 +357,10 @@ const ABOUT = {
   units:
     'Durations are seconds. Heights are metres above the lobby floor (12 game pixels to the metre); the door of the first floor is at about 42 m. Money is rupiah: 500000 per envelope. Medians are null when there are no rows to take them from.',
   totals:
-    'visits: page loads. runs: presses of Mulai or Main lagi, so one visit can start several. ended: runs that reported an ending. finished: runs that reached the door. shared: uses of Bagikan hasil. errors: JavaScript errors from the game in players\u2019 browsers.',
+    'visits: page loads. runs: presses of Mulai or Main lagi, so one visit can start several. ended: runs that reported an ending, once each: at the door, on a restart, or when the page was hidden mid-run, whichever came first, since a phone may close a hidden page without another word. finished: runs that reached the door. shared: uses of Bagikan hasil. errors: JavaScript errors from the game in players\u2019 browsers.',
   daily: 'The same counts per UTC day. Days without events are absent, not zero.',
   causes:
-    'How runs ended. finished: reached the door. abandoned: the page was closed, or the run restarted, before the door. auditor, band, fall: endings of the one-tap game before v0.5.0, kept until they age out.',
+    'How runs ended. finished: reached the door. abandoned: the page was hidden or closed, or the run restarted, before the door. auditor, band, fall: endings of the one-tap game before v0.5.0, kept until they age out.',
   finished:
     'Runs that reached the door: how many, and the median duration, money, envelopes (weight) and times caught (deaths).',
   abandoned: 'Runs left before the door: how many, and the median duration, highest point reached and times caught.',
@@ -390,7 +397,7 @@ const ABOUT = {
   dwell:
     'Per ledge (index in `ledges`): runs that stood on it for a second or more, the median seconds those runs stood there, and the total. Long waits mark a ledge where players hesitate or wait for a hazard.',
   breaks:
-    'Of `runs`: paused, the runs the player paused at least once; away, the runs whose page was left mid-run (another app, a notification) and come back to.',
+    'Of `runs`: paused, the runs the player paused at least once; away, the runs whose page was left mid-run (another app, a notification) and come back to; finishedAfter, those of them that then reached the door. A run is counted when its page is first hidden, as abandoned, so these finishes are not in `finished`: they are run_resumed events, which say only how such a run ended.',
   attempts:
     'By which run of the visit it was, counted in the page: the first, the second, up to five and more together (`to` null). started counts run_started, ended and finished count run_ended. Once every visit comes from a build that counts attempts, visits minus first runs started is the visits that never started a run.',
   returning:
@@ -436,7 +443,7 @@ const ABOUT = {
     'Of `runs`: fullscreen, runs played at least partly in full screen; turned, runs in which the phone was turned on its side or back.',
   languages: 'Visits by the browser\u2019s language (its first part: id, en, ms...).',
   missing:
-    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on. Rows stored before the collector read the User-Agent have no browser, system, form or model, and visits from builds before the page said them have no width, installed, zone or finishedBefore. Rows stored before addresses were looked up, or while the GeoIP database was missing, have no country, region or city. Visits and runs from builds before the page said where it came from have no referrer, source or campaign, and those builds sent no hidden or share_missed events. Visits and runs from builds before the speed and the sound were measured have no ready, net, saveData, lang, fps, slow, audio, full or turns, and their errors no screen.',
+    'Rows recorded before v0.7.0 have no deaths, checkpoint, hazards, title, muted, device, layout or via; rows from builds before the details of play were sent (route, spots, carrying, lastCatch, envelopes, moves, dwell, breaks, attempts, returning) have none of those. They count in the totals and are left out of those breakdowns, whose own counts say how many rows they rest on. Rows stored before the collector read the User-Agent have no browser, system, form or model, and visits from builds before the page said them have no width, installed, zone or finishedBefore. Rows stored before addresses were looked up, or while the GeoIP database was missing, have no country, region or city. Visits and runs from builds before the page said where it came from have no referrer, source or campaign, and those builds sent no hidden or share_missed events. Visits and runs from builds before the speed and the sound were measured have no ready, net, saveData, lang, fps, slow, audio, full or turns, and their errors no screen. Builds before a run was reported when its page was hidden sent `away` with the run and no run_resumed events, and many of their runs left on a phone never reported an ending at all.',
 };
 
 /** How far up abandoned runs got is reported in bands this many metres tall; the last band is open-ended. */
@@ -478,9 +485,11 @@ const placed = (row) => {
 /**
  * How runs were played, from the details a run reports about itself
  * (src/core/report.ts). Only rows that carry them count, which `jumps` marks:
- * every run that sends the details sends it. `starts` are run_started rows.
+ * every run that sends the details sends it. `starts` are run_started rows,
+ * `resumed` the run_resumed rows: runs the player came back to after their
+ * page was hidden, which were counted then.
  */
-function playStats(rows, starts) {
+function playStats(rows, starts, resumed) {
   const runs = rows
     .filter((r) => r.jumps != null)
     .map((r) => ({
@@ -627,7 +636,10 @@ function playStats(rows, starts) {
     breaks: {
       runs: runs.length,
       paused: runs.filter((r) => r.pauses > 0).length,
-      away: runs.filter((r) => r.away > 0).length,
+      // Older builds said it with the run; newer ones report the run when its
+      // page is hidden, and the coming back afterwards.
+      away: runs.filter((r) => r.away > 0).length + resumed.length,
+      finishedAfter: resumed.filter((r) => r.cause === 'finished').length,
     },
     attempts,
     returning: {
@@ -750,6 +762,9 @@ export function openStore(path) {
         .prepare(
           `SELECT attempt FROM events WHERE type = 'run_started' AND day >= ? AND attempt IS NOT NULL LIMIT 50000`,
         )
+        .all(since);
+      const resumed = db
+        .prepare(`SELECT cause FROM events WHERE type = 'run_resumed' AND day >= ? LIMIT 50000`)
         .all(since);
 
       // A run that reached the door and a run the player walked away from
@@ -1084,7 +1099,7 @@ export function openStore(path) {
         sound: { runs: heard.length, muted: heard.filter((r) => r.muted === 1).length },
         errors: placedErrors,
         revs,
-        ...playStats(runs, starts),
+        ...playStats(runs, starts, resumed),
         floor,
         browsers,
         systems: visitsBy('os', 20),
