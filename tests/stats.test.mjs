@@ -434,7 +434,7 @@ test('the statistics say how runs were played', () => {
     { ledge: 0, runs: 1, total: 10, seconds: 10 },
     { ledge: 11, runs: 2, total: 12, seconds: 6 },
   ]);
-  assert.deepEqual(stats.breaks, { runs: 4, paused: 1, away: 1 });
+  assert.deepEqual(stats.breaks, { runs: 4, paused: 1, away: 1, finishedAfter: 0 });
 
   assert.deepEqual(stats.attempts, [
     { from: 1, to: 1, started: 3, ended: 2, finished: 1 },
@@ -448,6 +448,32 @@ test('the statistics say how runs were played', () => {
     new: { runs: 3, finished: 1, records: 1 },
     returning: { runs: 1, finished: 1, records: 0 },
   });
+  store.close();
+});
+
+test('a run the player came back to is counted once, and how it then ended apart', () => {
+  // What comes back says how the run ended and nothing else.
+  const resumed = normaliseEvent({ type: 'run_resumed', cause: 'finished', duration: 99, jumps: 5, away: 1 });
+  assert.equal(resumed.cause, 'finished');
+  assert.deepEqual([resumed.duration, resumed.jumps, resumed.away], [null, null, null]);
+  assert.equal(normaliseEvent({ type: 'run_resumed', cause: 'menang' }).cause, null);
+
+  const store = openStore(':memory:');
+  const now = Date.now();
+  const add = (event) => store.insert(normaliseEvent(event), now);
+  // Three runs whose page was hidden mid-run, reported then as abandoned.
+  const left = { type: 'run_ended', cause: 'abandoned', duration: 40, deaths: 1, jumps: 10, dashes: 0, pauses: 0 };
+  for (let i = 0; i < 3; i++) add(left);
+  // Two players came back: one went on to the door, one left again.
+  add({ type: 'run_resumed', cause: 'finished' });
+  add({ type: 'run_resumed', cause: 'abandoned' });
+
+  const stats = store.stats(30);
+  assert.equal(stats.totals.ended, 3);
+  assert.equal(stats.totals.finished, 0);
+  assert.deepEqual(plain(stats.causes), [{ cause: 'abandoned', n: 3 }]);
+  assert.equal(stats.abandoned.n, 3);
+  assert.deepEqual(stats.breaks, { runs: 3, paused: 0, away: 2, finishedAfter: 1 });
   store.close();
 });
 
@@ -566,7 +592,7 @@ test('the statistics say what catches players, where they leave, and on what', (
 
   const stats = store.stats(7);
 
-  assert.equal(stats.format, 7);
+  assert.equal(stats.format, 8);
   assert.equal(stats.finished.deaths, 2);
   assert.equal(stats.abandoned.deaths, 3);
 
@@ -639,7 +665,7 @@ test('an empty store still answers with every field', () => {
   assert.deepEqual(stats.lastCatch, { left: 0, uncaught: 0, soon: 15, hazards: [] });
   assert.deepEqual(stats.envelopes, { runs: 0, finished: 0, lost: 0, lostRuns: 0, list: [] });
   assert.deepEqual(stats.moves, { runs: 0, dashed: 0, jumps: null, dashes: null });
-  assert.deepEqual(stats.breaks, { runs: 0, paused: 0, away: 0 });
+  assert.deepEqual(stats.breaks, { runs: 0, paused: 0, away: 0, finishedAfter: 0 });
   assert.equal(stats.attempts.length, 5);
   assert.ok(stats.attempts.every((row) => row.started === 0 && row.ended === 0));
   assert.deepEqual(stats.returning, {

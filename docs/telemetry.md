@@ -33,7 +33,8 @@ Every event carries `type` and `rev`, the build label (`0.7.0+abc1234`).
 | --- | --- | --- |
 | `visit` | The page loads | `device`, `layout`, `width`, `installed`, `zone`, `finishedBefore`, `model`, `from`, `source`, `campaign`, `ready`, `net`, `saveData`, `lang` |
 | `run_started` | Mulai or Main lagi is pressed | `device`, `layout`, `attempt`, `after`, `wait`, `from`, `source`, `campaign` |
-| `run_ended` | A run reaches the door, or is closed or restarted before it | all of the run fields below, and `from`, `source`, `campaign` |
+| `run_ended` | A run reaches the door or is restarted, or its page is hidden mid-run, whichever comes first: once per run. A phone may close a hidden page without another word, so a run reports how far it got as the page goes | all of the run fields below, and `from`, `source`, `campaign` |
+| `run_resumed` | A run already reported when its page was hidden, which the player came back to, reaches the door, is restarted, or is left again: at most once per run | `cause` |
 | `shared` | Bagikan hasil is used and something came of it | `via` |
 | `share_missed` | Bagikan hasil is used and nothing came of it | `via`: `cancelled` (the sheet was closed) or `failed` |
 | `hidden` | The page is hidden: closed, or left for another app | `screen`, `visible`, `part` |
@@ -50,7 +51,7 @@ before this rule.
 
 | Field | Meaning | Range |
 | --- | --- | --- |
-| `cause` | `finished`: reached the door. `abandoned`: the page was closed, or the run restarted, first | |
+| `cause` | `finished`: reached the door. `abandoned`: the page was hidden or closed, or the run restarted, first | |
 | `duration` | Seconds on the run's clock | 0 to 3600 |
 | `height` | Highest point reached, in metres above the lobby floor. 12 game pixels to the metre; the first floor's door is at about 42 m | |
 | `weight` | Envelopes carried at the end | |
@@ -71,7 +72,7 @@ before this rule.
 | `jumps`, `dashes` | Jumps and dashes (ngeles) made | |
 | `dwell` | Whole seconds stood on each ledge, by ledge index, for the ledges stood on for a second or more: `{"0": 9, "11": 4}` | at most 64 keys |
 | `pauses` | Times the player paused (the button, Esc or P) | |
-| `away` | Times the page was left mid-run (another app, a notification) and come back to. Closing the page is not counted | |
+| `away` | Times the page was left mid-run (another app, a notification) and come back to. Only from builds before a run was reported when its page was hidden; a newer run's coming back is a `run_resumed` | |
 | `finishedBefore` | Whether the floor had been finished on this device before the run began, read from the record the game keeps there for its own result screen | |
 | `record` | On a finish that beat the player's own record: `time`, `money` or `both` | |
 | `fps` | Frames drawn per second of play | 1 to 500 |
@@ -163,7 +164,7 @@ shape changes. A test fails if a key is added without a note.
 | `envelopes` | How often each envelope is picked up, and carried out by those who finish; how many go back after a catch |
 | `moves` | Jumps and dashes per run, and how many runs ever dash: whether players find ngeles |
 | `dwell` | How long players stand on each ledge: where they hesitate or wait |
-| `breaks` | How many runs are paused, and how many are interrupted by another app |
+| `breaks` | How many runs are paused, how many are interrupted by another app, and how many of those were come back to and finished |
 | `attempts` | Runs started, ended and finished by which run of the visit it was: how many tries the floor takes |
 | `returning` | Runs and finishes of players who had finished before on that device, and of those who had not |
 | `browsers`, `systems`, `forms`, `models` | What players come in, and whether one of them finishes less: an in-app browser, an old version, a phone |
@@ -185,6 +186,12 @@ Things to keep in mind when drawing conclusions:
   ends the run before it as `abandoned`.
 - **`abandoned` is not failure alone.** It is every run that did not reach the door,
   including one closed after ten seconds of looking around. Read it with `duration`.
+- **A run is counted when its page is first hidden.** A phone may close a hidden page
+  without another word, and before runs were reported then, many runs left on a phone
+  never reported an ending at all. So a player who answers a message mid-run counts as
+  having left at that moment; `breaks.away` says how many came back, and
+  `breaks.finishedAfter` how many of those went on to the door. Those finishes are not in
+  `finished`.
 - **Medians, not means.** One run left open for an hour would drag a mean; `null` means
   there were no rows.
 - **A hazard with many catches in few runs** is one that a few players throw themselves
