@@ -37,7 +37,9 @@ export const KELURAHAN: FloorDef = {
     /* 10 */ { x: 286, y: 254, w: 84, skin: 'meja' },
     /* 11 */ { x: 204, y: 284, w: 56, skin: 'lemari' },
     // The stamp, a gap that needs a dash, and an auditor in the way.
-    /* 12 */ { x: 96, y: 312, w: 84, skin: 'meja' },
+    // The desk reaches to the machine's cabinet, so a jump from the machine
+    // that falls short lands on it rather than below the tape.
+    /* 12 */ { x: 96, y: 312, w: 104, skin: 'meja' },
     /* 13 */ { x: 24, y: 340, w: 62, skin: 'rak' },
     // Clear of the stamp below: its knob rises past this shelf.
     /* 14 */ { x: 150, y: 366, w: 40, skin: 'rak' },
@@ -49,12 +51,15 @@ export const KELURAHAN: FloorDef = {
     /* 19 */ { x: 96, y: 478, w: 76, skin: 'meja' },
     /* 20 */ { x: 204, y: 506, w: 180, skin: 'balkon' },
   ],
+  // A running jump onto a hazard's desk lands out of its reach: the first
+  // auditor turns short of where the jump from the fiktif ledge comes down,
+  // and the first stamp hangs short of where the jump from the machine does.
   auditors: [
-    { ledge: 10, from: 312, to: 362, speed: 26 },
+    { ledge: 10, from: 326, to: 362, speed: 26 },
     { ledge: 17, from: 106, to: 172, speed: 32 },
   ],
   stamps: [
-    { ledge: 12, x: 138, period: 2.8, offset: 0 },
+    { ledge: 12, x: 130, period: 2.8, offset: 0 },
     { ledge: 19, x: 134, period: 2.4, offset: 0.9 },
   ],
   amplop: [

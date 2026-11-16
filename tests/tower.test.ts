@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { PARAMS, WORLD_WIDTH } from '../src/core/params.ts';
-import { auditorAt, FLOORS, KELURAHAN, ledgeX, STAMP, stampAt, stampBites } from '../src/core/tower.ts';
+import { PARAMS, PLAYER, WORLD_WIDTH } from '../src/core/params.ts';
+import { AUDITOR, auditorAt, FLOORS, KELURAHAN, ledgeX, STAMP, stampAt, stampBites } from '../src/core/tower.ts';
 import { Game } from '../src/core/game.ts';
-import { canReach, climbTo, run } from './helpers.ts';
+import { canReach, climbTo, quietGame, run, STEP } from './helpers.ts';
 
 /** The way up, ledge by ledge. */
 const ROUTE = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20];
@@ -88,6 +88,74 @@ test('no ledge on the route can be skipped', () => {
 test('the gap after the first stamp needs a dash', () => {
   assert.ok(!canReach(KELURAHAN, 13, 14, 0, { dash: false }));
   assert.ok(canReach(KELURAHAN, 13, 14, FULL));
+});
+
+/**
+ * The jump most players make from ledge `from`: run to its end on the `dir`
+ * side, jump there holding the button for `hold` seconds, and keep steering.
+ * Returns where the player lands.
+ */
+function runningJump(from: number, dir: -1 | 1, hold: number, weight: number): { ledge: number; x: number } {
+  const ledge = KELURAHAN.ledges[from];
+  assert.ok(ledge);
+  const game = quietGame(KELURAHAN);
+  game.weight = weight;
+  game.placeOn(from, ledge.x + ledge.w / 2);
+  const edge = dir < 0 ? ledge.x + 2 : ledge.x + ledge.w - 2;
+  let jumpedAt = -1;
+  let airborne = false;
+  for (let i = 0; i < 600; i++) {
+    const t = i * STEP;
+    if (jumpedAt < 0 && (dir < 0 ? game.player.x <= edge : game.player.x >= edge)) jumpedAt = t;
+    game.step(STEP, { move: dir, jump: jumpedAt >= 0 && t - jumpedAt < hold, dash: false });
+    if (game.player.ground < 0) airborne = true;
+    else if (airborne) break;
+  }
+  return { ledge: game.player.ground, x: game.player.x };
+}
+
+test('a running jump onto the first auditor or the first stamp lands out of reach', () => {
+  // The first numbers (2026-11-16) found both catching players where the jump
+  // towards them comes down. By the fiktif ledge a player can carry three
+  // envelopes, by the first machine four.
+  const auditor = KELURAHAN.auditors.find((a) => a.ledge === 10);
+  const stamp = KELURAHAN.stamps.find((s) => s.ledge === 12);
+  assert.ok(auditor && stamp);
+  for (const hold of [1, 0.25, 0.12]) {
+    for (const weight of [0, 3]) {
+      const desk = runningJump(9, 1, hold, weight);
+      assert.equal(desk.ledge, 10, `the jump to the auditor's desk, held ${hold} s with ${weight} envelopes`);
+      const reach = auditor.from - AUDITOR.half - PLAYER.half;
+      assert.ok(desk.x <= reach, `it lands at ${desk.x.toFixed(0)}, in the auditor's reach from ${reach}`);
+    }
+    for (const weight of [0, 4]) {
+      const under = runningJump(11, -1, hold, weight);
+      assert.equal(under.ledge, 12, `the jump to the stamp's desk, held ${hold} s with ${weight} envelopes`);
+      const reach = stamp.x + STAMP.w / 2 + PLAYER.half - 1;
+      assert.ok(under.x >= reach, `it lands at ${under.x.toFixed(0)}, under the stamp, which reaches ${reach}`);
+    }
+  }
+});
+
+test('a jump from the first machine towards the stamp lands on its desk', () => {
+  // An OTT puts the player back at the machine. A jump straight from there
+  // used to fall short of the desk and through the tape, back to the machine.
+  const machine = KELURAHAN.checkpoints[1];
+  assert.ok(machine && machine.ledge === 11);
+  for (const hold of [1, 0.25]) {
+    for (const weight of [0, 4]) {
+      const game = quietGame(KELURAHAN);
+      game.weight = weight;
+      game.placeOn(machine.ledge, machine.x);
+      let airborne = false;
+      for (let i = 0; i < 600; i++) {
+        game.step(STEP, { move: -1, jump: i * STEP < hold, dash: false });
+        if (game.player.ground < 0) airborne = true;
+        else if (airborne) break;
+      }
+      assert.equal(game.player.ground, 12, `held ${hold} s with ${weight} envelopes`);
+    }
+  }
 });
 
 test('every envelope can be touched from a ledge', () => {

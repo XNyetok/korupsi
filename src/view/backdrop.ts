@@ -239,6 +239,8 @@ function paintWall(floor: FloorDef): HTMLCanvasElement {
     textCentred(ctx, 'PENGUMUMAN', 269, row(b + 110), C.paperDark);
     poster(ctx, 232, row(b + 132), ['JAM ISTIRAHAT', '10.00 - 14.00'], C.paper, C.ink);
     calendar(ctx, 62, row(b + 122));
+    // Over the gap that needs a dash: the ready card says how, but it is soon gone.
+    poster(ctx, 66, row(b + 100), ['LOMPAT', 'LALU', 'NGELES >'], C.paper, C.ink);
   }
 
   // ----- storey 3: the lurah's floor -----
