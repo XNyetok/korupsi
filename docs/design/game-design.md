@@ -1,6 +1,6 @@
 # Korupsi — game design
 
-**Status:** the first floor is playable, live as v0.7.2, and has been played by a
+**Status:** the first floor is playable, live as v0.8.0, and has been played by a
 person. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts), the
 tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). Tests and a scripted climb
 prove the floor is possible. Three hands-on sessions on a phone shaped how the game sits
@@ -8,8 +8,9 @@ on a screen, how it sounds and how a result is shared; none has yet asked for a 
 the jump or the hazards. From v0.7.0 the game reports which hazard catches players and
 where they leave, and from v0.7.2 how each run is played: how long each stretch takes,
 where a player is caught and with what in the bag, how often they jump and dash
-([`../telemetry.md`](../telemetry.md)). The floor can be tuned from numbers as well as
-from sessions: see the playtest log.
+([`../telemetry.md`](../telemetry.md)). The first reading of those numbers eased three
+spots near the first machine in v0.8.0; the floor is tuned from numbers as well as from
+sessions: see the playtest log.
 
 ## One line
 
