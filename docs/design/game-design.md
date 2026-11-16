@@ -1,13 +1,15 @@
 # Korupsi — game design
 
-**Status:** the first floor is playable, live as v0.7.0, and has been played by a
+**Status:** the first floor is playable, live as v0.7.2, and has been played by a
 person. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts), the
 tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). Tests and a scripted climb
 prove the floor is possible. Three hands-on sessions on a phone shaped how the game sits
 on a screen, how it sounds and how a result is shared; none has yet asked for a change to
 the jump or the hazards. From v0.7.0 the game reports which hazard catches players and
-where they leave ([`../telemetry.md`](../telemetry.md)), so the floor can be tuned from
-numbers as well as from sessions: see the playtest log.
+where they leave, and from v0.7.2 how each run is played: how long each stretch takes,
+where a player is caught and with what in the bag, how often they jump and dash
+([`../telemetry.md`](../telemetry.md)). The floor can be tuned from numbers as well as
+from sessions: see the playtest log.
 
 ## One line
 
@@ -186,7 +188,7 @@ early waits for the landing.
 | 2026-11-10 | A dash passes through an auditor | Ngeles is the verb. It also gives the dash a use before the gap that requires it |
 | 2026-11-10 | Falling below the last checkpoint is an OTT | Otherwise a fall costs more than a death: the climb back takes longer than the respawn. The tape makes the rule visible |
 | 2026-11-10 | A pause no longer ends the run after a minute | That rule protected a score that could be farmed by waiting. The score is a clock now, and a paused clock is stopped |
-| 2026-11-10 | The size budget is 30 KB (was 18 KB) | The art is code. The build is about 22 KB gzipped |
+| 2026-11-10 | The size budget went from 18 KB to 30 KB | The art is code. The build was about 22 KB gzipped |
 | 2026-11-10 | A press shorter than a simulation step is kept until it is read | A quick tap on a touch button could begin and end between two steps and never jump |
 | 2026-11-11 | On a touch screen the game fills the screen; the box with bars is for a mouse and keyboard only | The maintainer's note from the first session on a phone. A box wasted a third of an upright phone and put the controls on bare background. Filling the screen means an upright phone cannot show the tower's full width at a readable size, so the camera follows sideways there; the slice is never narrower than 216 pixels, which keeps the next ledge in view |
 | 2026-11-11 | A cellar is drawn under the lobby | The touch controls cover the bottom of the picture. Without something below the ground floor they would cover the first ledge of the climb |
@@ -195,7 +197,6 @@ early waits for the landing.
 | 2026-11-11 | The sound and pause buttons sit above the cards | They were under the title, pause and result cards, so the sound could not be switched off there. Found by a browser test |
 | 2026-11-11 | A run reports what caught the player, by hazard and ledge | The panel could say that people left, not why. A floor is tuned hazard by hazard, so the report names each one the way the tower does (`stempel:12`), and says the last checkpoint reached. With that, "ledge 12's stamp catches half of everyone" is a number rather than a feeling |
 | 2026-11-11 | The statistics explain themselves, and can be saved as one file | They are read by people through the panel and, more and more, by an agent deciding what to build. Field names say what they hold, every key has a note in `about`, the shape has a format number, and a test fails when a key is added without a note. `docs/telemetry.md` is the long form |
-| 2026-11-11 | Touch or keyboard is reported; nothing finer | Whether a phone makes the floor harder is a question the game has to answer. A device model, a screen size or a browser would answer no question worth the fingerprint |
 | 2026-11-11 | The credit sits beside the version, and under the result | "Dibuat oleh nyetok.id" belongs where a player looks for who made a thing: the foot of the first card, and the foot of the last. It is small, it is a link that opens in a new tab so a run is never lost to it, and it is not on the shared picture: that sheet is about the player |
 | 2026-11-11 | The panel measures finished runs and abandoned runs apart | A run that reached the door and a run the player walked away from answer different questions: how long the floor takes, and where people give up. Averaged together, the time to finish was dragged down by people who left in ten seconds. The panel also says in words what each figure counts, because a number nobody can interpret is not a statistic |
 | 2026-11-11 | The panel's daily chart has three lines on one axis, a legend, end labels and a table | All three are counts per day, so one axis is honest. The colours are three fixed slots checked for colour-blind separation; the green sits under 3:1 against a light surface, which is why the lines are also named at their ends and every figure is in the table |
@@ -207,6 +208,8 @@ early waits for the landing.
 | 2026-11-11 | The result is shared as a picture, 1080 x 1920 | The maintainer's note: a picture goes into a story or a chat, a line of text does not, and every share is the game's advertising. The card is painted by the game itself, so it needs no image file, and what matters sits clear of the top and bottom that story apps cover. A phone gets its share sheet; anything else gets the file, because a desktop share sheet is rarely where a picture is wanted |
 | 2026-11-11 | A full-screen button only where the browser has full screen; an iPhone uses the home screen | Safari on an iPhone has no full-screen API. The page declares itself a home-screen app, which is the one way to lose the browser's bars there. No manifest and no service worker: nothing is cached |
 | 2026-11-11 | Touches on the game are cancelled, and the page has `touch-action: none` | Safari on iOS ignores `user-scalable=no` and zooms on a double tap, which is exactly what tapping jump twice is. Real buttons and the cards keep their touches, or they would never be clicked or scrolled |
+| 2026-11-14 | The browser, the device and the town are reported (was touch or keyboard, nothing finer) | The maintainer asked for much richer telemetry, still without any identifier. Touch or keyboard could not show a problem that only one browser or phone has, how many players open the game inside Instagram or TikTok, or which parts of Indonesia it reaches. The header and the address are cut down before anything is kept: the User-Agent to a browser and its version, a system, a kind of device and a phone model; the address, looked up once, to a country, a province and a town. Neither is stored, and Do Not Track and Global Privacy Control switch it all off |
+| 2026-11-14 | The size budget is 32 KB, 28 KB of it JavaScript (was 30 KB) | The richer telemetry of v0.7.2 is about 1.5 KB of code that every visit carries. The build is about 30 KB gzipped |
 
 ## What the tests check
 
@@ -243,6 +246,7 @@ in CI. Whether the tune is any good is for ears.
 | 2026-11-11 | v0.6.1 | The share fix, by tests and by a headless browser on the live site with a stand-in share sheet. Not on a real phone | The sheet is handed the picture alone, and a sheet that refuses it leads to the picture on screen. Whether the iPhone's sheet now lists a story is the maintainer's to see; that the caption was the cause is an inference from the symptom, not something measured |
 | 2026-11-11 | v0.6.1 | The maintainer, in Safari on an iPhone | Instagram is in the share sheet now. There is no direct "story" entry: that choice is made inside the app, and a web page cannot reach past the sheet. The picture itself should be something people want to post, which became the decree in v0.7.0 |
 | 2026-11-11 | v0.7.0 | The decree, the panel and the new telemetry, by tests, by a local collector on seeded data, and by a headless browser on the live site. Not by a player, and the panel not against live data | The maintainer saw samples of the decree and approved it. The thresholds of the ten titles are guesses, and the panel's new breakdowns are empty until runs from this release arrive: both are for the next reading of the numbers |
+| 2026-11-14 | v0.7.0 | The panel, against live data | The one error it listed, "Script error." five times, was not the game's: it came from scripts that extensions and in-app browsers add to the page, and from v0.7.1 only the game's own errors are reported. The maintainer asked the same day for much richer telemetry, still without any identifier, and v0.7.2 carries it. Tuning the floor waits for a few days of play |
 
 ## Tuning
 

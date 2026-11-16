@@ -52,7 +52,7 @@ page to the home screen and open it from there.
 
 | | |
 | --- | --- |
-| Build size | about 28 KB gzipped, no runtime dependencies; CI enforces a 30 KB budget |
+| Build size | about 30 KB gzipped, no runtime dependencies; CI enforces a 32 KB budget |
 | Stack | TypeScript and Canvas 2D, bundled by Vite |
 | Art | pixel art drawn in code, a tower 384 pixels wide, scaled up without smoothing; no image files |
 | Audio | a tune and effects synthesised with WebAudio; no audio files |
