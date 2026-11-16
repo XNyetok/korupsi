@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-14 · Last tagged release: `v0.7.2`. What is live is the latest
+Last updated: 2026-11-16 · Last tagged release: `v0.7.2`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -32,17 +32,16 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P2 — Play the Kelurahan and tune it.** Waiting on the maintainer, and now on the
-  numbers too. Three sessions on an iPhone so far, all about how the game sits on a phone
-  and how a result is shared, none about the jump or the hazards; what came of them is in
-  Done under v0.6.0, v0.6.1 and v0.7.0. Confirmed on the phone: no double-tap zoom, the
-  tune and the effects are good, the share sheet lists Instagram (the story is chosen
-  inside that app; a web page cannot open it directly). Still untried: sharing in Chrome
-  on Android. The panel was read against live data on 2026-11-14; the one error it
-  listed was not the game's (fixed in v0.7.1). From v0.7.0 the panel says which hazard
-  catches people and where they leave: read it after a few days of play (the JSON export
-  is the form to give an agent, `docs/telemetry.md` says how to read it), then tune the
-  floor. The open questions are in `docs/design/game-design.md`. P3 waits for this.
+- [~] **P2 — Play the Kelurahan and tune it.** Three sessions on an iPhone so far, all
+  about how the game sits on a phone and how a result is shared, none about the jump or
+  the hazards; what came of them is in Done under v0.6.0, v0.6.1 and v0.7.0. Still
+  untried: sharing in Chrome on Android. The numbers were read on 2026-11-16 (playtest log
+  in `docs/design/game-design.md`): the floor is too hard, and most catches were at three
+  spots near the first machine, each where the jump most players make comes down. Tuned
+  for them in #54, with a notice at the dash gap; not released yet. Next: release it,
+  then read the numbers again over the days since (the JSON export is the form to give an
+  agent, `docs/telemetry.md` says how to read it), and settle the open questions in
+  `docs/design/game-design.md`. P3 waits for this.
 - [ ] **T8 — Renew the GeoIP file every month**, next in early December 2026: DB-IP
   publishes a new one monthly (`docs/deploy.md`, The GeoIP file). An old file keeps
   working, only less accurately. Waiting on the maintainer, or on an agent asked to.

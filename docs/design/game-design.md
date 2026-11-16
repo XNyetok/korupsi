@@ -56,8 +56,9 @@ The Kelurahan has three stretches, each ending at a clock-in machine or the door
 - **The lobby.** Nothing here ends a life. Fixed ledges, then a filing cart on a rail.
 - **Fiktif and the first auditor.** Two ledges that give way, then a desk an auditor
   walks. The player only has to touch its near end; the envelope is at the far end.
-- **Stamp, gap, auditor, stamp.** A desk under a stamp, a gap that needs a dash, a cart,
-  a desk where the auditor is in the way, and a last stamp with an envelope under it.
+- **Stamp, gap, auditor, stamp.** A desk under a stamp, a gap that needs a dash (a
+  notice on the wall says how), a cart, a desk where the auditor is in the way, and a last
+  stamp with an envelope under it.
 
 ## Sessions
 
@@ -210,6 +211,8 @@ early waits for the landing.
 | 2026-11-11 | Touches on the game are cancelled, and the page has `touch-action: none` | Safari on iOS ignores `user-scalable=no` and zooms on a double tap, which is exactly what tapping jump twice is. Real buttons and the cards keep their touches, or they would never be clicked or scrolled |
 | 2026-11-14 | The browser, the device and the town are reported (was touch or keyboard, nothing finer) | The maintainer asked for much richer telemetry, still without any identifier. Touch or keyboard could not show a problem that only one browser or phone has, how many players open the game inside Instagram or TikTok, or which parts of Indonesia it reaches. The header and the address are cut down before anything is kept: the User-Agent to a browser and its version, a system, a kind of device and a phone model; the address, looked up once, to a country, a province and a town. Neither is stored, and Do Not Track and Global Privacy Control switch it all off |
 | 2026-11-14 | The size budget is 32 KB, 28 KB of it JavaScript (was 30 KB) | The richer telemetry of v0.7.2 is about 1.5 KB of code that every visit carries. The build is about 30 KB gzipped |
+| 2026-11-16 | The jump most players make lands clear of the first auditor and the first stamp, and a jump from the first machine lands on the stamp's desk | The first reading of the numbers. The first auditor caught players in more runs than any other hazard: the jump from the fiktif ledge before it, which gives way too soon to wait on, came down inside its beat. The first stamp caught most often where the jump from the machine lands. And a standing jump from the machine, where an OTT puts the player back, fell just short of the desk and through the tape, back to the machine. The auditor's beat now starts 14 px further along, the stamp hangs 8 px nearer the wall, and the desk is 20 px longer, up to the machine's cabinet |
+| 2026-11-16 | A notice over the dash gap says how to cross it | Forty runs reached the ledge before the gap and about eighteen got across, though the timing forgives: a dash from about 0.2 to 0.45 s into the jump crosses it, even with a full bag. The ready card says how, but it is up for 9 s. "LOMPAT LALU NGELES" is on the wall, where the game keeps its words |
 
 ## What the tests check
 
@@ -221,11 +224,14 @@ early waits for the landing.
 - no ledge on the route can be reached from two ledges below it;
 - the gap after the first stamp cannot be crossed without a dash, and can with one at
   full weight;
+- a running jump onto the first auditor's or the first stamp's desk lands out of its
+  reach, and a jump from the first machine lands on the stamp's desk;
 - a scripted careful player, with every hazard on, reaches the door without an OTT.
 
 That last one is a bot that waits for a safe moment and tries a grid of timings. It says
-the floor is possible and that no landing spot is a trap. It says nothing about whether
-the floor is fun.
+the floor is possible for a patient player, not that the jump most players make is safe:
+the first numbers showed the difference, and the running-jump test checks it now. It
+says nothing about whether the floor is fun.
 
 The sound is checked in two ways, and neither is listening. `tests/music.test.ts` reads
 the score: every note is in the scale, each voice plays one note at a time, the loop is
@@ -247,6 +253,7 @@ in CI. Whether the tune is any good is for ears.
 | 2026-11-11 | v0.6.1 | The maintainer, in Safari on an iPhone | Instagram is in the share sheet now. There is no direct "story" entry: that choice is made inside the app, and a web page cannot reach past the sheet. The picture itself should be something people want to post, which became the decree in v0.7.0 |
 | 2026-11-11 | v0.7.0 | The decree, the panel and the new telemetry, by tests, by a local collector on seeded data, and by a headless browser on the live site. Not by a player, and the panel not against live data | The maintainer saw samples of the decree and approved it. The thresholds of the ten titles are guesses, and the panel's new breakdowns are empty until runs from this release arrive: both are for the next reading of the numbers |
 | 2026-11-14 | v0.7.0 | The panel, against live data | The one error it listed, "Script error." five times, was not the game's: it came from scripts that extensions and in-app browsers add to the page, and from v0.7.1 only the game's own errors are reported. The maintainer asked the same day for much richer telemetry, still without any identifier, and v0.7.2 carries it. Tuning the floor waits for a few days of play |
+| 2026-11-16 | v0.7.2 | The panel's 30-day export, read with a script: 633 visits and 540 runs, 140 of them with the detail of v0.7.2. The spots where players were caught, checked against the game's own physics | Too hard rather than too kind: 31% of those 140 runs reached the first machine and 12% the door, and every run that reached the second machine finished. Most catches were at three spots near the first machine, each where the jump most players make comes down; the floor was tuned for them (Decisions, 2026-11-16). The dash gap stopped more than half. Those who finished carried 5 envelopes of 6, so 2% each is not yet a choice. 44% of the runs started on v0.7.2 never said how they ended: a phone often closes a page without a word. Read the next numbers over the days since the tuning was released |
 
 ## Tuning
 
