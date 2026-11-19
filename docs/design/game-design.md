@@ -86,8 +86,15 @@ not a particular office's look or conduct. [Hayashida's level design interview](
 suggests teaching one idea safely before varying it. [GMTK's Tropical Freeze analysis](https://www.youtube.com/watch?v=JqHcE6B4OP4)
 shows how a workflow can tie the scenery, movement and hazards together. The rest of
 Kecamatan can use that arc if the opening works: arrive, read a signal, and carry the
-same idea into a busier room. First test on a phone with sound off: can a player tell the
-rooms apart without the floor label, board unprompted, and see where to jump off?
+same idea into a busier room.
+
+The maintainer's local playtest found the lift and the jump clear, but the space too
+abstract. The art pass keeps the same geometry and cues. Warm stone and glazed tiles
+set off the cool light through windows onto tiled rooftops. Monitors, forms, numbered
+counters and a ticket kiosk give the lobby a purpose; steel rails and a paper tray make
+the cabin look used. Only the moving deck and verification balcony get the bright rim.
+Check that the scene reads as a service hall without its floor label before carrying
+this treatment through the rest of Kecamatan.
 
 ## Sessions
 
