@@ -1,3 +1,4 @@
+import type { Climb } from '../core/climb.ts';
 import { clock, type Game, rupiah } from '../core/game.ts';
 import { gelarFor } from '../core/gelar.ts';
 import { audio } from '../platform/audio.ts';
@@ -96,14 +97,15 @@ export class Ui {
     this.overlay.querySelector<HTMLButtonElement>('button.primary')?.click();
   }
 
-  update(game: Game): void {
+  update(climb: Climb): void {
+    const { game, money, number } = climb;
     const seconds = Math.floor(game.time);
-    const key = `${game.weight}|${game.deaths}|${seconds}`;
+    const key = `${number}|${money}|${game.weight}|${game.deaths}|${seconds}`;
     if (key === this.cache) return;
     this.cache = key;
 
-    this.floor.textContent = `01 ${game.floor.name}`;
-    this.money.textContent = rupiah(game.money);
+    this.floor.textContent = `${String(number).padStart(2, '0')} ${game.floor.name}`;
+    this.money.textContent = rupiah(money);
     this.weight.textContent = `Beban ${game.weight}`;
     this.weight.hidden = game.weight === 0;
     this.weight.classList.toggle('is-heavy', game.weight >= game.floor.amplop.length - 1);

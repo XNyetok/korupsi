@@ -18,6 +18,7 @@ export const STAMP = { w: 28, h: 10, lift: 34, warn: 0.45, slam: 0.1, hold: 0.45
 export const AUDITOR = { half: 4, height: 24 } as const;
 
 export const KELURAHAN: FloorDef = {
+  id: 'kelurahan',
   name: 'Kelurahan',
   // Four storeys of 140, and a strip of the floor above so the door has headroom.
   height: 596,
@@ -78,7 +79,7 @@ export const KELURAHAN: FloorDef = {
   exit: { ledge: 20, x: 348 },
 };
 
-export const FLOORS: FloorDef[] = [KELURAHAN];
+export const FLOORS: readonly [FloorDef, ...FloorDef[]] = [KELURAHAN];
 
 /** The left edge of a ledge at world time `t`. Only a troli moves. */
 export function ledgeX(def: LedgeDef, t: number): number {

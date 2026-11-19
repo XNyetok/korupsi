@@ -90,7 +90,7 @@ export class Game {
   private readonly store: BestStore | null;
 
   constructor(options: GameOptions = {}) {
-    this.floor = options.floor ?? (FLOORS[0] as FloorDef);
+    this.floor = options.floor ?? FLOORS[0];
     this.store = options.store ?? null;
     this.best = this.store ? this.store.read() : { time: 0, money: 0 };
     this.player = this.spawnPlayer();

@@ -12,6 +12,7 @@ const hold = (input: Partial<Input>): Input => ({ ...idle, ...input });
 
 /** A floor with one of everything, small enough to reason about by hand. */
 const YARD: FloorDef = {
+  id: 'yard',
   name: 'Yard',
   height: 300,
   ledges: [

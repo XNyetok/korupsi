@@ -56,6 +56,8 @@ export interface Spot {
 }
 
 export interface FloorDef {
+  /** Stable key for records, independent of the name shown to players. */
+  id: string;
   name: string;
   height: number;
   ledges: LedgeDef[];
