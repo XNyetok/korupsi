@@ -10,12 +10,13 @@
  *   route cannot be skipped.
  */
 
-import type { AuditorDef, FloorDef, LedgeDef, StampDef } from './types.ts';
+import type { AuditorDef, FloorDef, LedgeDef, PrinterDef, StampDef } from './types.ts';
 
 /** The stamp head's size, how high it rests above its ledge, and its timing. */
 export const STAMP = { w: 28, h: 10, lift: 34, warn: 0.45, slam: 0.1, hold: 0.45, rise: 0.5 } as const;
 
 export const AUDITOR = { half: 4, height: 24 } as const;
+export const PAPER = { warn: 0.6, speed: 90, half: 6, height: 8 } as const;
 
 export const KELURAHAN: FloorDef = {
   id: 'kelurahan',
@@ -76,10 +77,75 @@ export const KELURAHAN: FloorDef = {
     { ledge: 11, x: 232 },
     { ledge: 18, x: 47 },
   ],
-  exit: { ledge: 20, x: 348 },
+  exit: { ledge: 20, x: 348, label: 'KECAMATAN' },
 };
 
-export const FLOORS: readonly [FloorDef, ...FloorDef[]] = [KELURAHAN];
+export const KECAMATAN: FloorDef = {
+  id: 'kecamatan',
+  name: 'Kecamatan',
+  height: 514,
+  ledges: [
+    /*  0 */ { x: 0, y: 0, w: 384, skin: 'lantai' },
+    // The reception desks turn back towards the legalisation counter.
+    /*  1 */ { x: 94, y: 28, w: 60, skin: 'meja' },
+    /*  2 */ { x: 176, y: 56, w: 54, skin: 'lemari' },
+    /*  3 */ { x: 254, y: 84, w: 54, skin: 'meja' },
+    /*  4 */ { x: 322, y: 112, w: 48, skin: 'rak' },
+    /*  5 */ { x: 257, y: 140, w: 58, skin: 'lemari' },
+    // The copier stops short of the landing. Cross its desk to reach the archive.
+    /*  6 */ { x: 127, y: 168, w: 122, skin: 'meja' },
+    /*  7 */ { x: 62, y: 196, w: 50, skin: 'rak' },
+    /*  8 */ { x: 10, y: 224, w: 36, skin: 'lemari' },
+    /*  9 */ { x: 64, y: 252, w: 42, kind: 'troli', travel: 22, period: 3.6 },
+    /* 10 */ { x: 148, y: 280, w: 42, kind: 'fiktif' },
+    /* 11 */ { x: 205, y: 308, w: 92, skin: 'meja' },
+    /* 12 */ { x: 311, y: 336, w: 54, skin: 'lemari' },
+    // A shorter copier cycle, then the stamp below the Camat's balcony.
+    /* 13 */ { x: 201, y: 364, w: 90, skin: 'meja' },
+    /* 14 */ { x: 125, y: 392, w: 50, skin: 'rak' },
+    /* 15 */ { x: 42, y: 420, w: 55, skin: 'meja' },
+    /* 16 */ { x: 108, y: 448, w: 212, skin: 'balkon' },
+  ],
+  auditors: [{ ledge: 11, from: 251, to: 283, speed: 30 }],
+  stamps: [{ ledge: 15, x: 63, period: 2.9, offset: 0.4 }],
+  printers: [
+    { ledge: 6, x: 142, to: 204, period: 3.4 },
+    { ledge: 13, x: 215, to: 246, period: 2.7, offset: 0.8 },
+  ],
+  amplop: [
+    { x: 138, y: 40 },
+    { x: 355, y: 124 },
+    { x: 167, y: 180 },
+    { x: 24, y: 236 },
+    { x: 280, y: 320 },
+    { x: 229, y: 376 },
+    { x: 62, y: 432 },
+  ],
+  checkpoints: [
+    { ledge: 0, x: 68 },
+    { ledge: 5, x: 280 },
+    { ledge: 12, x: 321 },
+  ],
+  exit: { ledge: 16, x: 222, label: 'DINAS' },
+};
+
+export const FLOORS: readonly [FloorDef, ...FloorDef[]] = [KELURAHAN, KECAMATAN];
+
+export interface PrinterState {
+  warning: boolean;
+  /** Centre of the flying bundle, or null when the desk is clear. */
+  paper: number | null;
+}
+
+export function printerAt(def: PrinterDef, t: number): PrinterState {
+  const flight = Math.abs(def.to - def.x) / PAPER.speed;
+  const elapsed = (t + (def.offset ?? 0)) % def.period;
+  const sinceLaunch = elapsed - (def.period - flight);
+  return {
+    warning: sinceLaunch < 0 && sinceLaunch >= -PAPER.warn,
+    paper: sinceLaunch < 0 ? null : def.x + Math.sign(def.to - def.x) * sinceLaunch * PAPER.speed,
+  };
+}
 
 /** The left edge of a ledge at world time `t`. Only a troli moves. */
 export function ledgeX(def: LedgeDef, t: number): number {

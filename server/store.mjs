@@ -43,7 +43,8 @@ const SHARE_VIA = new Set(['shared', 'saved', 'show', 'copied']);
 /** A press of Bagikan hasil that came to nothing: the sheet was closed, or nothing could share. */
 const MISSED_VIA = new Set(['cancelled', 'failed']);
 /** How the run before a run ended, and what the player was looking at when the page was left. */
-const AFTER = new Set(['win', 'restart']);
+const AFTER = new Set(['win', 'restart', 'promotion']);
+const FLOOR_EVENTS = new Set(['run_started', 'run_ended', 'run_resumed', 'shared', 'share_missed']);
 const SCREENS = new Set(['title', 'playing', 'paused', 'result']);
 /** The network as Chrome guesses it, and the states an audio context can be in ('none': never made). */
 const NETS = new Set(['slow-2g', '2g', '3g', '4g']);
@@ -54,7 +55,7 @@ const CHOPPY = 10;
 const oneOf = (set, value) => (set.has(value) ? value : null);
 
 /** A hazard is named by what it is and the ledge it is on (src/core/tower.ts), or `jatuh` for a fall. */
-const HAZARD = /^(?:(?:auditor|stempel):\d{1,3}|jatuh)$/;
+const HAZARD = /^(?:(?:auditor|stempel|berkas):\d{1,3}|jatuh)$/;
 const MAX_HAZARDS = 24;
 
 /**
@@ -203,6 +204,7 @@ const ADDED_COLUMNS = {
   audio: 'TEXT',
   full: 'INTEGER',
   turns: 'INTEGER',
+  floor: 'TEXT',
 };
 
 /** Every column an event fills, in the order they are inserted. */
@@ -223,6 +225,10 @@ export function normaliseEvent(input, agent = {}, where = null) {
   const event = Object.fromEntries(COLUMNS.map((column) => [column, null]));
   event.type = input.type;
   event.rev = clip(input.rev, 40);
+  if (FLOOR_EVENTS.has(input.type) && input.floor != null) {
+    if (!FLOOR_IDS.has(input.floor)) return null;
+    event.floor = input.floor;
+  }
   // What the player holds, and how the game sits on their screen: said with
   // a visit and with a run, so a run can be read by device.
   event.device = oneOf(DEVICES, input.device);
@@ -331,20 +337,24 @@ export function normaliseEvent(input, agent = {}, where = null) {
 }
 
 /**
- * The floor the numbers are about (written by scripts/floor.mjs from
- * src/core/tower.ts). Sent with the statistics, so positions and ledge
- * numbers can be read without the source. Without the file, it is null.
+ * Floor plans written by scripts/floor.mjs. Stats include the plan that goes
+ * with their ledge indices and catch positions without needing the source.
  */
-function readFloor() {
+function readFloors() {
   try {
-    return JSON.parse(readFileSync(new URL('./floor.json', import.meta.url), 'utf8'));
+    const plans = JSON.parse(readFileSync(new URL('./floor.json', import.meta.url), 'utf8'));
+    return Array.isArray(plans) ? plans : [];
   } catch {
-    return null;
+    return [];
   }
 }
 
+const FLOOR_PLANS = new Map(readFloors().map((plan) => [plan.id, plan]));
+const DEFAULT_FLOOR = 'kelurahan';
+const FLOOR_IDS = new Set([DEFAULT_FLOOR, ...FLOOR_PLANS.keys()]);
+
 /** Bumped when the shape of the statistics changes, so a reader knows what it is holding. */
-const STATS_FORMAT = 8;
+const STATS_FORMAT = 9;
 
 /**
  * What every part of the statistics means, sent with them. The answer is read
@@ -355,9 +365,11 @@ const ABOUT = {
   purpose:
     'Anonymous, aggregate telemetry of the browser game Korupsi (korupsi.web.id) for the last `days` days, starting on `since` (UTC days). No cookies, no addresses, no identifiers: nothing here can be tied to a person, and two rows cannot be tied to the same player.',
   units:
-    'Durations are seconds. Heights are metres above the lobby floor (12 game pixels to the metre); the door of the first floor is at about 42 m. Money is rupiah: 500000 per envelope. Medians are null when there are no rows to take them from.',
+    'Durations are seconds. Heights are metres above the selected floor’s lobby (12 game pixels to the metre). Money is rupiah: 500000 per envelope. Medians are null when there are no rows to take them from.',
+  floors:
+    'Available floors (id and name). Runs and shares are for the floor selected in `floor`; rows before floor tags count as Kelurahan. Visits, page exits, errors and build totals are still for the whole game.',
   totals:
-    'visits: page loads. runs: presses of Mulai or Main lagi, so one visit can start several. ended: runs that reported an ending, once each: at the door, on a restart, or when the page was hidden mid-run, whichever came first, since a phone may close a hidden page without another word. finished: runs that reached the door. shared: uses of Bagikan hasil. errors: JavaScript errors from the game in players\u2019 browsers.',
+    'visits: page loads. runs: floor attempts started from the title, a restart or by promotion. ended: attempts that reported an ending, once each: at the door, on a restart or return to the title, or when the page was hidden mid-run, whichever came first, since a phone may close a hidden page without another word. finished: runs that reached the door. shared: uses of Bagikan hasil. errors: JavaScript errors from the game in players\u2019 browsers.',
   daily: 'The same counts per UTC day. Days without events are absent, not zero.',
   causes:
     'How runs ended. finished: reached the door. abandoned: the page was hidden or closed, or the run restarted, before the door. auditor, band, fall: endings of the one-tap game before v0.5.0, kept until they age out.',
@@ -381,7 +393,7 @@ const ABOUT = {
     'Errors thrown by the game\u2019s own code, and unhandled promise rejections, by message, most frequent first, with the last time seen, a build that showed it, and the screens (title, playing, paused, result) and browsers it happened on most. Errors from scripts that extensions or in-app browsers add to the page are left out. Addresses are removed before storage.',
   revs: 'Events per build label (`version+commit`), to tell which release the data comes from.',
   floor:
-    'The floor the numbers are about, in game pixels as in src/core/tower.ts: ledges (x the left edge, y the height above the ground floor, w the width; a troli rolls `travel` either side of x), the auditors\u2019 beats between `from` and `to`, the stamps, the envelopes (`amplop`, by index), the clock-in machines (`checkpoints`, the first being where a run starts) and the door (`exit`). Read `spots`, `dwell`, `envelopes` and `hazards` against it.',
+    'The floor the numbers are about, in game pixels as in src/core/tower.ts: ledges (x the left edge, y the height above the ground floor, w the width; a troli rolls `travel` either side of x), the auditors\u2019 beats between `from` and `to`, the stamps, paper paths from `printers`, the envelopes (`amplop`, by index), the clock-in machines (`checkpoints`, the first being where a run starts) and the door (`exit`). Read `spots`, `dwell`, `envelopes` and `hazards` against it.',
   route:
     'The floor stretch by stretch: `stretches[i].to` is the checkpoint that ends it (1, 2...) or `door`. reached: runs that got there, of `runs`. seconds: median time the runs that crossed the stretch took to cross it.',
   spots:
@@ -430,7 +442,7 @@ const ABOUT = {
   leaving:
     'Where pages are left, from the first time each visit was hidden (closed, or left for another app): visits, the screen it was on (title, playing, paused, result), and the median seconds it had been looked at. returned: visits hidden a second time, so ones that came back after leaving.',
   cards:
-    'The cards between runs: title, the first runs started and the median seconds the title was up before; result, the runs started from the result of a win (Main lagi) and the median seconds it was looked at first; restarts, runs started over from the pause card.',
+    'The cards between runs: title, attempts started from the title; result, attempts replayed from the result card (Main lagi); promotions, entries from the floor below. Each has the count and median wait in seconds. restarts counts retries from the pause card.',
   shareMisses:
     'Presses of Bagikan hasil that came to nothing: cancelled, the share sheet was closed; failed, nothing could share. With `shares`, every press and what came of it.',
   speed:
@@ -650,7 +662,6 @@ function playStats(rows, starts, resumed) {
 }
 
 export function openStore(path) {
-  const floor = readFloor();
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA synchronous = NORMAL');
@@ -705,24 +716,32 @@ export function openStore(path) {
       insertStmt.run(now, day, ...COLUMNS.map((column) => event[column] ?? null));
     },
 
-    stats(days = 30, geo = null) {
+    stats(days = 30, geo = null, floorId = DEFAULT_FLOOR) {
       const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10);
+      const selected = FLOOR_IDS.has(floorId) ? floorId : DEFAULT_FLOOR;
 
-      const daily = db
-        .prepare(
-          `SELECT day,
+      // Visits, errors and first page exits describe the whole game, not a floor.
+      // Untagged play is from the old single-floor game and stays with Kelurahan.
+      const scoped = (query) =>
+        db
+          .prepare(`WITH scoped AS (
+          SELECT * FROM events WHERE day >= ?
+          AND (type IN ('visit', 'hidden', 'error') OR COALESCE(floor, ?) = ?)
+        ) ${query}`)
+          .all(since, DEFAULT_FLOOR, selected);
+
+      const daily = scoped(
+        `SELECT day,
                   SUM(type = 'visit')     AS visits,
                   SUM(type = 'run_started') AS runs,
                   SUM(type = 'run_ended')   AS ended,
                   SUM(type = 'run_ended' AND cause = 'finished') AS finished,
                   SUM(type = 'shared')    AS shared,
                   SUM(type = 'error')     AS errors
-             FROM events
-            WHERE day >= ?
+             FROM scoped
             GROUP BY day
             ORDER BY day`,
-        )
-        .all(since);
+      );
 
       const totals = daily.reduce(
         (acc, row) => {
@@ -737,35 +756,27 @@ export function openStore(path) {
         { visits: 0, runs: 0, ended: 0, finished: 0, shared: 0, errors: 0 },
       );
 
-      const causes = db
-        .prepare(
-          `SELECT cause, COUNT(*) AS n
-             FROM events
-            WHERE type = 'run_ended' AND day >= ? AND cause IS NOT NULL
-            GROUP BY cause
-            ORDER BY n DESC`,
-        )
-        .all(since);
+      const causes = scoped(
+        `SELECT cause, COUNT(*) AS n
+           FROM scoped
+          WHERE type = 'run_ended' AND cause IS NOT NULL
+          GROUP BY cause
+          ORDER BY n DESC`,
+      );
 
-      const runs = db
-        .prepare(
-          `SELECT cause, money, weight, height, duration, deaths, checkpoint, hazards, title, muted, device,
-                  splits, spots, lastHazard, sinceCaught, picked, kept, lost, carried, caughtWith,
-                  jumps, dashes, dwell, attempt, pauses, away, finishedBefore, record
-             FROM events
-            WHERE type = 'run_ended' AND day >= ?
-            ORDER BY id DESC
-            LIMIT 50000`,
-        )
-        .all(since);
-      const starts = db
-        .prepare(
-          `SELECT attempt FROM events WHERE type = 'run_started' AND day >= ? AND attempt IS NOT NULL LIMIT 50000`,
-        )
-        .all(since);
-      const resumed = db
-        .prepare(`SELECT cause FROM events WHERE type = 'run_resumed' AND day >= ? LIMIT 50000`)
-        .all(since);
+      const runs = scoped(
+        `SELECT cause, money, weight, height, duration, deaths, checkpoint, hazards, title, muted, device,
+                splits, spots, lastHazard, sinceCaught, picked, kept, lost, carried, caughtWith,
+                jumps, dashes, dwell, attempt, pauses, away, finishedBefore, record
+           FROM scoped
+          WHERE type = 'run_ended'
+          ORDER BY id DESC
+          LIMIT 50000`,
+      );
+      const starts = scoped(
+        `SELECT attempt FROM scoped WHERE type = 'run_started' AND attempt IS NOT NULL LIMIT 50000`,
+      );
+      const resumed = scoped(`SELECT cause FROM scoped WHERE type = 'run_resumed' LIMIT 50000`);
 
       // A run that reached the door and a run the player walked away from
       // answer different questions, so they are never averaged together.
@@ -820,19 +831,17 @@ export function openStore(path) {
       const titles = tallyBy(finished, 'title').map(([title, n]) => ({ title, n }));
 
       // Touch or keyboard: who comes, who plays, and who gets to the door.
-      const byDevice = db
-        .prepare(
-          `SELECT device,
-                  SUM(type = 'visit')       AS visits,
-                  SUM(type = 'run_started') AS runs,
-                  SUM(type = 'run_ended' AND cause = 'finished')  AS finished,
-                  SUM(type = 'run_ended' AND cause = 'abandoned') AS abandoned
-             FROM events
-            WHERE day >= ? AND device IS NOT NULL
-            GROUP BY device
-            ORDER BY visits DESC, device`,
-        )
-        .all(since);
+      const byDevice = scoped(
+        `SELECT device,
+                SUM(type = 'visit')       AS visits,
+                SUM(type = 'run_started') AS runs,
+                SUM(type = 'run_ended' AND cause = 'finished')  AS finished,
+                SUM(type = 'run_ended' AND cause = 'abandoned') AS abandoned
+           FROM scoped
+          WHERE device IS NOT NULL
+          GROUP BY device
+          ORDER BY visits DESC, device`,
+      );
 
       const layouts = db
         .prepare(
@@ -844,15 +853,13 @@ export function openStore(path) {
         )
         .all(since);
 
-      const shares = db
-        .prepare(
-          `SELECT via, COUNT(*) AS n
-             FROM events
-            WHERE type = 'shared' AND day >= ? AND via IS NOT NULL
-            GROUP BY via
-            ORDER BY n DESC, via`,
-        )
-        .all(since);
+      const shares = scoped(
+        `SELECT via, COUNT(*) AS n
+           FROM scoped
+          WHERE type = 'shared' AND via IS NOT NULL
+          GROUP BY via
+          ORDER BY n DESC, via`,
+      );
 
       const heard = runs.filter((r) => r.muted != null);
 
@@ -868,21 +875,18 @@ export function openStore(path) {
         .all(since);
 
       // What the players came in: browser, system, kind of device, phone model.
-      const browsers = db
-        .prepare(
-          `SELECT browser AS name,
-                  SUM(type = 'visit')       AS visits,
-                  SUM(type = 'run_started') AS runs,
-                  SUM(type = 'run_ended' AND cause = 'finished') AS finished,
-                  MIN(CASE WHEN type = 'visit' THEN browserVersion END) AS oldest
-             FROM events
-            WHERE day >= ? AND browser IS NOT NULL
-            GROUP BY browser
-            ORDER BY visits DESC, name
-            LIMIT 25`,
-        )
-        .all(since)
-        .map((row) => ({ ...row }));
+      const browsers = scoped(
+        `SELECT browser AS name,
+                SUM(type = 'visit')       AS visits,
+                SUM(type = 'run_started') AS runs,
+                SUM(type = 'run_ended' AND cause = 'finished') AS finished,
+                MIN(CASE WHEN type = 'visit' THEN browserVersion END) AS oldest
+           FROM scoped
+          WHERE browser IS NOT NULL
+          GROUP BY browser
+          ORDER BY visits DESC, name
+          LIMIT 25`,
+      ).map((row) => ({ ...row }));
       const commonVersion = db.prepare(
         `SELECT browserVersion AS version FROM events
           WHERE type = 'visit' AND day >= ? AND browser = ? AND browserVersion IS NOT NULL
@@ -905,18 +909,16 @@ export function openStore(path) {
           )
           .all(since);
 
-      const forms = db
-        .prepare(
-          `SELECT form,
-                  SUM(type = 'visit')       AS visits,
-                  SUM(type = 'run_started') AS runs,
-                  SUM(type = 'run_ended' AND cause = 'finished') AS finished
-             FROM events
-            WHERE day >= ? AND form IS NOT NULL
-            GROUP BY form
-            ORDER BY visits DESC, form`,
-        )
-        .all(since);
+      const forms = scoped(
+        `SELECT form,
+                SUM(type = 'visit')       AS visits,
+                SUM(type = 'run_started') AS runs,
+                SUM(type = 'run_ended' AND cause = 'finished') AS finished
+           FROM scoped
+          WHERE form IS NOT NULL
+          GROUP BY form
+          ORDER BY visits DESC, form`,
+      );
 
       // What a visit says about itself: the screen, the home screen, the player's clock.
       const visitRows = db
@@ -946,32 +948,28 @@ export function openStore(path) {
       };
 
       // Where visits come from, and whether the players they bring play and finish.
-      const sources = db
-        .prepare(
-          `SELECT referrer AS site,
-                  SUM(type = 'visit')       AS visits,
-                  SUM(type = 'run_started') AS runs,
-                  SUM(type = 'run_ended' AND cause = 'finished') AS finished
-             FROM events
-            WHERE day >= ? AND referrer IS NOT NULL
-            GROUP BY referrer
-            ORDER BY visits DESC, site
-            LIMIT 25`,
-        )
-        .all(since);
-      const campaigns = db
-        .prepare(
-          `SELECT source, campaign,
-                  SUM(type = 'visit')       AS visits,
-                  SUM(type = 'run_started') AS runs,
-                  SUM(type = 'run_ended' AND cause = 'finished') AS finished
-             FROM events
-            WHERE day >= ? AND source IS NOT NULL
-            GROUP BY source, campaign
-            ORDER BY visits DESC, source
-            LIMIT 25`,
-        )
-        .all(since);
+      const sources = scoped(
+        `SELECT referrer AS site,
+                SUM(type = 'visit')       AS visits,
+                SUM(type = 'run_started') AS runs,
+                SUM(type = 'run_ended' AND cause = 'finished') AS finished
+           FROM scoped
+          WHERE referrer IS NOT NULL
+          GROUP BY referrer
+          ORDER BY visits DESC, site
+          LIMIT 25`,
+      );
+      const campaigns = scoped(
+        `SELECT source, campaign,
+                SUM(type = 'visit')       AS visits,
+                SUM(type = 'run_started') AS runs,
+                SUM(type = 'run_ended' AND cause = 'finished') AS finished
+           FROM scoped
+          WHERE source IS NOT NULL
+          GROUP BY source, campaign
+          ORDER BY visits DESC, source
+          LIMIT 25`,
+      );
 
       // Where pages are left, and how often players come back.
       const hides = db
@@ -980,24 +978,21 @@ export function openStore(path) {
       const firstHides = hides.filter((hide) => hide.part === 1);
 
       // The cards between runs, and how long each was up before the next run.
-      const cardRows = db
-        .prepare(
-          `SELECT attempt, after, wait FROM events
-            WHERE type = 'run_started' AND day >= ? AND (after IS NOT NULL OR wait IS NOT NULL)
-            LIMIT 50000`,
-        )
-        .all(since);
-      const firstRuns = cardRows.filter((row) => row.after == null);
-      const replays = cardRows.filter((row) => row.after === 'win');
-      const waits = (rows) => median(rows.map((row) => row.wait).filter((wait) => wait != null));
+      const cardRows = scoped(
+        `SELECT after, wait FROM scoped
+          WHERE type = 'run_started' AND (after IS NOT NULL OR wait IS NOT NULL)
+          LIMIT 50000`,
+      );
+      const fromCard = (after) => {
+        const rows = cardRows.filter((row) => row.after === after);
+        return { runs: rows.length, wait: median(rows.map((row) => row.wait).filter((wait) => wait != null)) };
+      };
 
-      const shareMisses = db
-        .prepare(
-          `SELECT via, COUNT(*) AS n FROM events
-            WHERE type = 'share_missed' AND day >= ? AND via IS NOT NULL
-            GROUP BY via ORDER BY n DESC, via`,
-        )
-        .all(since);
+      const shareMisses = scoped(
+        `SELECT via, COUNT(*) AS n FROM scoped
+          WHERE type = 'share_missed' AND via IS NOT NULL
+          GROUP BY via ORDER BY n DESC, via`,
+      );
 
       // How fast the page is ready, and on what network.
       const speedRows = db
@@ -1016,12 +1011,10 @@ export function openStore(path) {
       const savers = speedRows.filter((row) => row.saveData != null);
 
       // How smoothly runs are drawn, and whether a choppy run is given up more often.
-      const frameRows = db
-        .prepare(
-          `SELECT fps, slow, form, cause, audio, full, turns FROM events
-            WHERE type = 'run_ended' AND day >= ? AND fps IS NOT NULL LIMIT 50000`,
-        )
-        .all(since);
+      const frameRows = scoped(
+        `SELECT fps, slow, form, cause, audio, full, turns FROM scoped
+          WHERE type = 'run_ended' AND fps IS NOT NULL LIMIT 50000`,
+      );
       const choppy = frameRows.filter((row) => row.slow > CHOPPY);
       const smooth = frameRows.filter((row) => !(row.slow > CHOPPY));
       const tally = (rows) => ({ runs: rows.length, finished: rows.filter((row) => row.cause === 'finished').length });
@@ -1100,7 +1093,8 @@ export function openStore(path) {
         errors: placedErrors,
         revs,
         ...playStats(runs, starts, resumed),
-        floor,
+        floors: [...FLOOR_PLANS.values()].map(({ id, name }) => ({ id, name })),
+        floor: FLOOR_PLANS.get(selected) ?? null,
         browsers,
         systems: visitsBy('os', 20),
         forms,
@@ -1126,9 +1120,10 @@ export function openStore(path) {
           returned: hides.filter((hide) => hide.part === 2).length,
         },
         cards: {
-          title: { runs: firstRuns.length, wait: waits(firstRuns) },
-          result: { runs: replays.length, wait: waits(replays) },
-          restarts: cardRows.filter((row) => row.after === 'restart').length,
+          title: fromCard(null),
+          result: fromCard('win'),
+          promotions: fromCard('promotion'),
+          restarts: fromCard('restart').runs,
         },
         shareMisses,
         speed: {

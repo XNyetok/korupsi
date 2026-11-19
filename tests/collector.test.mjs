@@ -261,6 +261,7 @@ test('the statistics say where players come from, where they leave and what they
   assert.deepEqual(stats.cards, {
     title: { runs: 2, wait: 21 },
     result: { runs: 1, wait: 5 },
+    promotions: { runs: 0, wait: null },
     restarts: 1,
   });
   assert.deepEqual(plain(stats.shareMisses), [
@@ -542,6 +543,27 @@ test('the collector stores beacons, and ignores crawlers, Do Not Track and Globa
   );
   assert.equal(stats.floor?.name, 'Kelurahan');
   assert.deepEqual(stats.geo, { available: false, built: null }, 'no GeoIP file, no places');
+});
+
+test('the collector serves one floor and leaves old beacons with Kelurahan', async (t) => {
+  const base = await collector(t);
+  const post = (body) =>
+    fetch(`${base}/api/beacon`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'user-agent': SAMSUNG },
+      body: JSON.stringify(body),
+    });
+  assert.equal((await post({ type: 'run_started' })).status, 204);
+  assert.equal((await post({ type: 'run_started', floor: 'kecamatan', after: 'promotion' })).status, 204);
+  assert.equal((await post({ type: 'run_started', floor: 'unknown' })).status, 422);
+  const read = (query) => fetch(`${base}/api/stats?days=7${query}`).then((response) => response.json());
+  const kelurahan = await read('');
+  const kecamatan = await read('&floor=kecamatan');
+  assert.equal(kelurahan.floor.id, 'kelurahan');
+  assert.equal(kelurahan.totals.runs, 1);
+  assert.equal(kecamatan.floor.id, 'kecamatan');
+  assert.equal(kecamatan.totals.runs, 1);
+  assert.equal(kecamatan.cards.promotions.runs, 1);
 });
 
 test('the collector looks the address up, and keeps the place but not the address', async (t) => {

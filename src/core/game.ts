@@ -5,7 +5,18 @@
  */
 
 import { OVERHANG, PARAMS, PLAYER } from './params.ts';
-import { AUDITOR, auditorAt, FLOORS, ledgeX, STAMP, stampAt, stampBites, type StampPhase } from './tower.ts';
+import {
+  AUDITOR,
+  auditorAt,
+  FLOORS,
+  ledgeX,
+  PAPER,
+  printerAt,
+  STAMP,
+  stampAt,
+  stampBites,
+  type StampPhase,
+} from './tower.ts';
 import type {
   Best,
   BestStore,
@@ -241,6 +252,12 @@ export class Game {
       if (phase === 'hold' && before !== 'hold') this.emit('stamp', def.x, ledges[def.ledge]?.y ?? 0);
       this.stampPhases[i] = phase;
     }
+
+    for (const def of this.floor.printers ?? []) {
+      if (printerAt(def, this.worldTime).warning && !printerAt(def, this.worldTime - dt).warning) {
+        this.emit('warn', def.x, ledges[def.ledge]?.y ?? 0);
+      }
+    }
   }
 
   /** A fiktif ledge holds for a moment after it is touched, then is gone for a while. */
@@ -454,6 +471,20 @@ export class Game {
         p.y + PLAYER.height > bottom
       ) {
         this.catch('stempel', `stempel:${def.ledge}`);
+        return;
+      }
+    }
+
+    for (const def of this.floor.printers ?? []) {
+      const { paper } = printerAt(def, this.worldTime);
+      const y = ledges[def.ledge]?.y ?? 0;
+      if (
+        paper != null &&
+        Math.abs(paper - p.x) < PAPER.half + PLAYER.half &&
+        p.y < y + PAPER.height &&
+        p.y + PLAYER.height > y
+      ) {
+        this.catch('berkas', `berkas:${def.ledge}`);
         return;
       }
     }

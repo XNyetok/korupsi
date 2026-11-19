@@ -25,12 +25,12 @@ export interface Debug {
 /** Debug tooling shows only with `?debug=1`: the tuning panel and the game on `window`. */
 export const debugOn = new URLSearchParams(location.search).has('debug');
 
-export function mountDebug(game: Game): Debug | null {
+export function mountDebug(active: () => Game): Debug | null {
   if (!debugOn) return null;
 
   // Expose the running game in the console, so a session can be inspected or
   // driven by hand while tuning. The browser tests use the same handle.
-  window.__korupsi = Object.assign(game, { params: PARAMS, audio });
+  Object.defineProperty(window, '__korupsi', { get: () => Object.assign(active(), { params: PARAMS, audio }) });
 
   const panel = document.getElementById('debug');
   if (!panel) return null;
@@ -56,6 +56,7 @@ export function mountDebug(game: Game): Debug | null {
   const readout = panel.querySelector('[data-readout]');
   window.setInterval(() => {
     if (!readout) return;
+    const game = active();
     const factor = jumpFactor(game.weight);
     const jv = PARAMS.jumpV * factor;
     const rise = (jv * jv) / (2 * PARAMS.gravity);
@@ -67,7 +68,7 @@ export function mountDebug(game: Game): Debug | null {
 
   return {
     tick() {
-      panel.classList.toggle('is-muted', game.phase !== 'playing');
+      panel.classList.toggle('is-muted', active().phase !== 'playing');
     },
   };
 }

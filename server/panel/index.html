@@ -24,6 +24,9 @@
     <button type="button" data-days="30" aria-pressed="true">30 hari</button>
     <button type="button" data-days="90" aria-pressed="false">90 hari</button>
   </div>
+  <select id="floor-filter" class="ghost" aria-label="Lantai">
+    <option value="kelurahan">Kelurahan</option>
+  </select>
   <button type="button" id="refresh" class="ghost">Muat ulang</button>
   <button type="button" id="export" class="ghost" title="Semua angka di halaman ini sebagai satu berkas yang menjelaskan dirinya sendiri, untuk dibaca agent atau program">Unduh data (JSON)</button>
   <p id="period" class="period" role="status" aria-live="polite"></p>
@@ -34,6 +37,7 @@
 
   <section aria-labelledby="h-summary">
     <h2 id="h-summary">Ringkasan</h2>
+    <p class="hint" id="floor-scope"></p>
     <div class="tiles" id="tiles"></div>
   </section>
 
@@ -62,7 +66,7 @@
   <div class="columns">
     <section class="card" aria-labelledby="h-ends">
       <h2 id="h-ends">Bagaimana permainan berakhir</h2>
-      <p class="hint">Tiap permainan berakhir dengan tamat (sampai pintu kecamatan) atau ditinggal (halaman ditutup atau mulai ulang sebelum tamat).</p>
+      <p class="hint">Percobaan tercatat saat sampai pintu, diulang, kembali ke menu, atau saat halaman disembunyikan.</p>
       <div id="ends" class="bars"></div>
     </section>
 
@@ -83,7 +87,7 @@
         <p class="hint">Lantai ini punya tiga bagian, dipisah dua mesin absen. Bagian dengan baris terpanjang adalah yang paling membuat pemain pergi.</p>
         <div id="sections" class="bars"></div>
         <h3 class="gap">Berhenti di ketinggian berapa</h3>
-        <p class="hint">Lobi ada di 0 m dan pintu kecamatan di sekitar 42 m. Baris yang paling panjang adalah tempat pemain paling sering menyerah.</p>
+        <p class="hint">Ketinggian diukur dari lobi lantai yang dipilih. Baris terpanjang menunjukkan tempat pemain paling sering berhenti.</p>
         <div id="quit" class="bars"></div>
       </div>
     </div>

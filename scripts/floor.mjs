@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Writes server/floor.json: the floor in game pixels, with its ledges,
- * hazards, envelopes, clock-in machines and door. The collector sends it with
+ * Writes server/floor.json: each floor in game pixels, with its ledges,
+ * hazards, envelopes, clock-in machines and door. The collector sends the selected floor with
  * the statistics, so the panel can draw where players are caught and a reader
  * of the JSON can tell what a position or a ledge number is.
  *
@@ -22,6 +22,7 @@ export const FLOOR_FILE = fileURLToPath(new URL('../server/floor.json', import.m
 /** What the panel needs of a floor, and nothing else. */
 export function floorPlan(floor) {
   return {
+    id: floor.id,
     name: floor.name,
     width: WORLD_WIDTH,
     height: floor.height,
@@ -34,6 +35,7 @@ export function floorPlan(floor) {
     })),
     auditors: floor.auditors.map(({ ledge, from, to }) => ({ ledge, from, to })),
     stamps: floor.stamps.map(({ ledge, x }) => ({ ledge, x })),
+    printers: (floor.printers ?? []).map(({ ledge, x, to }) => ({ ledge, x, to })),
     amplop: floor.amplop.map(({ x, y }) => ({ x, y })),
     checkpoints: floor.checkpoints.map(({ ledge, x }) => ({ ledge, x })),
     exit: { ledge: floor.exit.ledge, x: floor.exit.x },
@@ -41,6 +43,6 @@ export function floorPlan(floor) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  writeFileSync(FLOOR_FILE, `${JSON.stringify(floorPlan(FLOORS[0]), null, 2)}\n`);
+  writeFileSync(FLOOR_FILE, `${JSON.stringify(FLOORS.map(floorPlan), null, 2)}\n`);
   console.log(`wrote ${FLOOR_FILE}`);
 }

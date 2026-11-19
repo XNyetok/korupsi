@@ -303,7 +303,7 @@ test.describe('pause', () => {
     }
 
     // "Ulang dari lobi" starts over.
-    await page.locator('#overlay button.secondary').click();
+    await page.getByRole('button', { name: 'Ulang dari lobi' }).click();
     await waitForPhase(page, 'playing');
     expect((await state(page)).time).toBeLessThan(1);
   });
@@ -312,6 +312,10 @@ test.describe('pause', () => {
 test.describe('result', () => {
   async function win(page: import('@playwright/test').Page): Promise<void> {
     await start(page);
+    await finishAtDoor(page);
+  }
+
+  async function finishAtDoor(page: import('@playwright/test').Page): Promise<void> {
     await goToDoor(page);
     await page.evaluate(() => {
       const g = (window as unknown as { __korupsi: { player: { x: number }; floor: { exit: { x: number } } } })
@@ -326,21 +330,72 @@ test.describe('result', () => {
     await win(page);
 
     const card = page.locator('#overlay .card.result');
-    await expect(card.locator('.stamp')).toHaveText('lolos');
+    await expect(card.locator('.stamp')).toHaveText('lolos Kelurahan');
     await expect(card.locator('.big')).toHaveText(/^\d+:\d\d$/);
     await expect(card.locator('.stats')).toContainText('0/6');
     // Quick, clean and empty-handed: the title the decree will carry.
     await expect(card.locator('.gelar')).toHaveText('Belut Birokrasi');
     await expect(card.locator('.lede')).toHaveText('Licin. Tak tersentuh dan tak terkejar.');
-    await expect(card.locator('.record')).toContainText('Rekor waktu baru');
+    await expect(card.getByText('Rekor waktu baru')).toBeVisible();
     await expect(card.locator('.version a')).toHaveText('nyetok.id');
 
-    // The record survives a reload.
-    await page.waitForTimeout(800);
-    await card.locator('button.primary').click();
+    await expect(card.getByRole('button', { name: 'Lanjut ke Kecamatan' })).toBeVisible();
+    await card.getByRole('button', { name: 'Main lagi' }).click();
     await waitForPhase(page, 'playing');
     expect((await state(page)).ground).toBe(0);
     expect(errors).toEqual([]);
+  });
+
+  test('promotion carries money but not weight, and the next floor stays open after reload', async ({
+    page,
+    baseURL,
+  }) => {
+    const events = await asLiveSite(page, baseURL);
+    await page.goto(`${LIVE}?debug=1`);
+    const next = page.getByRole('button', { name: 'Lanjut ke Kecamatan' });
+    await expect(next).toHaveCount(0);
+    await start(page);
+    await placeOn(page, 0, 340);
+    await expect(page.locator('#hud-money')).toHaveText('Rp 500.000');
+    await finishAtDoor(page);
+    await next.click();
+    await expect(page.locator('#hud-floor')).toHaveText('02 Kecamatan');
+    await expect(page.locator('#hud-money')).toHaveText('Rp 500.000');
+    await expect(page.locator('#hud-weight')).toBeHidden();
+    expect(await state(page)).toMatchObject({ phase: 'playing', ground: 0, deaths: 0, weight: 0 });
+
+    await finishAtDoor(page);
+    await expect(page.locator('.result .stats')).toContainText('0/7');
+    await expect(page.getByText('Total uang dari semua lantai: Rp 500.000')).toBeVisible();
+    await expect
+      .poll(() => events.filter((e) => e.type === 'run_started').map((e) => e.floor))
+      .toEqual(['kelurahan', 'kecamatan']);
+    expect(events.find((e) => e.type === 'run_started' && e.floor === 'kecamatan')).toMatchObject({
+      after: 'promotion',
+    });
+    await expect
+      .poll(() => events.filter((e) => e.type === 'run_ended').map((e) => [e.floor, e.money]))
+      .toEqual([
+        ['kelurahan', 500_000],
+        ['kecamatan', 0],
+      ]);
+    await page.reload();
+    await expect(next).toBeVisible();
+  });
+
+  test('a v0.8.0 record unlocks direct entry without importing the old money', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('korupsi.kelurahan.best', JSON.stringify({ time: 145, money: 2_500_000 }));
+    });
+    await open(page);
+    await page.getByRole('button', { name: 'Lanjut ke Kecamatan' }).click();
+    await expect(page.locator('#hud-floor')).toHaveText('02 Kecamatan');
+    await expect(page.locator('#hud-money')).toHaveText('Rp 0');
+    expect(await state(page)).toMatchObject({ phase: 'playing', ground: 0, weight: 0 });
+    await page.locator('#pause').click();
+    await page.getByRole('button', { name: 'Pilih lantai' }).click();
+    await page.getByRole('button', { name: 'Main Kelurahan' }).click();
+    await expect(page.locator('#hud-floor')).toHaveText('01 Kelurahan');
   });
 
   test('sharing on a computer saves the result as a story-sized picture', async ({ page, isMobile }) => {
@@ -576,8 +631,7 @@ test.describe('telemetry', () => {
     expect(ended.dwell).toBeInstanceOf(Object);
 
     // Playing again is the second run of the same visit, by a player who has now finished.
-    await page.waitForTimeout(800);
-    await page.locator('#overlay button.primary').click();
+    await page.getByRole('button', { name: 'Main lagi' }).click();
     await waitForPhase(page, 'playing');
     await expect.poll(() => of('run_started').map((e) => e.attempt)).toEqual([1, 2]);
     expect(of('run_started')[1]).toMatchObject({ after: 'win', wait: expect.any(Number) });

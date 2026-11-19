@@ -31,7 +31,7 @@ interface Floater {
   big: boolean;
 }
 
-const CAUGHT_WORDS = { auditor: 'OTT!', stempel: 'DITOLAK!', jatuh: 'OTT!' } as const;
+const CAUGHT_WORDS = { auditor: 'OTT!', stempel: 'DITOLAK!', berkas: 'BERKAS!', jatuh: 'OTT!' } as const;
 
 export class Fx {
   private particles: Particle[] = [];

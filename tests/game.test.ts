@@ -391,6 +391,7 @@ test('the longest report of the real floor still fits in a beacon', () => {
   const body = JSON.stringify({
     type: 'run_ended',
     rev: '10.10.10+abcdef0',
+    floor: game.floor.id,
     ...runReport(game, 'finished'),
     muted: false,
     device: 'touch',

@@ -52,7 +52,7 @@ const SERIES = [
 ];
 
 /** What the collector's short names mean, in the words the game uses. */
-const HAZARD_NAMES = { auditor: 'Auditor', stempel: 'Stempel' };
+const HAZARD_NAMES = { auditor: 'Auditor', stempel: 'Stempel', berkas: 'Berkas' };
 const SECTION_NAMES = ['Lobi, sebelum mesin absen pertama', 'Setelah mesin absen pertama', 'Setelah mesin absen kedua'];
 const DEVICE_NAMES = { touch: 'Layar sentuh', keys: 'Keyboard' };
 const LAYOUT_NAMES = {
@@ -146,6 +146,8 @@ const LEGACY = new Set(['auditor', 'band', 'fall']);
 
 let days = 30;
 let lastStats = null;
+let pending;
+const floorFilter = byId('floor-filter');
 
 // ---------- data ----------
 
@@ -193,19 +195,21 @@ function tile({ label, value, what, share, ratio }) {
 function renderTiles(stats) {
   const { visits, runs, shared } = stats.totals;
   const finished = stats.finished.n;
+  byId('floor-scope').textContent =
+    `Percobaan dan hasil untuk ${stats.floor?.name ?? 'lantai terpilih'}. Kunjungan, halaman ditinggal, error, dan versi mencakup seluruh game.`;
 
   byId('tiles').replaceChildren(
     tile({ label: 'Kunjungan', value: number(visits), what: 'Berapa kali halaman game dibuka.' }),
     tile({
       label: 'Mulai main',
       value: number(runs),
-      what: 'Berapa kali tombol Mulai atau Main lagi ditekan.',
+      what: 'Percobaan di lantai ini, termasuk naik dari lantai sebelumnya.',
       share: visits ? `${decimal(runs / visits)} permainan per kunjungan` : 'Belum ada kunjungan',
     }),
     tile({
       label: 'Tamat',
       value: number(finished),
-      what: 'Permainan yang sampai ke pintu kecamatan.',
+      what: 'Percobaan yang sampai ke pintu keluar lantai ini.',
       share: runs ? `${percent(finished, runs)} dari permainan yang dimulai` : 'Belum ada permainan',
       ratio: runs ? finished / runs : 0,
     }),
@@ -262,8 +266,12 @@ function bars(target, rows, emptyText, of) {
 function renderEnds(stats) {
   const legacy = stats.causes.filter((row) => LEGACY.has(row.cause)).reduce((sum, row) => sum + row.n, 0);
   const rows = [
-    { name: 'Tamat', note: 'sampai pintu kecamatan', n: count(stats, 'finished') },
-    { name: 'Ditinggal', note: 'ditutup atau diulang sebelum tamat', n: count(stats, 'abandoned') },
+    { name: 'Tamat', note: 'sampai pintu keluar', n: count(stats, 'finished') },
+    {
+      name: 'Ditinggal',
+      note: 'halaman disembunyikan, kembali ke menu, atau mulai ulang',
+      n: count(stats, 'abandoned'),
+    },
   ];
   if (legacy) rows.push({ name: 'Versi lama', note: 'game satu tombol, sebelum v0.5.0', n: legacy });
   bars(byId('ends'), rows, 'Belum ada permainan yang berakhir pada rentang ini.');
@@ -412,7 +420,7 @@ function renderAbandoned(stats) {
 
 // ---------- how runs are played ----------
 
-const stopName = (to) => (to === 'door' ? 'pintu kecamatan' : `mesin absen ${to}`);
+const stopName = (to) => (to === 'door' ? 'pintu keluar' : `mesin absen ${to}`);
 
 function renderRoute(stats) {
   const { runs, stretches } = stats.route;
@@ -617,9 +625,9 @@ function renderVisitors(stats) {
       what: 'dibuka dari ikon game di layar utama HP',
     }),
     tile({
-      label: 'Pernah tamat',
+      label: 'Pernah tamat Kelurahan',
       value: percent(finishedBefore.yes, finishedBefore.said),
-      what: 'datang dari perangkat yang pernah menamatkan lantai ini',
+      what: 'kunjungan dari browser yang menyimpan rekor Kelurahan',
     }),
   );
   fillTable(
@@ -790,17 +798,25 @@ function renderLeaving(stats) {
       what: 'kunjungan yang dibuka lagi setelah ditinggal',
     }),
   );
-  const { title, result, restarts } = stats.cards;
+  const { title, result, promotions, restarts } = stats.cards;
   byId('cards').replaceChildren(
     tile({
       label: 'Di layar judul',
       value: title.wait != null ? clock(title.wait) : '—',
-      what: `sebelum menekan Mulai, dari ${number(title.runs)} kunjungan`,
+      what: `sebelum mulai dari menu, dari ${number(title.runs)} percobaan`,
     }),
     tile({
       label: 'Di layar hasil',
       value: result.wait != null ? clock(result.wait) : '—',
       what: `sebelum Main lagi, dari ${number(result.runs)} kali main lagi setelah tamat`,
+    }),
+    tile({
+      label: 'Naik lantai',
+      value: number(promotions.runs),
+      what:
+        promotions.wait != null
+          ? `menunggu ${clock(promotions.wait)} sebelum naik (nilai tengah)`
+          : 'dari lantai sebelumnya',
     }),
     tile({ label: 'Mulai ulang', value: number(restarts), what: 'kali Ulang dari lobi dari kartu jeda' }),
   );
@@ -918,6 +934,7 @@ const MAP_KEYS = [
   { css: 'amplop', name: 'Amplop' },
   { css: 'beat', name: 'Jalur auditor' },
   { css: 'stamp', name: 'Stempel' },
+  { css: 'papers', name: 'Jalur berkas' },
   { css: 'machine', name: 'Mesin absen' },
   { css: 'door', name: 'Pintu' },
 ];
@@ -987,6 +1004,10 @@ function renderMap(stats) {
   }
   for (const stamp of floor.stamps) {
     map.append(svg('rect', { class: 'stamp', x: stamp.x - 7, y: Y(ledgeY(stamp.ledge)) - 30, width: 14, height: 8 }));
+  }
+  for (const printer of floor.printers) {
+    const y = Y(ledgeY(printer.ledge)) - 6;
+    map.append(svg('line', { class: 'papers', x1: printer.x, x2: printer.to, y1: y, y2: y }));
   }
   floor.checkpoints.forEach((spot, i) => {
     if (i === 0) return;
@@ -1311,20 +1332,34 @@ function renderPeriod(stats) {
 
 async function load() {
   // The page keeps its last render, dimmed, while the new numbers arrive.
+  pending?.abort();
+  const controller = new AbortController();
+  pending = controller;
   document.body.dataset.loading = 'true';
   const failure = byId('failure');
   try {
-    const response = await fetch(`/api/stats?days=${days}`, { headers: { accept: 'application/json' } });
+    const query = new URLSearchParams({ days: String(days), floor: floorFilter.value });
+    const response = await fetch(`/api/stats?${query}`, { signal: controller.signal });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    lastStats = await response.json();
+    const stats = await response.json();
+    if (controller.signal.aborted) return;
+    lastStats = stats;
+    if (stats.floors.length) {
+      floorFilter.replaceChildren(...stats.floors.map(({ id, name }) => new Option(name, id)));
+      floorFilter.value = stats.floor?.id ?? 'kelurahan';
+    }
     failure.hidden = true;
-    renderPeriod(lastStats);
-    render(lastStats);
+    renderPeriod(stats);
+    render(stats);
   } catch (error) {
+    if (controller.signal.aborted) return;
     failure.textContent = 'Gagal memuat data: ' + (error instanceof Error ? error.message : String(error));
     failure.hidden = false;
   } finally {
-    document.body.dataset.loading = 'false';
+    if (pending === controller) {
+      pending = null;
+      document.body.dataset.loading = 'false';
+    }
   }
 }
 
@@ -1338,17 +1373,20 @@ for (const button of document.querySelectorAll('[data-days]')) {
   });
 }
 
+floorFilter.addEventListener('change', () => void load());
 byId('refresh').addEventListener('click', () => void load());
 
 // The same numbers as one file, with the collector's own notes on what each
 // part means: for an agent, a script, or a spreadsheet.
 byId('export').addEventListener('click', () => {
-  if (!lastStats) return;
+  if (!lastStats || pending || lastStats.days !== days) return;
+  const floor = lastStats.floor?.id ?? 'kelurahan';
+  if (floor !== floorFilter.value) return;
   const file = new Blob([JSON.stringify(lastStats, null, 2) + '\n'], { type: 'application/json' });
   const url = URL.createObjectURL(file);
   const link = el('a');
   link.href = url;
-  link.download = `korupsi-stats-${lastStats.days}d-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `korupsi-stats-${floor}-${lastStats.days}d-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.append(link);
   link.click();
   link.remove();

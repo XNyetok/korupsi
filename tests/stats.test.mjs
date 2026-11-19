@@ -592,7 +592,7 @@ test('the statistics say what catches players, where they leave, and on what', (
 
   const stats = store.stats(7);
 
-  assert.equal(stats.format, 8);
+  assert.equal(stats.format, 9);
   assert.equal(stats.finished.deaths, 2);
   assert.equal(stats.abandoned.deaths, 3);
 
@@ -685,7 +685,12 @@ test('an empty store still answers with every field', () => {
   }
   assert.equal(stats.leaving.visits, 0);
   assert.equal(stats.leaving.visible, null);
-  assert.deepEqual(stats.cards, { title: { runs: 0, wait: null }, result: { runs: 0, wait: null }, restarts: 0 });
+  assert.deepEqual(stats.cards, {
+    title: { runs: 0, wait: null },
+    result: { runs: 0, wait: null },
+    promotions: { runs: 0, wait: null },
+    restarts: 0,
+  });
   assert.deepEqual(stats.speed, { visits: 0, ready: null, nets: [], saveData: { said: 0, yes: 0 } });
   assert.deepEqual(stats.frames, {
     runs: 0,
