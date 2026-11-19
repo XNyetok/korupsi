@@ -187,6 +187,11 @@ export class Game {
     return events;
   }
 
+  /** The top of a ledge now, or just before the last step for moving surfaces. */
+  ledgeHeight(index: number, _previous = false): number {
+    return this.floor.ledges[index]?.y ?? 0;
+  }
+
   /** Puts the player on a ledge: for tests and `?debug=1`. */
   placeOn(ledge: number, x?: number): void {
     const def = this.floor.ledges[ledge];
@@ -194,7 +199,7 @@ export class Game {
     const left = ledgeX(def, this.worldTime);
     const p = this.player;
     p.x = x ?? left + def.w / 2;
-    p.y = def.y;
+    p.y = this.ledgeHeight(ledge);
     p.vx = 0;
     p.vy = 0;
     p.ground = ledge;
@@ -292,10 +297,13 @@ export class Game {
     const jumpPressed = input.jump && !this.prev.jump;
     const dashPressed = input.dash && !this.prev.dash;
 
-    // A troli carries whoever stands on it.
+    // A moving ledge carries whoever stands on it.
     if (p.ground >= 0) {
       const def = ledges[p.ground];
-      if (def) p.x += ledgeX(def, this.worldTime) - ledgeX(def, this.worldTime - dt);
+      if (def) {
+        p.x += ledgeX(def, this.worldTime) - ledgeX(def, this.worldTime - dt);
+        p.y += this.ledgeHeight(p.ground) - this.ledgeHeight(p.ground, true);
+      }
     }
 
     p.buffer = jumpPressed ? PARAMS.jumpBuffer : Math.max(0, p.buffer - dt);
@@ -369,7 +377,7 @@ export class Game {
       const landed = this.landing(before, p.y, p.x);
       if (landed >= 0) {
         const def = ledges[landed];
-        p.y = def?.y ?? 0;
+        p.y = this.ledgeHeight(landed);
         p.vy = 0;
         p.ground = landed;
         p.rising = false;
@@ -395,8 +403,8 @@ export class Game {
     let height = Number.NEGATIVE_INFINITY;
     const { ledges } = this.floor;
     for (let i = 0; i < ledges.length; i++) {
-      const y = ledges[i]?.y ?? 0;
-      if (y > from || y < to || y <= height) continue;
+      const y = this.ledgeHeight(i);
+      if (this.ledgeHeight(i, true) > from || y < to || y <= height) continue;
       if (!this.supports(i, x)) continue;
       found = i;
       height = y;

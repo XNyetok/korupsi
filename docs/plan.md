@@ -32,9 +32,11 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [ ] **P7 — Play Kecamatan and tune it.** Try promotion, direct entry and the copier's
-  warning on a phone. After it ships, use the Kecamatan filter in the panel to check
-  where players are caught and where they stop.
+- [~] **P7 — Give Kecamatan its own feel.** The maintainer found #58 too close to
+  Kelurahan in a local playtest. `feat/kecamatan-atrium` adds a dev-only opening:
+  `npm run dev`, then `/prototype/kecamatan/`. Try the atrium, lift and balcony on a
+  phone with sound off before reworking the full floor. The current route stays
+  available for comparison.
 - [ ] **T10 — Recheck the Kelurahan after v0.8.0.** Read the 7-day JSON export from
   2026-11-23 for a full window after the tuning (`docs/telemetry.md`). Not a blocker
   for Kecamatan.

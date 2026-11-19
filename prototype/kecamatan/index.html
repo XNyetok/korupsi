@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Nomor Berikutnya — Korupsi</title>
+</head>
+<body class="atrium">
+<div id="stage">
+  <div id="screen">
+    <canvas id="game" width="384" height="216" tabindex="0" aria-label="Korupsi: uji coba atrium Kecamatan"></canvas>
+    <div id="hud">
+      <span class="chip">02 Kecamatan</span>
+      <span class="chip lift-status" id="lift-status" role="status">Lift siap</span>
+    </div>
+    <div class="tools">
+      <button id="pause" class="tool" type="button" aria-label="Jeda">Ⅱ</button>
+      <button id="mute" class="tool" type="button" aria-label="Suara" aria-pressed="true">♪</button>
+    </div>
+  </div>
+  <div id="touch" aria-hidden="true">
+    <div id="pad" class="pad"><span>◀</span><span>▶</span></div>
+    <div class="actions">
+      <div id="btn-dash" class="action dash">Ngeles</div>
+      <div id="btn-jump" class="action jump">Lompat</div>
+    </div>
+  </div>
+  <div id="overlay" class="is-visible">
+    <section class="card" aria-labelledby="heading">
+      <p class="eyebrow">02 Kecamatan / Uji coba</p>
+      <h1 id="heading">Nomor Berikutnya</h1>
+      <p class="lede" id="message">Lewati lobi dan masuk ke ruang verifikasi.</p>
+      <button id="continue" class="primary" type="button">Mulai uji coba</button>
+      <p class="keys"><kbd>←</kbd><kbd>→</kbd> jalan <kbd>Spasi</kbd> lompat <kbd>Shift</kbd> ngeles</p>
+    </section>
+  </div>
+</div>
+<script type="module" src="/src/atrium-preview.ts"></script>
+</body>
+</html>
