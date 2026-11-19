@@ -1,8 +1,8 @@
 # Korupsi — game design
 
-**Status:** Kelurahan has been tested by people and tuned in v0.8.0. Kecamatan is
-implemented and covered by scripted climbs and browser tests; see [`../plan.md`](../plan.md)
-for release and playtest status. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts),
+**Status:** Kelurahan was tuned in v0.8.0. The maintainer approved Kecamatan after
+playing it locally, and both floors are live in v0.9.0. See [`../plan.md`](../plan.md)
+for playtest and release history. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts),
 the tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). The first reading of
 [`../telemetry.md`](../telemetry.md) eased three spots near Kelurahan's first machine;
 phone sessions shaped the screen, sound and sharing. See the playtest log.
@@ -98,8 +98,8 @@ abstract. The art pass keeps the same geometry and cues. Warm stone and glazed t
 set off the cool light through windows onto tiled rooftops. Monitors, forms, numbered
 counters and a ticket kiosk give the lobby a purpose; steel rails and a paper tray make
 the cabin look used. Only the moving deck and verification balcony get the bright rim.
-The maintainer approved the result on 2026-11-19. The same surfaces and signage now
-continue into the archive and pengesahan; those rooms still need hands-on play.
+The maintainer approved the result on 2026-11-19. The same surfaces and signage
+continue into the archive and pengesahan in v0.9.0.
 
 ## Sessions
 
@@ -300,6 +300,7 @@ in CI. Whether the tune is any good is for ears.
 | 2026-11-19 | v0.8.0 | The maintainer played the tuned Kelurahan | The floor felt right to play. Start Kecamatan while keeping the next telemetry review and Android sharing check as separate follow-ups |
 | 2026-11-19 | #58 | Scripted climbs, browser checks, and the maintainer's hands-on test | Unlocks and progression worked, but the first Kecamatan route felt too much like Kelurahan |
 | 2026-11-19 | #59 and #60 | The maintainer played the opening and reviewed the service hall art | The automatic lift and destination jump were clear. With detailed counters, glass and steel, the art was approved for the full floor |
+| 2026-11-19 | #61 | The maintainer tried the full Kecamatan route locally; scripted climbs and browser checks also passed | Approved for release as v0.9.0 |
 
 ## Tuning
 
