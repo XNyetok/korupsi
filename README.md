@@ -28,8 +28,8 @@ Dinas and the floors above it are next.
 - **Do not fall far.** Once you have clocked in, the audit team tapes off the floors
   below. Drop past the tape and they have you.
 - **Proyek fiktif** ledges, the red-and-white ones, give way shortly after you land.
-- **Copiers** in Kecamatan warn before shooting a bundle of papers across a desk. Jump
-  over it or cross while the desk is clear.
+- **Document lifts** in Kecamatan rise as soon as you step on them. Ride to a landing,
+  then jump across. A copier warns before sending papers along the upper walkway.
 
 Finish Kelurahan once to unlock Kecamatan. Take the promotion at the door to keep your
 money in the climb total without carrying its weight, or start directly in Kecamatan from
@@ -57,7 +57,7 @@ page to the home screen and open it from there.
 
 | | |
 | --- | --- |
-| Build size | about 32 KB gzipped, no runtime dependencies; CI enforces a 33 KB budget |
+| Build size | about 36 KB gzipped, no runtime dependencies; CI enforces a 37 KB budget |
 | Stack | TypeScript and Canvas 2D, bundled by Vite |
 | Art | pixel art drawn in code, a tower 384 pixels wide, scaled up without smoothing; no image files |
 | Audio | a tune and effects synthesised with WebAudio; no audio files |

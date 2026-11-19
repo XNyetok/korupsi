@@ -1,22 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { pressTouch } from './helpers.ts';
 
 const PREVIEW = 'http://127.0.0.1:4174/prototype/kecamatan/';
-
-/** Same direction and jump actions as a player, without teleporting to the lift. */
-async function pressThumb(page: Page, selector: string, pointerId: number, half = false) {
-  const target = page.locator(selector);
-  const box = await target.boundingBox();
-  if (!box) throw new Error(`missing controls: ${selector}`);
-  const event = {
-    pointerId,
-    pointerType: 'touch',
-    bubbles: true,
-    clientX: box.x + box.width * (half ? 0.75 : 0.5),
-    clientY: box.y + box.height * 0.5,
-  };
-  await target.dispatchEvent('pointerdown', event);
-  return () => target.dispatchEvent('pointerup', event);
-}
 
 test('the atrium can be finished and replayed with sound off', async ({ page, isMobile }) => {
   const errors: string[] = [];
@@ -26,12 +11,12 @@ test('the atrium can be finished and replayed with sound off', async ({ page, is
     if (new URL(request.url()).pathname === '/api/beacon') beacons.push(request.url());
   });
   const pressRight = async () => {
-    if (isMobile) return pressThumb(page, '#pad', 1, true);
+    if (isMobile) return pressTouch(page, '#pad', 1, 'right');
     await page.keyboard.down('ArrowRight');
     return () => page.keyboard.up('ArrowRight');
   };
   const pressJump = async () => {
-    if (isMobile) return pressThumb(page, '#btn-jump', 2);
+    if (isMobile) return pressTouch(page, '#btn-jump', 2);
     await page.keyboard.down('Space');
     return () => page.keyboard.up('Space');
   };

@@ -5,8 +5,8 @@ export type Phase = 'ready' | 'playing' | 'paused' | 'won';
 /** What ended a life. `jatuh` is a fall past the audit line. */
 export type Cause = 'auditor' | 'stempel' | 'berkas' | 'jatuh';
 
-/** `fiktif` crumbles after it is touched; `troli` rolls from side to side. */
-export type LedgeKind = 'solid' | 'fiktif' | 'troli';
+/** `fiktif` crumbles, `troli` rolls side to side, `lift` carries a rider up. */
+export type LedgeKind = 'solid' | 'fiktif' | 'troli' | 'lift';
 
 /** What a ledge looks like. Only the view reads it. */
 export type Skin = 'lantai' | 'meja' | 'rak' | 'lemari' | 'ac' | 'balkon';
@@ -26,6 +26,8 @@ export interface LedgeDef {
   travel?: number;
   period?: number;
   phase?: number;
+  /** lift: the height of the upper stop; y is the lower stop. */
+  liftTo?: number;
 }
 
 /** An auditor walks a ledge between `from` and `to`. */
@@ -118,6 +120,8 @@ export type GameEventType =
   | 'crumble'
   | 'warn'
   | 'stamp'
+  | 'lift_up'
+  | 'lift_at'
   | 'win';
 
 /** Something the view and the sound may want to react to. */

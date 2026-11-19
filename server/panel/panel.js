@@ -931,6 +931,7 @@ function renderSpeed(stats) {
 const MAP_KEYS = [
   { css: 'catch', name: 'Tempat kena OTT' },
   { css: 'ledge', name: 'Pijakan' },
+  { css: 'lift', name: 'Lintasan lift' },
   { css: 'amplop', name: 'Amplop' },
   { css: 'beat', name: 'Jalur auditor' },
   { css: 'stamp', name: 'Stempel' },
@@ -980,6 +981,11 @@ function renderMap(stats) {
           y1: y,
           y2: y,
         }),
+      );
+    }
+    if (ledge.liftTo != null) {
+      map.append(
+        svg('rect', { class: 'lift', x: ledge.x, y: Y(ledge.liftTo), width: ledge.w, height: ledge.liftTo - ledge.y }),
       );
     }
     map.append(

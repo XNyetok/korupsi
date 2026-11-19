@@ -120,7 +120,7 @@ function begin(): void {
   game = climb.game;
   audio.unlock();
   audio.play('start');
-  audio.startMusic();
+  if (game.floor.id !== 'kecamatan') audio.startMusic();
   pad.clear();
   renderer.snap(game);
   ui.hideOverlay();
@@ -190,7 +190,7 @@ function resume(): void {
   pad.clear();
   game.resume();
   audio.play('click');
-  audio.resumeMusic();
+  if (game.floor.id !== 'kecamatan') audio.resumeMusic();
   ui.hideOverlay();
   loop.resync();
 }
@@ -280,6 +280,8 @@ function sound(event: GameEvent): void {
     case 'warn':
     case 'stamp':
     case 'crumble':
+    case 'lift_up':
+    case 'lift_at':
       // The whole floor is simulated; only what is near is heard.
       audio.play(event.type, nearness(event.x, event.y));
       break;

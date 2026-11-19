@@ -8,6 +8,7 @@ import type { Game } from '../core/game.ts';
 import { FILL, PARAMS, VIEW, WORLD_WIDTH as W } from '../core/params.ts';
 import { auditorAt, ledgeX, printerAt, stampAt } from '../core/tower.ts';
 import type { FloorDef, GameEvent } from '../core/types.ts';
+import { ATRIUM_SCENE } from './atrium.ts';
 import { BASE, type Backdrop, PARALLAX, paintBackdrop } from './backdrop.ts';
 import { Fx } from './fx.ts';
 import { C } from './palette.ts';
@@ -40,10 +41,13 @@ export interface Scene {
 }
 
 const OFFICE: Scene = { backdrop: paintBackdrop, ledge: drawLedge, exit: drawExit };
+const sceneFor = (floor: FloorDef) =>
+  floor.id === 'kecamatan' || floor.id === 'kecamatan-atrium' ? ATRIUM_SCENE : OFFICE;
 
 export class Renderer {
   private readonly ctx: Ctx;
   private floor: FloorDef;
+  private scene: Scene;
   private backdrop: Backdrop;
   private readonly fx = new Fx();
   private readonly reducedMotion: boolean;
@@ -59,15 +63,11 @@ export class Renderer {
   /** A short trail of where the player just was, drawn while dashing. */
   private trail: { x: number; y: number; age: number }[] = [];
 
-  constructor(
-    ctx: Ctx,
-    game: Game,
-    reducedMotion: boolean,
-    private readonly scene = OFFICE,
-  ) {
+  constructor(ctx: Ctx, game: Game, reducedMotion: boolean) {
     this.ctx = ctx;
     this.floor = game.floor;
-    this.backdrop = scene.backdrop(this.floor, FILL.maxHeight);
+    this.scene = sceneFor(this.floor);
+    this.backdrop = this.scene.backdrop(this.floor, FILL.maxHeight);
     this.reducedMotion = reducedMotion;
   }
 
@@ -86,6 +86,7 @@ export class Renderer {
   snap(game: Game): void {
     if (this.floor !== game.floor) {
       this.floor = game.floor;
+      this.scene = sceneFor(this.floor);
       this.backdrop = this.scene.backdrop(this.floor, FILL.maxHeight);
       this.clock = this.stride = 0;
     }

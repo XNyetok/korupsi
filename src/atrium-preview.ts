@@ -1,11 +1,11 @@
 import './ui/style.css';
 import './ui/atrium.css';
-import { Atrium, type LiftPhase } from './core/atrium.ts';
+import { ATRIUM } from './core/atrium.ts';
+import { Game, type LiftPhase } from './core/game.ts';
 import { AtriumSound } from './platform/atrium-sound.ts';
 import { bindInput, guardGestures, Pad } from './platform/input.ts';
 import { startLoop } from './platform/loop.ts';
 import { applyView } from './platform/viewport.ts';
-import { ATRIUM_SCENE } from './view/atrium.ts';
 import { Renderer } from './view/renderer.ts';
 
 function need<T extends HTMLElement>(id: string): T {
@@ -26,10 +26,11 @@ const pauseButton = need<HTMLButtonElement>('pause');
 const muteButton = need<HTMLButtonElement>('mute');
 const liftStatus = need('lift-status');
 
-const game = new Atrium();
+const game = new Game({ floor: ATRIUM });
+const phase = () => game.liftPhase(1) ?? 'ready';
 const pad = new Pad();
 const sound = new AtriumSound();
-const renderer = new Renderer(ctx, game, matchMedia('(prefers-reduced-motion: reduce)').matches, ATRIUM_SCENE);
+const renderer = new Renderer(ctx, game, matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 function play(): void {
   if (game.phase === 'paused') game.resume();
@@ -58,7 +59,7 @@ function show(title: string, text: string, button: string): void {
 function pause(): void {
   if (game.phase !== 'playing') return;
   game.pause();
-  sound.update(game.liftPhase, false);
+  sound.update(phase(), false);
   show('Dijeda', 'Lift dan berkas menunggu.', 'Lanjut');
 }
 
@@ -120,9 +121,10 @@ const loop = startLoop({
     const events = game.drain();
     renderer.handle(events);
     renderer.draw(game, dt);
-    sound.update(game.liftPhase, game.phase === 'playing');
-    if (shown !== game.liftPhase) {
-      shown = game.liftPhase;
+    const lift = phase();
+    sound.update(lift, game.phase === 'playing');
+    if (shown !== lift) {
+      shown = lift;
       liftStatus.textContent = LIFT_STATUS[shown];
     }
     if (events.some((event) => event.type === 'win')) {
