@@ -32,11 +32,11 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P7 — Give Kecamatan its own feel.** The maintainer found #58 too close to
-  Kelurahan in a local playtest. `feat/kecamatan-atrium` adds a dev-only opening:
-  `npm run dev`, then `/prototype/kecamatan/`. Try the atrium, lift and balcony on a
-  phone with sound off before reworking the full floor. The current route stays
-  available for comparison.
+- [~] **P7 — Give Kecamatan its own feel.** The first route (#58) felt too much like
+  Kelurahan. A local playtest of #59 found the lift and jump clear, but the art too
+  abstract. `art/kecamatan-atrium` adds a more recognisable service hall without changing
+  the controls or route. Try the new art at `/prototype/kecamatan/` under `npm run dev`
+  before applying it to the full floor. The current route stays available for comparison.
 - [ ] **T10 — Recheck the Kelurahan after v0.8.0.** Read the 7-day JSON export from
   2026-11-23 for a full window after the tuning (`docs/telemetry.md`). Not a blocker
   for Kecamatan.
