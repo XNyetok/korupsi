@@ -144,14 +144,13 @@ function paintWall(floor: FloorDef): HTMLCanvasElement {
   const { canvas, ctx } = layer(W, H + CELLAR);
   const random = seeded(17);
   const storeys = Math.ceil(H / STOREY);
-  const kecamatan = floor.id === 'kecamatan';
 
   /** Canvas row of a height above the ground floor. */
   const row = (alt: number) => H - alt;
   /** A rectangle given by its left edge and the height of its top. */
   const box = (x: number, top: number, w: number, h: number, color: string) => rect(ctx, x, row(top), w, h, color);
 
-  rect(ctx, 0, 0, W, H + CELLAR, kecamatan ? C.kecamatan : C.wall);
+  rect(ctx, 0, 0, W, H + CELLAR, C.wall);
 
   // Plaster: specks, and the odd damp streak nobody has budgeted to fix.
   for (let i = 0; i < 2600; i++) {
@@ -170,11 +169,11 @@ function paintWall(floor: FloorDef): HTMLCanvasElement {
 
   for (let s = 0; s < storeys; s++) {
     const b = s * STOREY;
-    const lurah = s === 3 && !kecamatan;
-    const violet = kecamatan || s > 3;
+    const lurah = s === 3;
+    const violet = s > 3;
 
     // The door at the top of Kelurahan already shows the colour of the next office.
-    if (!kecamatan && violet) box(0, b + STOREY, W, STOREY, C.kecamatan);
+    if (violet) box(0, b + STOREY, W, STOREY, C.kecamatan);
 
     // dado: the darker lower band every office wall has
     box(0, b + 46, W, 46, lurah ? C.woodDeep : violet ? C.kecamatanDark : C.dado);
@@ -196,78 +195,62 @@ function paintWall(floor: FloorDef): HTMLCanvasElement {
     }
   }
 
-  if (kecamatan) {
-    windows.push([30, 56], [340, 55], [257, 211], [18, 324], [344, 407]);
-    board(ctx, 180, row(123), 'KANTOR KECAMATAN', C.steelLight, C.navy, true);
-    loket(ctx, 110, row(66), 1, false);
-    loket(ctx, 174, row(66), 2, false);
-    loket(ctx, 238, row(66), 3, true);
-    plant(ctx, 22, row(0));
-    board(ctx, 124, row(260), 'LOKET LEGALISIR', C.steelDark, C.white);
-    poster(ctx, 175, row(232), ['LOMPATI', 'BERKAS'], C.paper, C.ink);
-    shelf(ctx, 50, row(375), 108, 3, random);
-    board(ctx, 104, row(390), 'ARSIP KECAMATAN', C.steelDark, C.white);
-    poster(ctx, 258, row(391), ['KURANG', 'SATU BERKAS'], C.paper, C.ink);
-    board(ctx, 119, row(486), 'RUANG CAMAT', C.woodDark, C.goldLight, true);
-    trophies(ctx, 288, row(472));
-  } else {
-    // ----- storey 0: the lobby -----
-    windows.push([22, 68], [328, 68]);
-    board(ctx, 192, row(126), 'KANTOR KELURAHAN', C.paper, C.ink, true);
-    for (const [i, lx] of [112, 170, 228].entries()) {
-      loket(ctx, lx, row(52), i + 1, i === 2);
-    }
-    // queue display
-    box(284, 76, 30, 12, C.ink);
-    text(ctx, 'A012', 291, row(76) + 4, C.red);
-    poster(ctx, 64, row(112), ['STOP', 'PUNGLI'], C.red, C.white);
-    // suggestion box, never opened
-    box(302, 44, 16, 13, C.woodDark);
-    box(302, 44, 16, 2, C.wood);
-    box(306, 40, 8, 1, C.ink);
-    text(ctx, 'SARAN', 301, row(52) - 3, C.paperDark);
-    plant(ctx, 10, row(0));
-    plant(ctx, 368, row(0));
-    // waiting bench
-    box(266, 12, 50, 3, C.steel);
-    box(266, 20, 50, 3, C.steelDark);
-    for (const bx of [270, 310]) box(bx, 9, 2, 9, C.steelDark);
+  // ----- storey 0: the lobby -----
+  windows.push([22, 68], [328, 68]);
+  board(ctx, 192, row(126), 'KANTOR KELURAHAN', C.paper, C.ink, true);
+  for (const [i, lx] of [112, 170, 228].entries()) {
+    loket(ctx, lx, row(52), i + 1, i === 2);
+  }
+  // queue display
+  box(284, 76, 30, 12, C.ink);
+  text(ctx, 'A012', 291, row(76) + 4, C.red);
+  poster(ctx, 64, row(112), ['STOP', 'PUNGLI'], C.red, C.white);
+  // suggestion box, never opened
+  box(302, 44, 16, 13, C.woodDark);
+  box(302, 44, 16, 2, C.wood);
+  box(306, 40, 8, 1, C.ink);
+  text(ctx, 'SARAN', 301, row(52) - 3, C.paperDark);
+  plant(ctx, 10, row(0));
+  plant(ctx, 368, row(0));
+  // waiting bench
+  box(266, 12, 50, 3, C.steel);
+  box(266, 20, 50, 3, C.steelDark);
+  for (const bx of [270, 310]) box(bx, 9, 2, 9, C.steelDark);
 
-    // ----- storey 1: the archive -----
-    {
-      const b = STOREY;
-      windows.push([60, b + 66], [292, b + 66]);
-      banner(ctx, 192, row(b + 128), 'ZONA INTEGRITAS');
-      shelf(ctx, 124, row(b + 100), 110, 3, random);
-      clock(ctx, 348, row(b + 116));
-      fan(ctx, 22, row(b + 112));
-      poster(ctx, 250, row(b + 96), ['BEBAS', 'KORUPSI'], C.greenDark, C.white);
-    }
+  // ----- storey 1: the archive -----
+  {
+    const b = STOREY;
+    windows.push([60, b + 66], [292, b + 66]);
+    banner(ctx, 192, row(b + 128), 'ZONA INTEGRITAS');
+    shelf(ctx, 124, row(b + 100), 110, 3, random);
+    clock(ctx, 348, row(b + 116));
+    fan(ctx, 22, row(b + 112));
+    poster(ctx, 250, row(b + 96), ['BEBAS', 'KORUPSI'], C.greenDark, C.white);
+  }
 
-    // ----- storey 2: the staff room -----
-    if (storeys > 2) {
-      const b = STOREY * 2;
-      windows.push([22, b + 66], [175, b + 66], [328, b + 66]);
-      portrait(ctx, 84, row(b + 128));
-      clock(ctx, 106, row(b + 124));
-      portrait(ctx, 126, row(b + 128));
-      corkboard(ctx, 238, row(b + 102), 62, 40, random);
-      textCentred(ctx, 'PENGUMUMAN', 269, row(b + 110), C.paperDark);
-      poster(ctx, 232, row(b + 132), ['JAM ISTIRAHAT', '10.00 - 14.00'], C.paper, C.ink);
-      calendar(ctx, 62, row(b + 122));
-      // Over the gap that needs a dash: the ready card says how, but it is soon gone.
-      poster(ctx, 66, row(b + 100), ['LOMPAT', 'LALU', 'NGELES >'], C.paper, C.ink);
-    }
+  // ----- storey 2: the staff room -----
+  if (storeys > 2) {
+    const b = STOREY * 2;
+    windows.push([22, b + 66], [175, b + 66], [328, b + 66]);
+    portrait(ctx, 84, row(b + 128));
+    clock(ctx, 106, row(b + 124));
+    portrait(ctx, 126, row(b + 128));
+    corkboard(ctx, 238, row(b + 102), 62, 40, random);
+    textCentred(ctx, 'PENGUMUMAN', 269, row(b + 110), C.paperDark);
+    poster(ctx, 232, row(b + 132), ['JAM ISTIRAHAT', '10.00 - 14.00'], C.paper, C.ink);
+    calendar(ctx, 62, row(b + 122));
+    // Over the gap that needs a dash: the ready card says how, but it is soon gone.
+    poster(ctx, 66, row(b + 100), ['LOMPAT', 'LALU', 'NGELES >'], C.paper, C.ink);
+  }
 
-    // ----- storey 3: the lurah's floor -----
-    if (storeys > 3) {
-      const b = STOREY * 3;
-      windows.push([60, b + 66], [150, b + 66]);
-      board(ctx, 122, row(b + 132), 'RUANG LURAH', C.woodDark, C.goldLight, true);
-      trophies(ctx, 226, row(b + 124));
-      portrait(ctx, 286, row(b + 128));
-      portrait(ctx, 306, row(b + 128));
-    }
+  // ----- storey 3: the lurah's floor -----
+  if (storeys > 3) {
+    const b = STOREY * 3;
+    windows.push([60, b + 66], [150, b + 66]);
+    board(ctx, 122, row(b + 132), 'RUANG LURAH', C.woodDark, C.goldLight, true);
+    trophies(ctx, 226, row(b + 124));
+    portrait(ctx, 286, row(b + 128));
+    portrait(ctx, 306, row(b + 128));
   }
 
   // The world's edges are pillars, so the walls read as walls.

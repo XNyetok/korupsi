@@ -1,6 +1,7 @@
-import { Atrium, LIFT, type LiftPhase } from '../core/atrium.ts';
+import type { LiftPhase } from '../core/game.ts';
 import { WORLD_WIDTH as W } from '../core/params.ts';
-import type { FloorDef } from '../core/types.ts';
+import { VERIFICATION } from '../core/tower.ts';
+import type { FloorDef, LedgeDef } from '../core/types.ts';
 import { CELLAR, type Backdrop } from './backdrop.ts';
 import { type Ctx, layer, rect, seeded, text, textCentred } from './pixel.ts';
 import type { Scene } from './renderer.ts';
@@ -219,41 +220,74 @@ function waitingArea(ctx: Ctx, box: Box, row: (height: number) => number): void 
   plant(box, 369, 0);
 }
 
-function shaft(floor: FloorDef, ctx: Ctx, box: Box, row: (height: number) => number): void {
-  const { x, w } = floor.ledges[LIFT.ledge];
-  box(x - 9, 197, w + 18, 197, C.stoneDark);
-  box(x - 7, 192, w + 14, 192, C.deep);
-  box(x, 170, w, 170, '#34515c');
+function shaft(def: LedgeDef, ctx: Ctx, box: Box, row: (height: number) => number): void {
+  const { x, w, y } = def;
+  const top = def.liftTo ?? y;
+  const span = top - y;
+  const mid = x + w / 2;
+  box(x - 9, top + 83, w + 18, span + 83, C.stoneDark);
+  box(x - 7, top + 78, w + 14, span + 78, C.deep);
+  box(x, top + 56, w, span + 56, '#34515c');
   // Recessed wall, guide rails and the cab's central cable channel.
-  box(x + 5, 170, w - 10, 170, '#45616a');
-  box(x + 39, 168, 22, 168, '#304951');
-  for (const dx of [45, 49, 54]) box(x + dx, 164, 1, 164, C.steel);
+  box(x + 5, top + 56, w - 10, span + 56, '#45616a');
+  box(mid - 11, top + 54, 22, span + 54, '#304951');
+  for (const dx of [-5, -1, 4]) box(mid + dx, top + 50, 1, span + 50, C.steel);
   for (const tx of [x + 1, x + w - 6]) {
-    box(tx, 174, 5, 174, C.steelDark);
-    box(tx, 174, 2, 174, C.steelLight);
-    for (let h = 9; h < 171; h += 14) {
+    box(tx, top + 60, 5, span + 60, C.steelDark);
+    box(tx, top + 60, 2, span + 60, C.steelLight);
+    for (let h = y + 9; h < top + 57; h += 14) {
       box(tx - 1, h, 7, 2, C.steel);
       box(tx + 2, h, 1, 1, C.deep);
     }
   }
-  box(x + 34, 173, 32, 10, C.deep);
-  box(x + 39, 172, 22, 7, C.steel);
-  for (let dx = 41; dx < 60; dx += 4) box(x + dx, 171, 1, 6, C.steelDark);
-  box(x - 9, 194, w + 18, 22, C.ink);
-  box(x - 6, 192, w + 12, 18, C.sign);
-  textCentred(ctx, 'LIFT BERKAS', x + w / 2, row(187), C.ivory, true);
+  box(mid - 16, top + 59, 32, 10, C.deep);
+  box(mid - 11, top + 58, 22, 7, C.steel);
+  for (let dx = -9; dx < 10; dx += 4) box(mid + dx, top + 57, 1, 6, C.steelDark);
+  box(x - 9, top + 80, w + 18, 22, C.ink);
+  box(x - 6, top + 78, w + 12, 18, C.sign);
+  textCentred(ctx, y === 0 ? 'LIFT BERKAS' : 'LIFT ARSIP', mid, row(top + 73), C.ivory, true);
 
-  for (const [h, label] of [
-    [13, '01'],
-    [LIFT.top + 13, '02'],
-  ] as const) {
+  [y + 13, top + 13].forEach((h, i) => {
     const tx = x + w + 4;
     box(tx, h + 12, 14, 14, C.deep);
     box(tx + 1, h + 11, 12, 8, C.ink);
-    text(ctx, label, tx + 3, row(h + 9), C.mint);
+    text(ctx, String(i + (y === 0 ? 1 : 2)).padStart(2, '0'), tx + 3, row(h + 9), C.mint);
     box(tx + 6, h + 1, 2, 2, C.steelLight);
+  });
+  box(x - 7, y + 2, w + 14, 2, C.steelLight);
+}
+
+function offices(ctx: Ctx, box: Box, row: (height: number) => number): void {
+  // Back-office shelving and paper stacks are inset into the walls. They
+  // stay darker than the routes marked by the pale mint rims.
+  box(128, 475, 242, 263, C.stone);
+  box(128, 418, 242, 1, C.stoneDark);
+  for (const [x, h, w, label] of [
+    [116, 281, 100, 'ARSIP'],
+    [241, 427, 130, 'PENGESAHAN'],
+  ] as const) {
+    box(x, h, w, 63, C.stoneDark);
+    box(x + 2, h - 2, w - 4, 58, '#b7b49e');
+    for (let level = h - 25; level > h - 57; level -= 27) {
+      box(x + 4, level, w - 8, 2, C.stoneDark);
+      const folders = [C.steel, '#999986', '#909d95', '#a79782'];
+      for (let dx = 8; dx < w - 14; dx += 12) {
+        const color = folders[(Math.floor(dx / 12) + level) % folders.length];
+        box(x + dx, level + 15 + (dx % 5), 8, 15 + (dx % 5), color);
+        box(x + dx + 1, level + 2, 1, 1, C.stoneDark);
+        box(x + dx + 2, level + 12, 4, 2, C.plaster);
+      }
+    }
+    box(x + 6, h + 15, w - 12, 14, C.sign);
+    textCentred(ctx, label, x + w / 2, row(h + 11), C.ivory, true);
   }
-  box(x - 7, 2, w + 14, 2, C.steelLight);
+  box(215, 227, 150, 18, C.sign);
+  text(ctx, '<', 230, row(221), C.ivory);
+  textCentred(ctx, 'LIFT ARSIP', 290, row(221), C.ivory, true);
+  box(318, 181, 55, 11, C.steelDark);
+  textCentred(ctx, 'LOMPAT ^', 345, row(178), C.ivory);
+  box(164, 352, 100, 14, C.sign);
+  textCentred(ctx, 'LOMPATI BERKAS', 214, row(347), C.ivory, true);
 }
 
 /** An office atrium: light from a clerestory, warm tile, and deep equipment bays. */
@@ -292,7 +326,7 @@ function backdrop(floor: FloorDef, maxView: number): Backdrop {
   textCentred(ctx, 'PENDAFTARAN', 77, row(163), C.steelLight);
 
   // The glass balustrade sits behind the actual balcony surface.
-  const { x: balcony, y: h, w: width } = floor.ledges[floor.exit.ledge];
+  const { x: balcony, y: h, w: width } = floor.ledges[VERIFICATION.ledge];
   box(balcony, h + 22, width, 22, '#89aab0');
   box(balcony, h + 22, width, 2, C.steel);
   box(balcony, h + 19, width, 1, C.reflection);
@@ -318,11 +352,18 @@ function backdrop(floor: FloorDef, maxView: number): Backdrop {
 
   reception(ctx, box, row);
   waitingArea(ctx, box, row);
-  shaft(floor, ctx, box, row);
+  if (floor.id === 'kecamatan') {
+    offices(ctx, box, row);
+    // The prototype's door was the end of the slice. In the full floor,
+    // this sign marks the balcony and points to the next step of the route.
+    box(320, h + 19, 62, 13, C.sign);
+    textCentred(ctx, VERIFICATION.label, 351, row(h + 16), C.ivory, true);
+  }
+  for (const def of floor.ledges) if (def.kind === 'lift') shaft(def, ctx, box, row);
   return { sky, wall: canvas };
 }
 
-function cabin(ctx: Ctx, x: number, sy: number, w: number, phase: LiftPhase): void {
+function cabin(ctx: Ctx, x: number, sy: number, w: number, phase: LiftPhase, fromRight: boolean): void {
   // The stainless back is part of the sprite, so its depth moves with the deck.
   rect(ctx, x + 4, sy - 34, w - 8, 34, C.deep);
   rect(ctx, x + 7, sy - 32, w - 14, 31, '#78949c');
@@ -345,14 +386,14 @@ function cabin(ctx: Ctx, x: number, sy: number, w: number, phase: LiftPhase): vo
   rect(ctx, x + 15, sy - 49, w - 30, 13, C.ink);
   rect(ctx, x + 17, sy - 47, 2, 1, C.mint);
   if (phase === 'arrived') {
-    text(ctx, 'LOMPAT', x + 25, sy - 46, C.mint, true);
-    text(ctx, '>', x + 67, sy - 45, C.mint);
+    text(ctx, 'LOMPAT', x + w / 2 - 22, sy - 46, C.mint, true);
+    text(ctx, '>', x + w / 2 + 17, sy - 45, C.mint);
   } else {
     textCentred(ctx, LIFT_LABEL[phase], x + w / 2, sy - 46, C.mint, true);
   }
   if (phase === 'ready') {
-    rect(ctx, x + 20, sy - 28, 60, 11, C.sign);
-    textCentred(ctx, 'INJAK LIFT >', x + w / 2, sy - 25, C.ivory);
+    rect(ctx, x + w / 2 - 30, sy - 28, 60, 11, C.sign);
+    textCentred(ctx, fromRight ? '< INJAK LIFT' : 'INJAK LIFT >', x + w / 2, sy - 25, C.ivory);
   }
   if (phase === 'rising') {
     rect(ctx, x + w / 2 - 5, sy - 27, 11, 9, C.sign);
@@ -371,7 +412,8 @@ export const ATRIUM_SCENE: Scene = {
   ledge(ctx, def, { x, sy }, game, index) {
     if (index === 0) return;
     const { w } = def;
-    if (index === LIFT.ledge && game instanceof Atrium) cabin(ctx, x, sy, w, game.liftPhase);
+    const phase = game.liftPhase(index);
+    if (phase) cabin(ctx, x, sy, w, phase, def.y > 0);
     rect(ctx, x, sy, w, 9, C.ink);
     rect(ctx, x, sy, w, 2, C.rim);
     rect(ctx, x + 1, sy + 2, w - 2, 1, C.mint);

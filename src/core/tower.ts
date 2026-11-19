@@ -3,11 +3,9 @@
  * world clock, so the simulation, the tests and the view all agree on where an
  * auditor or a stamp is without sharing any state.
  *
- * Spacing rules the floor is built on (checked in tests/tower.test.ts):
- * - the next ledge on the route is about 28 px up, which a full load of
- *   envelopes still clears;
- * - the ledge after that is at least 54 px up, which nobody clears, so the
- *   route cannot be skipped.
+ * Kelurahan's next ledge is about 28 px up and the one after it at least 54 px
+ * up, so every jump works empty and full without skipping the route. In
+ * Kecamatan, lifts bridge taller gaps and connect broader landings.
  */
 
 import type { AuditorDef, FloorDef, LedgeDef, PrinterDef, StampDef } from './types.ts';
@@ -80,53 +78,46 @@ export const KELURAHAN: FloorDef = {
   exit: { ledge: 20, x: 348, label: 'KECAMATAN' },
 };
 
+// The opening was tested on its own before building the rooms above it.
+export const ATRIUM_LEDGES: LedgeDef[] = [
+  /* 0 */ { x: 0, y: 0, w: 384 },
+  /* 1 */ { x: 150, y: 0, w: 100, kind: 'lift', liftTo: 114 },
+  /* 2 */ { x: 270, y: 114, w: 114 },
+];
+export const ATRIUM_SPAWN = { ledge: 0, x: 42 };
+export const VERIFICATION = { ledge: 2, x: 350, label: 'VERIFIKASI' };
+
 export const KECAMATAN: FloorDef = {
   id: 'kecamatan',
   name: 'Kecamatan',
-  height: 514,
+  height: 492,
   ledges: [
-    /*  0 */ { x: 0, y: 0, w: 384, skin: 'lantai' },
-    // The reception desks turn back towards the legalisation counter.
-    /*  1 */ { x: 94, y: 28, w: 60, skin: 'meja' },
-    /*  2 */ { x: 176, y: 56, w: 54, skin: 'lemari' },
-    /*  3 */ { x: 254, y: 84, w: 54, skin: 'meja' },
-    /*  4 */ { x: 322, y: 112, w: 48, skin: 'rak' },
-    /*  5 */ { x: 257, y: 140, w: 58, skin: 'lemari' },
-    // The copier stops short of the landing. Cross its desk to reach the archive.
-    /*  6 */ { x: 127, y: 168, w: 122, skin: 'meja' },
-    /*  7 */ { x: 62, y: 196, w: 50, skin: 'rak' },
-    /*  8 */ { x: 10, y: 224, w: 36, skin: 'lemari' },
-    /*  9 */ { x: 64, y: 252, w: 42, kind: 'troli', travel: 22, period: 3.6 },
-    /* 10 */ { x: 148, y: 280, w: 42, kind: 'fiktif' },
-    /* 11 */ { x: 205, y: 308, w: 92, skin: 'meja' },
-    /* 12 */ { x: 311, y: 336, w: 54, skin: 'lemari' },
-    // A shorter copier cycle, then the stamp below the Camat's balcony.
-    /* 13 */ { x: 201, y: 364, w: 90, skin: 'meja' },
-    /* 14 */ { x: 125, y: 392, w: 50, skin: 'rak' },
-    /* 15 */ { x: 42, y: 420, w: 55, skin: 'meja' },
-    /* 16 */ { x: 108, y: 448, w: 212, skin: 'balkon' },
+    ...ATRIUM_LEDGES,
+    // The glass balcony turns back through the counters to the mail lift.
+    /*  3 */ { x: 321, y: 142, w: 58 },
+    /*  4 */ { x: 223, y: 170, w: 75 },
+    /*  5 */ { x: 82, y: 198, w: 121 },
+    /*  6 */ { x: 10, y: 198, w: 78, kind: 'lift', liftTo: 306 },
+    // A safe landing and a clock-in machine before the papers reach the walk.
+    /*  7 */ { x: 106, y: 306, w: 183 },
+    /*  8 */ { x: 304, y: 334, w: 67 },
+    /*  9 */ { x: 217, y: 362, w: 72 },
+    /* 10 */ { x: 91, y: 389, w: 113 },
   ],
-  auditors: [{ ledge: 11, from: 251, to: 283, speed: 30 }],
-  stamps: [{ ledge: 15, x: 63, period: 2.9, offset: 0.4 }],
-  printers: [
-    { ledge: 6, x: 142, to: 204, period: 3.4 },
-    { ledge: 13, x: 215, to: 246, period: 2.7, offset: 0.8 },
-  ],
+  auditors: [],
+  stamps: [],
+  printers: [{ ledge: 7, x: 191, to: 264, period: 3.9 }],
   amplop: [
-    { x: 138, y: 40 },
-    { x: 355, y: 124 },
-    { x: 167, y: 180 },
-    { x: 24, y: 236 },
-    { x: 280, y: 320 },
-    { x: 229, y: 376 },
-    { x: 62, y: 432 },
+    { x: 21, y: 12 },
+    { x: 371, y: 120 },
+    { x: 360, y: 154 },
+    { x: 174, y: 210 },
+    { x: 242, y: 317 },
+    { x: 358, y: 346 },
+    { x: 189, y: 417 },
   ],
-  checkpoints: [
-    { ledge: 0, x: 68 },
-    { ledge: 5, x: 280 },
-    { ledge: 12, x: 321 },
-  ],
-  exit: { ledge: 16, x: 222, label: 'DINAS' },
+  checkpoints: [ATRIUM_SPAWN, { ledge: 2, x: 306 }, { ledge: 7, x: 144 }],
+  exit: { ledge: 10, x: 151, label: 'DINAS' },
 };
 
 export const FLOORS: readonly [FloorDef, ...FloorDef[]] = [KELURAHAN, KECAMATAN];

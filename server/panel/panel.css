@@ -238,6 +238,7 @@ body[data-loading="true"] main { opacity: 0.55; }
 .floor .ledge.troli { fill: var(--muted); }
 .floor .ledge.fiktif { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 2; }
 .floor .travel { stroke: var(--grid); stroke-width: 3; }
+.floor .lift:not(.ledge) { fill: none; stroke: var(--finished); stroke-dasharray: 4 3; }
 .floor .label { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
 .floor .beat { stroke: var(--starts); stroke-width: 2; stroke-dasharray: 4 3; }
 .floor .papers { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 2 1; }
@@ -250,6 +251,7 @@ body[data-loading="true"] main { opacity: 0.55; }
 .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: var(--swatch); }
 .swatch.catch { --swatch: var(--critical); border-radius: 50%; }
 .swatch.ledge { --swatch: var(--axis); height: 4px; }
+.swatch.lift { border: 1px dashed var(--finished); }
 .swatch.amplop { --swatch: var(--gold); border-radius: 50%; }
 .swatch.beat { --swatch: var(--starts); height: 3px; }
 .swatch.papers { --swatch: var(--gold); height: 3px; }

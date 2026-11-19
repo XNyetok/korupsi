@@ -24,6 +24,8 @@ export type Cue =
   | 'warn'
   | 'stamp'
   | 'crumble'
+  | 'lift_up'
+  | 'lift_at'
   | 'win'
   | 'start'
   | 'click';
@@ -255,6 +257,16 @@ export class Synth {
         }
         tone({ wave: 'sawtooth', freq: 170, to: 55, dur: 0.3, gain: 0.22 });
         break;
+      case 'lift_up':
+      case 'lift_at': {
+        const leaving = name === 'lift_up';
+        if (leaving) tone({ wave: 'triangle', freq: 94, dur: 0.86, gain: 0.07, held: true });
+        // The bell calls a rider at both ends of the trip.
+        const note = leaving ? 523 : 622;
+        tone({ wave: 'sine', freq: note, dur: 0.14, gain: 0.18 });
+        tone({ wave: 'sine', freq: note * 1.26, dur: 0.17, gain: 0.16, delay: 0.12 });
+        break;
+      }
       case 'win': {
         // Up the scale the tune is written in, and a chord to land on.
         const climb = [659.26, 783.99, 987.77, 1046.5, 1318.51];

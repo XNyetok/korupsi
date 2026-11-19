@@ -1,4 +1,4 @@
-import type { LiftPhase } from '../core/atrium.ts';
+import type { LiftPhase } from '../core/game.ts';
 
 /** A quiet motor and a two-note queue chime, separate from the tower tune. */
 export class AtriumSound {

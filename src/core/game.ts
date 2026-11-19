@@ -31,6 +31,16 @@ import type {
 } from './types.ts';
 
 const IDLE: Input = { move: 0, jump: false, dash: false };
+const LIFT = { speed: 124, recall: 0.9 } as const;
+
+export type LiftPhase = 'ready' | 'rising' | 'arrived' | 'returning';
+
+interface LiftState {
+  phase: LiftPhase;
+  y: number;
+  before: number;
+  empty: number;
+}
 
 export const rupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
@@ -97,6 +107,7 @@ export class Game {
   private savedTaken: boolean[] = [];
   private prev: Input = IDLE;
   private stampPhases: StampPhase[] = [];
+  private lifts: (LiftState | null)[] = [];
   private queue: GameEvent[] = [];
   private readonly store: BestStore | null;
 
@@ -158,6 +169,9 @@ export class Game {
     this.taken = this.floor.amplop.map(() => false);
     this.savedTaken = [...this.taken];
     this.crumble = this.floor.ledges.map(() => 0);
+    this.lifts = this.floor.ledges.map((def) =>
+      def.kind === 'lift' ? { phase: 'ready', y: def.y, before: def.y, empty: 0 } : null,
+    );
     this.stampPhases = this.floor.stamps.map((s) => stampAt(s, this.worldTime).phase);
     this.player = this.spawnPlayer();
     this.prev = IDLE;
@@ -187,9 +201,14 @@ export class Game {
     return events;
   }
 
+  liftPhase(index: number): LiftPhase | undefined {
+    return this.lifts[index]?.phase;
+  }
+
   /** The top of a ledge now, or just before the last step for moving surfaces. */
-  ledgeHeight(index: number, _previous = false): number {
-    return this.floor.ledges[index]?.y ?? 0;
+  ledgeHeight(index: number, previous = false): number {
+    const lift = this.lifts[index];
+    return lift ? (previous ? lift.before : lift.y) : (this.floor.ledges[index]?.y ?? 0);
   }
 
   /** Puts the player on a ledge: for tests and `?debug=1`. */
@@ -214,6 +233,7 @@ export class Game {
 
     this.time += dt;
     this.worldTime += dt;
+    this.stepLifts(dt);
     this.stepWorld(dt);
 
     if (this.caught > 0) {
@@ -233,6 +253,50 @@ export class Game {
   }
 
   // ---------- the world ----------
+
+  private stepLifts(dt: number): void {
+    const p = this.player;
+    const { ledges } = this.floor;
+    for (let index = 0; index < this.lifts.length; index++) {
+      const lift = this.lifts[index];
+      if (!lift) continue;
+      const { x, w, y, liftTo } = ledges[index];
+      if (liftTo == null) continue;
+      lift.before = lift.y;
+      const centre = x + w / 2;
+      const distance = LIFT.speed * dt;
+
+      if (
+        lift.phase === 'ready' &&
+        this.caught <= 0 &&
+        p.ground >= 0 &&
+        p.y === y &&
+        p.x >= x + 5 &&
+        p.x <= x + w - 5
+      ) {
+        // Flush with the dock: walking onto it boards without a jump or button.
+        p.ground = index;
+        lift.phase = 'rising';
+        this.emit('lift_up', centre, y);
+      }
+      if (lift.phase === 'rising') {
+        lift.y = Math.min(liftTo, lift.y + distance);
+        if (lift.y === liftTo) {
+          lift.phase = 'arrived';
+          this.emit('lift_at', centre, lift.y);
+        }
+      } else if (lift.phase === 'arrived') {
+        lift.empty = p.ground === index ? 0 : lift.empty + dt;
+        if (lift.empty >= LIFT.recall) lift.phase = 'returning';
+      } else if (lift.phase === 'returning') {
+        lift.y = Math.max(y, lift.y - distance);
+        if (lift.y === y) {
+          lift.empty = 0;
+          lift.phase = 'ready';
+        }
+      }
+    }
+  }
 
   private stepWorld(dt: number): void {
     const { ledges, stamps } = this.floor;

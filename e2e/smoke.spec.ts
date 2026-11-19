@@ -10,6 +10,7 @@ import {
   leaveAndReturn,
   open,
   placeOn,
+  pressTouch,
   sound,
   start,
   state,
@@ -396,6 +397,38 @@ test.describe('result', () => {
     await page.getByRole('button', { name: 'Pilih lantai' }).click();
     await page.getByRole('button', { name: 'Main Kelurahan' }).click();
     await expect(page.locator('#hud-floor')).toHaveText('01 Kelurahan');
+  });
+
+  test('the main Kecamatan route starts with the automatic lift from the preview', async ({ page, isMobile }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('korupsi.kelurahan.best', JSON.stringify({ time: 145, money: 2_500_000 }));
+    });
+    const press = async (key: string, selector: string, id: number) => {
+      if (isMobile) return pressTouch(page, selector, id, key === 'ArrowRight' ? 'right' : 'centre');
+      await page.keyboard.down(key);
+      return () => page.keyboard.up(key);
+    };
+    await page.clock.install();
+    const errors = await open(page);
+    await start(page);
+    await expect(page.locator('#hud-floor')).toHaveText('02 Kecamatan');
+    expect((await sound(page)).musicOn).toBe(false);
+    let release = await press('ArrowRight', '#pad', 1);
+    await page.clock.runFor(1400);
+    await release();
+    expect((await state(page)).ground).toBe(1);
+    await page.clock.runFor(1200);
+    expect((await state(page)).y).toBe(114);
+
+    release = await press('ArrowRight', '#pad', 1);
+    await page.clock.runFor(535);
+    const releaseJump = await press('Space', '#btn-jump', 2);
+    await page.clock.runFor(160);
+    await releaseJump();
+    await page.clock.runFor(1360);
+    await release();
+    expect(await state(page)).toMatchObject({ phase: 'playing', ground: 2, y: 114, deaths: 0 });
+    expect(errors).toEqual([]);
   });
 
   test('sharing on a computer saves the result as a story-sized picture', async ({ page, isMobile }) => {

@@ -32,11 +32,11 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P7 — Give Kecamatan its own feel.** The first route (#58) felt too much like
-  Kelurahan. A local playtest of #59 found the lift and jump clear, but the art too
-  abstract. `art/kecamatan-atrium` adds a more recognisable service hall without changing
-  the controls or route. Try the new art at `/prototype/kecamatan/` under `npm run dev`
-  before applying it to the full floor. The current route stays available for comparison.
+- [~] **P7 — Give Kecamatan its own feel.** The maintainer approved the lift opening
+  (#59) and the service hall art (#60) on 2026-11-19. `feat/kecamatan-service-route`
+  makes them the main Kecamatan route and carries them through the archive to Dinas.
+  The scripted climb and browser checks pass. Next: a hands-on pass from the main game,
+  especially the direction after the first balcony and the crossing by the copier.
 - [ ] **T10 — Recheck the Kelurahan after v0.8.0.** Read the 7-day JSON export from
   2026-11-23 for a full window after the tuning (`docs/telemetry.md`). Not a blocker
   for Kecamatan.
@@ -56,10 +56,9 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
-- [x] **P3 — Floor 02, Kecamatan.** On 2026-11-19 the tests climbed the new route with
-  an empty and a full bag, finished with hazards on, and checked browser promotion,
-  existing Kelurahan records (#57), floor selection and separate statistics. Includes
-  new scenery, two copiers and the door to Dinas. Not released yet.
+- [x] **P3 — Floor 02, Kecamatan.** #57 and #58 added a second floor, browser promotion,
+  recognition of existing Kelurahan records, floor selection and separate statistics.
+  The first route was present and tested on 2026-11-19; P7 replaces it before release.
 - [x] **P2 — Play the Kelurahan and tune it.** The maintainer reported that the tuned
   Kelurahan felt right in hands-on play on 2026-11-19. The #54 changes are live in v0.8.0;
   follow-up telemetry and Android sharing are T10 and P6.

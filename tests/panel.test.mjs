@@ -32,9 +32,9 @@ test('floor reports do not mix catches, starts, resumes or shares across floors'
     floor,
     cause: 'abandoned',
     jumps: 3,
-    hazards: { 'berkas:6': 1 },
-    lastHazard: 'berkas:6',
-    spots: [[152, 168, 0]],
+    hazards: { 'berkas:7': 1 },
+    lastHazard: 'berkas:7',
+    spots: [[216, 306, 0]],
     checkpoint: 1,
     attempt: 2,
   });
@@ -53,9 +53,10 @@ test('floor reports do not mix catches, starts, resumes or shares across floors'
   );
   assert.deepEqual(
     kecamatan.hazards.map((row) => row.hazard),
-    ['berkas:6'],
+    ['berkas:7'],
   );
-  assert.deepEqual(kecamatan.spots, [{ x: 156, y: 172, n: 1 }]);
+  assert.deepEqual(kecamatan.spots, [{ x: 220, y: 308, n: 1 }]);
+  assert.equal(kecamatan.floor.ledges[1].liftTo, 114);
   assert.equal(kecamatan.lastCatch.hazards[0].kind, 'berkas');
   assert.equal(kecamatan.attempts[0].started, 0);
   assert.equal(kecamatan.attempts[1].started, 1);

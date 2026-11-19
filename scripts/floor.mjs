@@ -26,12 +26,13 @@ export function floorPlan(floor) {
     name: floor.name,
     width: WORLD_WIDTH,
     height: floor.height,
-    ledges: floor.ledges.map(({ x, y, w, kind, travel }) => ({
+    ledges: floor.ledges.map(({ x, y, w, kind, travel, liftTo }) => ({
       x,
       y,
       w,
       ...(kind ? { kind } : {}),
       ...(travel ? { travel } : {}),
+      ...(liftTo != null ? { liftTo } : {}),
     })),
     auditors: floor.auditors.map(({ ledge, from, to }) => ({ ledge, from, to })),
     stamps: floor.stamps.map(({ ledge, x }) => ({ ledge, x })),

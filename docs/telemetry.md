@@ -161,7 +161,7 @@ the shape changes.
 | `titles` | Which titles are earned, and so whether their thresholds are right |
 | `shares`, `sound` | How results leave the game; how many play with the sound off |
 | `errors`, `revs` | What breaks, and which builds the data comes from |
-| `floors`, `floor` | The floors offered in the filter and the plan of the selected one, including the copiers' paths. Read `spots`, `dwell` and ledge numbers against it |
+| `floors`, `floor` | The floors offered in the filter and the plan of the selected one, including copier paths and the upper stop `liftTo` of a lift. Read `spots`, `dwell` and ledge numbers against it |
 | `route` | How many runs reach each clock-in machine and the door, and how long each stretch takes |
 | `spots` | Where people are caught, in squares of 8 game pixels: the panel draws it on the floor |
 | `carrying` | Time and catches at each number of envelopes carried: what the weight costs |

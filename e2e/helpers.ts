@@ -111,14 +111,20 @@ export async function holdTouch(
   ms: number,
   at: 'left' | 'right' | 'centre' = 'centre',
 ): Promise<void> {
+  const release = await pressTouch(page, selector, 7, at);
+  await page.waitForTimeout(ms);
+  await release();
+}
+
+/** Separates press and release so a second thumb can act at the same time. */
+export async function pressTouch(page: Page, selector: string, pointerId: number, at = 'centre') {
   const box = await page.locator(selector).boundingBox();
   if (!box) throw new Error(`${selector} has no box`);
   const x = box.x + box.width * (at === 'left' ? 0.25 : at === 'right' ? 0.75 : 0.5);
   const y = box.y + box.height / 2;
-  const init = { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: x, clientY: y, isPrimary: true };
+  const init = { bubbles: true, pointerId, pointerType: 'touch', clientX: x, clientY: y, isPrimary: true };
   await page.locator(selector).dispatchEvent('pointerdown', init);
-  await page.waitForTimeout(ms);
-  await page.locator(selector).dispatchEvent('pointerup', init);
+  return () => page.locator(selector).dispatchEvent('pointerup', init);
 }
 
 /** An https address that exists only in the test browser: telemetry runs only over https. */

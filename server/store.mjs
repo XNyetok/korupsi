@@ -393,7 +393,7 @@ const ABOUT = {
     'Errors thrown by the game\u2019s own code, and unhandled promise rejections, by message, most frequent first, with the last time seen, a build that showed it, and the screens (title, playing, paused, result) and browsers it happened on most. Errors from scripts that extensions or in-app browsers add to the page are left out. Addresses are removed before storage.',
   revs: 'Events per build label (`version+commit`), to tell which release the data comes from.',
   floor:
-    'The floor the numbers are about, in game pixels as in src/core/tower.ts: ledges (x the left edge, y the height above the ground floor, w the width; a troli rolls `travel` either side of x), the auditors\u2019 beats between `from` and `to`, the stamps, paper paths from `printers`, the envelopes (`amplop`, by index), the clock-in machines (`checkpoints`, the first being where a run starts) and the door (`exit`). Read `spots`, `dwell`, `envelopes` and `hazards` against it.',
+    'The floor the numbers are about, in game pixels as in src/core/tower.ts: ledges (x the left edge, y the height above the ground floor, w the width; a troli rolls `travel` either side of x, a lift moves up to `liftTo`), the auditors\u2019 beats between `from` and `to`, the stamps, paper paths from `printers`, the envelopes (`amplop`, by index), the clock-in machines (`checkpoints`, the first being where a run starts) and the door (`exit`). Read `spots`, `dwell`, `envelopes` and `hazards` against it.',
   route:
     'The floor stretch by stretch: `stretches[i].to` is the checkpoint that ends it (1, 2...) or `door`. reached: runs that got there, of `runs`. seconds: median time the runs that crossed the stretch took to cross it.',
   spots:

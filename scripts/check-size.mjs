@@ -14,8 +14,8 @@
  * it JavaScript, for the telemetry asked for in November 2026 (T2 to T6 in
  * docs/plan.md): how a run is played, the visit and where it came from, and
  * how fast the game runs, about 1.5 KB of code that every visit carries.
- * Kecamatan's route, scenery, copier and promotion flow put the build just
- * over 32 KB. Allow one more KB without adding an asset download.
+ * Kecamatan's first route raised the budget to 33 KB. The service hall,
+ * archive and lift now cost about 4 KB more, with no asset download.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -24,11 +24,11 @@ import { gzipSync } from 'node:zlib';
 
 const KB = 1024;
 const BUDGET = {
-  js: 29 * KB,
+  js: 33 * KB,
   css: 3.5 * KB,
   html: 1.5 * KB,
   other: 4 * KB,
-  total: 33 * KB,
+  total: 37 * KB,
 };
 
 const dist = process.argv[2] ?? 'dist';

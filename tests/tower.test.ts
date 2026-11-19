@@ -29,10 +29,8 @@ const BRANCHES: [number, number][] = [
 ];
 
 const FULL = KELURAHAN.amplop.length;
-const ROUTES = [
-  [KELURAHAN, ROUTE],
-  [KECAMATAN, KECAMATAN.ledges.map((_, i) => i)],
-] as const;
+const RIGHT = { move: 1, jump: false, dash: false } as const;
+const LEFT = { ...RIGHT, move: -1 } as const;
 
 test('every floor is well formed', () => {
   for (const floor of FLOORS) {
@@ -46,6 +44,9 @@ test('every floor is well formed', () => {
         `ledge ${i} stays inside the walls`,
       );
       assert.ok(ledge.y >= 0 && ledge.y < floor.height, `ledge ${i} is inside the floor`);
+      if (ledge.kind === 'lift') {
+        assert.ok(ledge.liftTo != null && ledge.liftTo > ledge.y && ledge.liftTo < floor.height);
+      }
     }
     for (const a of floor.auditors) {
       const ledge = floor.ledges[a.ledge];
@@ -73,6 +74,7 @@ test('every floor is well formed', () => {
       assert.ok(ledge && spot.x > ledge.x && spot.x < ledge.x + ledge.w, 'a checkpoint or exit sits on its ledge');
       assert.notEqual(ledge.kind, 'fiktif');
       assert.notEqual(ledge.kind, 'troli');
+      assert.notEqual(ledge.kind, 'lift');
     }
   }
 });
@@ -83,16 +85,14 @@ test('the envelope count is what the jump floor was built for', () => {
   }
 });
 
-for (const [floor, route] of ROUTES) {
-  for (const weight of [0, floor.amplop.length]) {
-    test(`the ${floor.name} route can be climbed with ${weight} envelopes`, () => {
-      for (let i = 0; i + 1 < route.length; i++) {
-        const from = route[i] as number;
-        const to = route[i + 1] as number;
-        assert.ok(canReach(floor, from, to, weight), `ledge ${from} to ${to}`);
-      }
-    });
-  }
+for (const weight of [0, FULL]) {
+  test(`the Kelurahan route can be climbed with ${weight} envelopes`, () => {
+    for (let i = 0; i + 1 < ROUTE.length; i++) {
+      const from = ROUTE[i] as number;
+      const to = ROUTE[i + 1] as number;
+      assert.ok(canReach(KELURAHAN, from, to, weight), `ledge ${from} to ${to}`);
+    }
+  });
 }
 
 test('every envelope branch can be taken and left, even with a full bag', () => {
@@ -101,13 +101,11 @@ test('every envelope branch can be taken and left, even with a full bag', () => 
   }
 });
 
-test('no ledge on the route can be skipped', () => {
-  for (const [floor, route] of ROUTES) {
-    for (let i = 0; i + 2 < route.length; i++) {
-      const from = route[i] as number;
-      const to = route[i + 2] as number;
-      assert.ok(!canReach(floor, from, to, 0), `${floor.name}: ${from} reaches ${to}, skipping ${route[i + 1]}`);
-    }
+test('no ledge on the Kelurahan route can be skipped', () => {
+  for (let i = 0; i + 2 < ROUTE.length; i++) {
+    const from = ROUTE[i] as number;
+    const to = ROUTE[i + 2] as number;
+    assert.ok(!canReach(KELURAHAN, from, to, 0), `${from} reaches ${to}, skipping ${ROUTE[i + 1]}`);
   }
 });
 
@@ -258,20 +256,53 @@ test('the copier warns before catching and a jump clears the papers', () => {
   assert.equal(game.player.ground, printer.ledge);
 });
 
-for (const [floor, route] of ROUTES) {
-  test(`a careful player finishes ${floor.name} with the hazards on`, () => {
-    let game: Game | null = new Game({ floor });
-    game.start();
-    for (const next of route.slice(1)) {
-      const from: number = game.player.ground;
-      game = climbTo(game, next);
-      assert.ok(game, `no safe way from ledge ${from} to ${next}`);
-    }
-    // The door is to the right of the landing.
-    run(game, 3, { move: 1, jump: false, dash: false });
-    assert.equal(game.phase, 'won');
-    assert.equal(game.deaths, 0);
-    assert.ok(game.time < 120, `a clean climb takes ${game.time.toFixed(0)} s`);
-    if (floor === KECAMATAN) assert.equal(game.checkpoint, 2);
+function jumps(start: Game, route: number[]): Game {
+  let game = start;
+  for (const to of route) {
+    const next = climbTo(game, to);
+    assert.ok(next, `no safe way from ledge ${game.player.ground} to ${to}`);
+    game = next;
+  }
+  return game;
+}
+
+test('a careful player finishes Kelurahan with the hazards on', () => {
+  const game = new Game();
+  game.start();
+  const last = jumps(game, ROUTE.slice(1));
+  run(last, 3, RIGHT);
+  assert.equal(last.phase, 'won');
+  assert.equal(last.deaths, 0);
+  assert.ok(last.time < 120, `a clean climb takes ${last.time.toFixed(0)} s`);
+});
+
+for (const weight of [0, KECAMATAN.amplop.length]) {
+  test(`both lifts and the copier walk can be cleared starting with ${weight} envelopes`, () => {
+    const lobby = new Game({ floor: KECAMATAN });
+    lobby.start();
+    // Start full as a stress test; the playthrough otherwise starts at the spawn.
+    lobby.weight = weight;
+    if (weight) lobby.taken.fill(true);
+    run(lobby, 1.4, RIGHT);
+    run(lobby, 1);
+    assert.equal(lobby.liftPhase(1), 'arrived');
+    run(lobby, 0.59, RIGHT);
+    run(lobby, 0.12, { ...RIGHT, jump: true });
+    run(lobby, 1.55, RIGHT);
+    run(lobby, 0.08);
+    assert.equal(lobby.player.ground, 2);
+    assert.equal(lobby.checkpoint, 1);
+
+    const archives = jumps(lobby, [3, 4, 5]);
+    for (let i = 0; i < 400 && archives.liftPhase(6) === 'ready'; i++) archives.step(STEP, LEFT);
+    assert.equal(archives.player.ground, 6);
+    run(archives, 1.05);
+    assert.equal(archives.liftPhase(6), 'arrived');
+
+    const last = jumps(archives, [7, 8, 9, 10]);
+    run(last, 2, LEFT);
+    assert.equal(last.checkpoint, 2);
+    assert.equal(last.phase, 'won');
+    assert.equal(last.deaths, 0);
   });
 }

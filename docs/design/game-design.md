@@ -50,7 +50,7 @@ browser's records; there is no account or cross-device sync.
 | Floor | State | What it teaches |
 | --- | --- | --- |
 | 01 Kelurahan | playable | jump, the troli, proyek fiktif, the first auditor, the stamp, the dash |
-| 02 Kecamatan | implemented | jump over a low moving hazard; judge when to cross a copier desk |
+| 02 Kecamatan | implemented | ride automatic papers lifts; time the crossing of a copier walkway |
 | 03 Dinas | planned | |
 | 04 Kementerian | planned | |
 | Atap | planned | the way out |
@@ -64,12 +64,15 @@ The Kelurahan has three stretches, each ending at a clock-in machine or the door
   notice on the wall says how), a cart, a desk where the auditor is in the way, and a last
   stamp with an envelope under it.
 
-Kecamatan starts at the service windows. The first machine is before the legalisation
-counter, with a safe landing at the near end of the copier desk. The archive brings
-back the cart, the fiktif ledge and the auditor. The second machine leaves only one
-copier and a stamp between the player and the door to Dinas. There are seven envelopes.
+### Kecamatan: Nomor Berikutnya
 
-### Kecamatan prototype: Nomor Berikutnya
+The atrium is one open hall instead of a ladder of desks. Follow the ticket counter to
+an automatic lift, jump right to the verification balcony and clock in. The route turns
+left to the archive lift; at the top a second machine stands on the safe end of the
+pengesahan walkway. One copier guards its middle, leaving room to land and read the
+warning. A few steps above are the door to Dinas and the end of the floor. There are
+seven optional envelopes, several off the direct line. The floor keeps its own timing,
+records and statistics.
 
 In the maintainer's first local playtest the second floor felt much like Kelurahan.
 Every ledge in the main route rises by 28 pixels, the same furniture frames most jumps,
@@ -78,8 +81,10 @@ controls and reframes the climb around an office workflow: cross a bright servic
 ride the papers' lift, then jump to a wide verification balcony. The lift leaves as soon
 as someone steps on it and waits at the top while occupied. Words and an arrow mark each
 state even with sound off; a two-note chime and the motor replace the old tune. It has no
-hazards, score, saves or telemetry. Only the opening is playable at `/prototype/kecamatan/`
-under `npm run dev`; the preview is not built for production.
+hazards, score, saves or telemetry. The opening alone stays playable at
+`/prototype/kecamatan/` under `npm run dev`; the preview page is not built for production.
+The full floor is on the main path. Its sound uses the normal mute and pause flow, with
+a queue chime and lift motor in place of Kelurahan's tune.
 
 The queue, service counter and file check come from the [Sluke service SOP](https://kecsluke.rembangkab.go.id/content/files/2026/07/SK-SOP-Pelayanan_2025.pdf),
 not a particular office's look or conduct. [Hayashida's level design interview](https://www.gamedeveloper.com/design/the-structure-of-fun-learning-from-i-super-mario-3d-land-i-s-director)
@@ -93,8 +98,8 @@ abstract. The art pass keeps the same geometry and cues. Warm stone and glazed t
 set off the cool light through windows onto tiled rooftops. Monitors, forms, numbered
 counters and a ticket kiosk give the lobby a purpose; steel rails and a paper tray make
 the cabin look used. Only the moving deck and verification balcony get the bright rim.
-Check that the scene reads as a service hall without its floor label before carrying
-this treatment through the rest of Kecamatan.
+The maintainer approved the result on 2026-11-19. The same surfaces and signage now
+continue into the archive and pengesahan; those rooms still need hands-on play.
 
 ## Sessions
 
@@ -120,6 +125,7 @@ bureaucratic absurdity, never from a real person or a real institution.
 | Weight from money | Risk and reward on the same button | Jump velocity falls 2% per envelope; the route is built to work at 80% |
 | Auditor | A moving thing to time | Walks his desk at a constant pace; touching him is an OTT, dashing through him is not |
 | Stamp | A fixed thing to time | Rests raised, shakes, slams, holds, rises; only the slam and the hold bite |
+| Papers lift | Vertical progress without another jump | Boards by walking onto the deck. Rises immediately, waits with the rider and goes back down when empty |
 | Copier | A low obstacle, not something to dash through | Lights up and sounds a warning for 0.6 s, then sends papers across part of its desk. Jump over them or walk while the desk is clear |
 | Proyek fiktif | Tension inside the path | Gives way 0.5 s after it is landed on, and is back 2.5 s later |
 | Troli | Patience | A cart on a rail; it carries whoever stands on it |
@@ -292,7 +298,8 @@ in CI. Whether the tune is any good is for ears.
 | 2026-11-14 | v0.7.0 | The panel, against live data | The one error it listed, "Script error." five times, was not the game's: it came from scripts that extensions and in-app browsers add to the page, and from v0.7.1 only the game's own errors are reported. The maintainer asked the same day for much richer telemetry, still without any identifier, and v0.7.2 carries it. Tuning the floor waits for a few days of play |
 | 2026-11-16 | v0.7.2 | The panel's 30-day export, read with a script: 633 visits and 540 runs, 140 of them with the detail of v0.7.2. The spots where players were caught, checked against the game's own physics | Too hard rather than too kind: 31% of those 140 runs reached the first machine and 12% the door, and every run that reached the second machine finished. Most catches were at three spots near the first machine, each where the jump most players make comes down; the floor was tuned for them (Decisions, 2026-11-16). The dash gap stopped more than half. Those who finished carried 5 envelopes of 6, so 2% each is not yet a choice. 44% of the runs started on v0.7.2 never said how they ended: a phone often closes a page without a word. Read the next numbers over the days since the tuning was released |
 | 2026-11-19 | v0.8.0 | The maintainer played the tuned Kelurahan | The floor felt right to play. Start Kecamatan while keeping the next telemetry review and Android sharing check as separate follow-ups |
-| 2026-11-19 | `feat/kecamatan` | Scripted climbs and Chromium smoke tests at desktop and phone sizes | Kecamatan is climbable empty and full, a clean run reaches both machines, and promotion keeps money without carrying its weight. A saved Kelurahan record also opens the floor directly. Feel and difficulty still need a hands-on session |
+| 2026-11-19 | #58 | Scripted climbs, browser checks, and the maintainer's hands-on test | Unlocks and progression worked, but the first Kecamatan route felt too much like Kelurahan |
+| 2026-11-19 | #59 and #60 | The maintainer played the opening and reviewed the service hall art | The automatic lift and destination jump were clear. With detailed counters, glass and steel, the art was approved for the full floor |
 
 ## Tuning
 
