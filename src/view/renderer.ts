@@ -23,6 +23,7 @@ import {
   drawPrinter,
   drawRail,
   drawStamp,
+  type LedgeLook,
   type Pose,
 } from './sprites.ts';
 
@@ -30,6 +31,15 @@ import {
 const FOCUS = 0.4;
 /** How much of the camera's sideways travel the sky follows. */
 const SKY_DRIFT = 0.6;
+
+/** A scene can change its architecture without painting over the game's sprites. */
+export interface Scene {
+  backdrop(floor: FloorDef, maxView: number): Backdrop;
+  ledge(ctx: Ctx, def: FloorDef['ledges'][number], look: LedgeLook, game: Game, index: number): void;
+  exit: typeof drawExit;
+}
+
+const OFFICE: Scene = { backdrop: paintBackdrop, ledge: drawLedge, exit: drawExit };
 
 export class Renderer {
   private readonly ctx: Ctx;
@@ -49,10 +59,15 @@ export class Renderer {
   /** A short trail of where the player just was, drawn while dashing. */
   private trail: { x: number; y: number; age: number }[] = [];
 
-  constructor(ctx: Ctx, game: Game, reducedMotion: boolean) {
+  constructor(
+    ctx: Ctx,
+    game: Game,
+    reducedMotion: boolean,
+    private readonly scene = OFFICE,
+  ) {
     this.ctx = ctx;
     this.floor = game.floor;
-    this.backdrop = paintBackdrop(this.floor, FILL.maxHeight);
+    this.backdrop = scene.backdrop(this.floor, FILL.maxHeight);
     this.reducedMotion = reducedMotion;
   }
 
@@ -71,7 +86,7 @@ export class Renderer {
   snap(game: Game): void {
     if (this.floor !== game.floor) {
       this.floor = game.floor;
-      this.backdrop = paintBackdrop(this.floor, FILL.maxHeight);
+      this.backdrop = this.scene.backdrop(this.floor, FILL.maxHeight);
       this.clock = this.stride = 0;
     }
     this.cam = this.target(game);
@@ -157,9 +172,10 @@ export class Renderer {
 
     // ledges
     floor.ledges.forEach((def, i) => {
-      if (!visible(def.y)) return;
+      const height = game.ledgeHeight(i);
+      if (!visible(height)) return;
       if (def.kind === 'troli' && def.travel) {
-        drawRail(ctx, def.x - def.travel, def.x + def.travel + def.w, row(def.y));
+        drawRail(ctx, def.x - def.travel, def.x + def.travel + def.w, row(height));
       }
       const since = game.crumble[i] ?? 0;
       if (def.kind === 'fiktif' && since >= PARAMS.crumbleDelay) {
@@ -167,13 +183,19 @@ export class Renderer {
         const left = PARAMS.crumbleDelay + PARAMS.crumbleReturn - since;
         if (left > 0.4 || Math.floor(this.clock * 12) % 2 === 0) return;
       }
-      drawLedge(ctx, def, {
-        x: ledgeX(def, time),
-        sy: row(def.y),
-        toGround: def.y,
-        shaking: since > 0 && since < PARAMS.crumbleDelay,
-        time: this.clock,
-      });
+      this.scene.ledge(
+        ctx,
+        def,
+        {
+          x: ledgeX(def, time),
+          sy: row(height),
+          toGround: height,
+          shaking: since > 0 && since < PARAMS.crumbleDelay,
+          time: this.clock,
+        },
+        game,
+        i,
+      );
     });
 
     // things on ledges
@@ -183,7 +205,7 @@ export class Renderer {
     });
 
     const exitY = floor.ledges[floor.exit.ledge]?.y ?? 0;
-    if (visible(exitY)) drawExit(ctx, floor.exit.x, row(exitY), floor.exit.label ?? 'KELUAR');
+    if (visible(exitY)) this.scene.exit(ctx, floor.exit.x, row(exitY), floor.exit.label ?? 'KELUAR');
 
     floor.amplop.forEach((a, i) => {
       if (!game.taken[i] && visible(a.y)) drawAmplop(ctx, a.x, row(a.y), this.clock);

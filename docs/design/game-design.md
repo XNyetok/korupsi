@@ -69,6 +69,26 @@ counter, with a safe landing at the near end of the copier desk. The archive bri
 back the cart, the fiktif ledge and the auditor. The second machine leaves only one
 copier and a stamp between the player and the door to Dinas. There are seven envelopes.
 
+### Kecamatan prototype: Nomor Berikutnya
+
+In the maintainer's first local playtest the second floor felt much like Kelurahan.
+Every ledge in the main route rises by 28 pixels, the same furniture frames most jumps,
+and the copier changes where to wait rather than how to climb. The prototype keeps the
+controls and reframes the climb around an office workflow: cross a bright service atrium,
+ride the papers' lift, then jump to a wide verification balcony. The lift leaves as soon
+as someone steps on it and waits at the top while occupied. Words and an arrow mark each
+state even with sound off; a two-note chime and the motor replace the old tune. It has no
+hazards, score, saves or telemetry. Only the opening is playable at `/prototype/kecamatan/`
+under `npm run dev`; the preview is not built for production.
+
+The queue, service counter and file check come from the [Sluke service SOP](https://kecsluke.rembangkab.go.id/content/files/2026/07/SK-SOP-Pelayanan_2025.pdf),
+not a particular office's look or conduct. [Hayashida's level design interview](https://www.gamedeveloper.com/design/the-structure-of-fun-learning-from-i-super-mario-3d-land-i-s-director)
+suggests teaching one idea safely before varying it. [GMTK's Tropical Freeze analysis](https://www.youtube.com/watch?v=JqHcE6B4OP4)
+shows how a workflow can tie the scenery, movement and hazards together. The rest of
+Kecamatan can use that arc if the opening works: arrive, read a signal, and carry the
+same idea into a busier room. First test on a phone with sound off: can a player tell the
+rooms apart without the floor label, board unprompted, and see where to jump off?
+
 ## Sessions
 
 - **Switching apps pauses the run.** Coming back shows a pause card; nothing moves until
