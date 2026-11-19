@@ -44,6 +44,14 @@ bawa, dan jangan sampai kena OTT.
 
 The building is the bureaucracy: each office sits on top of the one that answers to it.
 
+From P3, reaching a door opens the next floor on that browser. A player who has already
+finished Kelurahan in v0.8.0 need not repeat it: the existing record opens Kecamatan.
+After promotion, the money already earned stays in the climb total, but the bag is
+empty and the next floor has its own time, OTT count and record. Starting an unlocked
+floor from the title is a fresh climb with nothing paid in. This keeps earlier floors
+replayable without making them a toll each time a player returns. Unlocks stay with the
+browser's records; there is no account or cross-device sync.
+
 | Floor | State | What it teaches |
 | --- | --- | --- |
 | 01 Kelurahan | playable | jump, the troli, proyek fiktif, the first auditor, the stamp, the dash |
@@ -65,8 +73,8 @@ The Kelurahan has three stretches, each ending at a clock-in machine or the door
 
 - **Switching apps pauses the run.** Coming back shows a pause card; nothing moves until
   the player presses Lanjut. The clock is the score now, and a paused clock is honest.
-- **Closing the tab loses the run.** A floor is a minute or two; there is nothing to save
-  but the records, and those are only written at the door.
+- **Closing the tab loses the run, not the unlocks.** Only records are saved at the
+  door. The in-flight clock, bag and checkpoints are not saved between visits.
 - **System gestures are not fought.** The edge-swipe is the operating system's, not ours.
 
 ## Player fantasy
@@ -255,6 +263,7 @@ in CI. Whether the tune is any good is for ears.
 | 2026-11-11 | v0.7.0 | The decree, the panel and the new telemetry, by tests, by a local collector on seeded data, and by a headless browser on the live site. Not by a player, and the panel not against live data | The maintainer saw samples of the decree and approved it. The thresholds of the ten titles are guesses, and the panel's new breakdowns are empty until runs from this release arrive: both are for the next reading of the numbers |
 | 2026-11-14 | v0.7.0 | The panel, against live data | The one error it listed, "Script error." five times, was not the game's: it came from scripts that extensions and in-app browsers add to the page, and from v0.7.1 only the game's own errors are reported. The maintainer asked the same day for much richer telemetry, still without any identifier, and v0.7.2 carries it. Tuning the floor waits for a few days of play |
 | 2026-11-16 | v0.7.2 | The panel's 30-day export, read with a script: 633 visits and 540 runs, 140 of them with the detail of v0.7.2. The spots where players were caught, checked against the game's own physics | Too hard rather than too kind: 31% of those 140 runs reached the first machine and 12% the door, and every run that reached the second machine finished. Most catches were at three spots near the first machine, each where the jump most players make comes down; the floor was tuned for them (Decisions, 2026-11-16). The dash gap stopped more than half. Those who finished carried 5 envelopes of 6, so 2% each is not yet a choice. 44% of the runs started on v0.7.2 never said how they ended: a phone often closes a page without a word. Read the next numbers over the days since the tuning was released |
+| 2026-11-19 | v0.8.0 | The maintainer played the tuned Kelurahan | The floor felt right to play. Start Kecamatan while keeping the next telemetry review and Android sharing check as separate follow-ups |
 
 ## Tuning
 

@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-16 · Last tagged release: `v0.8.0`. What is live is the latest
+Last updated: 2026-11-19 · Last tagged release: `v0.8.0`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -32,27 +32,19 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P2 — Play the Kelurahan and tune it.** Three sessions on an iPhone so far, all
-  about how the game sits on a phone and how a result is shared, none about the jump or
-  the hazards; what came of them is in Done under v0.6.0, v0.6.1 and v0.7.0. Still
-  untried: sharing in Chrome on Android. The numbers were read on 2026-11-16 (playtest log
-  in `docs/design/game-design.md`): the floor is too hard, and most catches were at three
-  spots near the first machine, each where the jump most players make comes down. Tuned
-  for them in #54, with a notice at the dash gap, live from v0.8.0 (2026-11-16). Next:
-  read the numbers again from 2026-11-23, when the panel's 7-day view holds only the new
-  floor (the JSON export is the form to give an agent, `docs/telemetry.md` says how to
-  read it), and settle the open questions in `docs/design/game-design.md`. P3 waits for
-  this.
+- [~] **P3 — Floor 02, Kecamatan.** Started in `feat/floor-progression` with promotion
+  rules, per-floor records and unlocks that recognise a v0.8.0 Kelurahan finish. Next:
+  build the route with its own scenery and one new hazard, following the spacing rules
+  in `src/core/tower.ts`. Wire the promotion card, title options for unlocked floors
+  and the scene change; keep play statistics for different floors separate.
+- [ ] **T10 — Recheck the Kelurahan after v0.8.0.** Read the 7-day JSON export from
+  2026-11-23 for a full window after the tuning (`docs/telemetry.md`). Not a blocker
+  for Kecamatan.
+- [ ] **P6 — Try Bagikan hasil in Chrome on an Android phone.** Check the share sheet
+  and the picture fallback on a real device. Not a blocker for Kecamatan.
 - [ ] **T8 — Renew the GeoIP file every month**, next in early December 2026: DB-IP
   publishes a new one monthly (`docs/deploy.md`, The GeoIP file). An old file keeps
   working, only less accurately. Waiting on the maintainer, or on an agent asked to.
-
-## Next
-
-- [ ] **P3 — Floor 02, Kecamatan.** Its own scenery and one new hazard, built on the
-  spacing rules at the top of `src/core/tower.ts`. Needs: more than one floor in a run
-  (the door leads to the next floor, the bag is paid upwards and the weight resets), a
-  promotion card between floors, and the floor name in the HUD from the floor itself.
 
 ## Later
 
@@ -64,6 +56,9 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
+- [x] **P2 — Play the Kelurahan and tune it.** The maintainer reported that the tuned
+  Kelurahan felt right in hands-on play on 2026-11-19. The #54 changes are live in v0.8.0;
+  follow-up telemetry and Android sharing are T10 and P6.
 - [x] **v0.8.0** — released and deployed 2026-11-16 (release run 43800860476, deploy run
   43801096426): live as `0.8.0+ff72282`, `/api/health` 404, `/panel/` 401. Players get
   the Kelurahan eased at the three spots where most of them were caught, and a notice at

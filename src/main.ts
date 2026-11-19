@@ -5,8 +5,9 @@
  */
 
 import './ui/style.css';
-import { Game } from './core/game.ts';
+import { Climb } from './core/climb.ts';
 import { runReport } from './core/report.ts';
+import { FLOORS } from './core/tower.ts';
 import type { GameEvent } from './core/types.ts';
 import { PARAMS } from './core/params.ts';
 import { audio } from './platform/audio.ts';
@@ -41,7 +42,8 @@ const RESULT_LOCK_MS = 700;
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const game = new Game({ store: bestStore });
+const climb = new Climb(FLOORS, bestStore);
+const game = climb.game;
 const pad = new Pad();
 const renderer = new Renderer(ctx, game, reducedMotion);
 
@@ -292,7 +294,7 @@ const loop = startLoop({
     for (const event of events) {
       sound(event);
       if (event.type === 'win') {
-        ui.update(game);
+        ui.update(climb);
         ui.showResult(game, RESULT_LOCK_MS);
         cardSince = performance.now();
         endRun('finished');
@@ -300,7 +302,7 @@ const loop = startLoop({
     }
     renderer.handle(events);
     renderer.draw(game, dt);
-    ui.update(game);
+    ui.update(climb);
     if (debug) {
       debug.tick();
       (window as unknown as { __view: Renderer['frame'] }).__view = renderer.frame;

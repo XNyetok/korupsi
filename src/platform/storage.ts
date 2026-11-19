@@ -5,9 +5,6 @@
 
 import type { Best, BestStore } from '../core/types.ts';
 
-/** The first game kept its record under `korupsi.best`, in another shape; that key is left alone. */
-const BEST_KEY = 'korupsi.kelurahan.best';
-
 export function readItem(key: string): string | null {
   try {
     return localStorage.getItem(key);
@@ -24,18 +21,26 @@ export function writeItem(key: string, value: string): void {
   }
 }
 
-export const bestStore: BestStore = {
-  read(): Best {
-    try {
-      const raw = readItem(BEST_KEY);
-      if (!raw) return { time: 0, money: 0 };
-      const parsed = JSON.parse(raw) as Partial<Best>;
-      return { time: Number(parsed.time) || 0, money: Number(parsed.money) || 0 };
-    } catch {
-      return { time: 0, money: 0 };
-    }
-  },
-  write(best: Best): void {
-    writeItem(BEST_KEY, JSON.stringify(best));
-  },
-};
+function nonnegative(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+/** Kelurahan keeps its existing key. The old one-tap game's `korupsi.best` is separate. */
+export function bestStore(floorId: string): BestStore {
+  const key = `korupsi.${floorId}.best`;
+  return {
+    read(): Best {
+      try {
+        const raw = readItem(key);
+        if (!raw) return { time: 0, money: 0 };
+        const parsed = JSON.parse(raw) as Partial<Best>;
+        return { time: nonnegative(parsed.time), money: nonnegative(parsed.money) };
+      } catch {
+        return { time: 0, money: 0 };
+      }
+    },
+    write(best: Best): void {
+      writeItem(key, JSON.stringify(best));
+    },
+  };
+}
