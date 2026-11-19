@@ -1,16 +1,11 @@
 # Korupsi — game design
 
-**Status:** the first floor is playable, live as v0.8.0, and has been played by a
-person. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts), the
-tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). Tests and a scripted climb
-prove the floor is possible. Three hands-on sessions on a phone shaped how the game sits
-on a screen, how it sounds and how a result is shared; none has yet asked for a change to
-the jump or the hazards. From v0.7.0 the game reports which hazard catches players and
-where they leave, and from v0.7.2 how each run is played: how long each stretch takes,
-where a player is caught and with what in the bag, how often they jump and dash
-([`../telemetry.md`](../telemetry.md)). The first reading of those numbers eased three
-spots near the first machine in v0.8.0; the floor is tuned from numbers as well as from
-sessions: see the playtest log.
+**Status:** Kelurahan has been tested by people and tuned in v0.8.0. Kecamatan is
+implemented and covered by scripted climbs and browser tests; see [`../plan.md`](../plan.md)
+for release and playtest status. The simulation lives in [`../../src/core/game.ts`](../../src/core/game.ts),
+the tower in [`../../src/core/tower.ts`](../../src/core/tower.ts). The first reading of
+[`../telemetry.md`](../telemetry.md) eased three spots near Kelurahan's first machine;
+phone sessions shaped the screen, sound and sharing. See the playtest log.
 
 ## One line
 
@@ -34,9 +29,9 @@ bawa, dan jangan sampai kena OTT.
    cabinets, air-conditioners.
 2. Envelopes sit a little off the safe path. Each is money on the result card and weight
    on the jump, so the climb gets tighter the richer the player is.
-3. Auditors walk some desks and stamps come down on others. Touching either is an OTT:
-   the player goes back to the last clock-in machine, and the envelopes picked up since
-   then go back to where they were.
+3. Auditors, stamps and the copiers' papers can cause an OTT: the player goes back to
+   the last clock-in machine, and the envelopes picked up since then go back to where
+   they were.
 4. The floor ends at a door. The result card shows the time, the number of OTT and the
    money carried out, and keeps the best time and the most money.
 
@@ -55,7 +50,7 @@ browser's records; there is no account or cross-device sync.
 | Floor | State | What it teaches |
 | --- | --- | --- |
 | 01 Kelurahan | playable | jump, the troli, proyek fiktif, the first auditor, the stamp, the dash |
-| 02 Kecamatan | planned | |
+| 02 Kecamatan | implemented | jump over a low moving hazard; judge when to cross a copier desk |
 | 03 Dinas | planned | |
 | 04 Kementerian | planned | |
 | Atap | planned | the way out |
@@ -68,6 +63,11 @@ The Kelurahan has three stretches, each ending at a clock-in machine or the door
 - **Stamp, gap, auditor, stamp.** A desk under a stamp, a gap that needs a dash (a
   notice on the wall says how), a cart, a desk where the auditor is in the way, and a last
   stamp with an envelope under it.
+
+Kecamatan starts at the service windows. The first machine is before the legalisation
+counter, with a safe landing at the near end of the copier desk. The archive brings
+back the cart, the fiktif ledge and the auditor. The second machine leaves only one
+copier and a stamp between the player and the door to Dinas. There are seven envelopes.
 
 ## Sessions
 
@@ -93,6 +93,7 @@ bureaucratic absurdity, never from a real person or a real institution.
 | Weight from money | Risk and reward on the same button | Jump velocity falls 2% per envelope; the route is built to work at 80% |
 | Auditor | A moving thing to time | Walks his desk at a constant pace; touching him is an OTT, dashing through him is not |
 | Stamp | A fixed thing to time | Rests raised, shakes, slams, holds, rises; only the slam and the hold bite |
+| Copier | A low obstacle, not something to dash through | Lights up and sounds a warning for 0.6 s, then sends papers across part of its desk. Jump over them or walk while the desk is clear |
 | Proyek fiktif | Tension inside the path | Gives way 0.5 s after it is landed on, and is back 2.5 s later |
 | Troli | Patience | A cart on a rail; it carries whoever stands on it |
 | Mesin absen | Checkpoints | Touching one saves the place and the bag |
@@ -150,8 +151,8 @@ early waits for the landing.
 
 **What exists**
 
-- One floor with three checkpoints. The scripted player in the tests finishes it clean in
-  about 20 seconds; a first climb, with its OTTs, will take several times that
+- Two floors, each with a lobby and two clock-in machines. Scripted climbs finish both;
+  these are reachability checks, not a measure of difficulty for a person
 - Keyboard and touch controls; on a phone the game fills the screen, held either way
 - Best time and most money per floor in `localStorage`
 - A synthesised tune and effects, anonymous telemetry to the game's own server
@@ -264,6 +265,7 @@ in CI. Whether the tune is any good is for ears.
 | 2026-11-14 | v0.7.0 | The panel, against live data | The one error it listed, "Script error." five times, was not the game's: it came from scripts that extensions and in-app browsers add to the page, and from v0.7.1 only the game's own errors are reported. The maintainer asked the same day for much richer telemetry, still without any identifier, and v0.7.2 carries it. Tuning the floor waits for a few days of play |
 | 2026-11-16 | v0.7.2 | The panel's 30-day export, read with a script: 633 visits and 540 runs, 140 of them with the detail of v0.7.2. The spots where players were caught, checked against the game's own physics | Too hard rather than too kind: 31% of those 140 runs reached the first machine and 12% the door, and every run that reached the second machine finished. Most catches were at three spots near the first machine, each where the jump most players make comes down; the floor was tuned for them (Decisions, 2026-11-16). The dash gap stopped more than half. Those who finished carried 5 envelopes of 6, so 2% each is not yet a choice. 44% of the runs started on v0.7.2 never said how they ended: a phone often closes a page without a word. Read the next numbers over the days since the tuning was released |
 | 2026-11-19 | v0.8.0 | The maintainer played the tuned Kelurahan | The floor felt right to play. Start Kecamatan while keeping the next telemetry review and Android sharing check as separate follow-ups |
+| 2026-11-19 | `feat/kecamatan` | Scripted climbs and Chromium smoke tests at desktop and phone sizes | Kecamatan is climbable empty and full, a clean run reaches both machines, and promotion keeps money without carrying its weight. A saved Kelurahan record also opens the floor directly. Feel and difficulty still need a hands-on session |
 
 ## Tuning
 

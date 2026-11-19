@@ -154,7 +154,7 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'GET' && url.pathname === '/api/stats') {
       const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days') ?? 30) || 30));
-      json(res, 200, store.stats(days, geo));
+      json(res, 200, store.stats(days, geo, url.searchParams.get('floor')));
       return;
     }
 

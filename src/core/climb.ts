@@ -22,6 +22,10 @@ export class Climb {
     return this.floorNumber;
   }
 
+  get nextFloor(): FloorDef | undefined {
+    return this.games[this.floorNumber]?.floor;
+  }
+
   /** A finish at the door opens the next floor, even if the player leaves then. */
   get highestUnlocked(): number {
     const firstUnfinished = this.games.findIndex((game) => game.best.time <= 0);
@@ -31,6 +35,13 @@ export class Climb {
   /** What was paid upstairs, plus what is still in the bag. */
   get money(): number {
     return this.deposited + this.current.money;
+  }
+
+  returnToTitle(): void {
+    this.deposited = 0;
+    this.current = this.games[0];
+    this.floorNumber = 1;
+    this.current.reset();
   }
 
   /** Starting from the title is a fresh climb, not a continuation of an old score. */
@@ -54,6 +65,7 @@ export class Climb {
   private enter(game: Game, number: number): void {
     this.current = game;
     this.floorNumber = number;
+    game.worldTime = 0;
     game.reset();
     game.start();
   }

@@ -2,7 +2,19 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { PARAMS, PLAYER, WORLD_WIDTH } from '../src/core/params.ts';
-import { AUDITOR, auditorAt, FLOORS, KELURAHAN, ledgeX, STAMP, stampAt, stampBites } from '../src/core/tower.ts';
+import {
+  AUDITOR,
+  auditorAt,
+  FLOORS,
+  KECAMATAN,
+  KELURAHAN,
+  ledgeX,
+  PAPER,
+  printerAt,
+  STAMP,
+  stampAt,
+  stampBites,
+} from '../src/core/tower.ts';
 import { Game } from '../src/core/game.ts';
 import { canReach, climbTo, quietGame, run, STEP } from './helpers.ts';
 
@@ -17,6 +29,10 @@ const BRANCHES: [number, number][] = [
 ];
 
 const FULL = KELURAHAN.amplop.length;
+const ROUTES = [
+  [KELURAHAN, ROUTE],
+  [KECAMATAN, KECAMATAN.ledges.map((_, i) => i)],
+] as const;
 
 test('every floor is well formed', () => {
   for (const floor of FLOORS) {
@@ -45,6 +61,13 @@ test('every floor is well formed', () => {
         'a stamp lands on its ledge',
       );
     }
+    for (const printer of floor.printers ?? []) {
+      const ledge = floor.ledges[printer.ledge];
+      const flight = Math.abs(printer.to - printer.x) / PAPER.speed;
+      assert.ok(ledge && printer.x - 12 >= ledge.x && printer.x + 12 <= ledge.x + ledge.w);
+      assert.ok(printer.to - PAPER.half >= ledge.x && printer.to + PAPER.half <= ledge.x + ledge.w);
+      assert.ok(flight > 0 && printer.period > flight + PAPER.warn + 0.9, 'the copier leaves time to cross');
+    }
     for (const spot of [...floor.checkpoints, floor.exit]) {
       const ledge = floor.ledges[spot.ledge];
       assert.ok(ledge && spot.x > ledge.x && spot.x < ledge.x + ledge.w, 'a checkpoint or exit sits on its ledge');
@@ -55,22 +78,22 @@ test('every floor is well formed', () => {
 });
 
 test('the envelope count is what the jump floor was built for', () => {
-  assert.ok(1 - PARAMS.weightPenalty * FULL >= PARAMS.minFactor, 'a full bag is not below the minimum factor');
-});
-
-test('the route can be climbed with an empty bag', () => {
-  for (let i = 0; i + 1 < ROUTE.length; i++) {
-    const [from, to] = [ROUTE[i] as number, ROUTE[i + 1] as number];
-    assert.ok(canReach(KELURAHAN, from, to, 0), `ledge ${from} to ${to}`);
+  for (const floor of FLOORS) {
+    assert.ok(1 - PARAMS.weightPenalty * floor.amplop.length >= PARAMS.minFactor, floor.name);
   }
 });
 
-test('the route can be climbed with every envelope in the bag', () => {
-  for (let i = 0; i + 1 < ROUTE.length; i++) {
-    const [from, to] = [ROUTE[i] as number, ROUTE[i + 1] as number];
-    assert.ok(canReach(KELURAHAN, from, to, FULL), `ledge ${from} to ${to}`);
+for (const [floor, route] of ROUTES) {
+  for (const weight of [0, floor.amplop.length]) {
+    test(`the ${floor.name} route can be climbed with ${weight} envelopes`, () => {
+      for (let i = 0; i + 1 < route.length; i++) {
+        const from = route[i] as number;
+        const to = route[i + 1] as number;
+        assert.ok(canReach(floor, from, to, weight), `ledge ${from} to ${to}`);
+      }
+    });
   }
-});
+}
 
 test('every envelope branch can be taken and left, even with a full bag', () => {
   for (const [from, to] of BRANCHES) {
@@ -79,9 +102,12 @@ test('every envelope branch can be taken and left, even with a full bag', () => 
 });
 
 test('no ledge on the route can be skipped', () => {
-  for (let i = 0; i + 2 < ROUTE.length; i++) {
-    const [from, to] = [ROUTE[i] as number, ROUTE[i + 2] as number];
-    assert.ok(!canReach(KELURAHAN, from, to, 0), `ledge ${from} reaches ${to}, skipping ${ROUTE[i + 1]}`);
+  for (const [floor, route] of ROUTES) {
+    for (let i = 0; i + 2 < route.length; i++) {
+      const from = route[i] as number;
+      const to = route[i + 2] as number;
+      assert.ok(!canReach(floor, from, to, 0), `${floor.name}: ${from} reaches ${to}, skipping ${route[i + 1]}`);
+    }
   }
 });
 
@@ -162,13 +188,15 @@ test('every envelope can be touched from a ledge', () => {
   // An envelope is within a jump of some ledge: no higher than a full-bag
   // jump above it, and over it or just beside it.
   const rise = (PARAMS.jumpV * PARAMS.minFactor) ** 2 / (2 * PARAMS.gravity);
-  for (const [i, a] of KELURAHAN.amplop.entries()) {
-    const near = KELURAHAN.ledges.some((ledge) => {
-      const travel = ledge.kind === 'troli' ? (ledge.travel ?? 0) : 0;
-      const over = a.x >= ledge.x - travel - 8 && a.x <= ledge.x + ledge.w + travel + 8;
-      return over && a.y >= ledge.y && a.y - 28 <= ledge.y + rise;
-    });
-    assert.ok(near, `envelope ${i} at ${a.x},${a.y}`);
+  for (const floor of FLOORS) {
+    for (const [i, a] of floor.amplop.entries()) {
+      const near = floor.ledges.some((ledge) => {
+        const travel = ledge.kind === 'troli' ? (ledge.travel ?? 0) : 0;
+        const over = a.x >= ledge.x - travel - 8 && a.x <= ledge.x + ledge.w + travel + 8;
+        return over && a.y >= ledge.y && a.y - 28 <= ledge.y + rise;
+      });
+      assert.ok(near, `${floor.name}: envelope ${i} at ${a.x},${a.y}`);
+    }
   }
 });
 
@@ -203,17 +231,47 @@ test('a stamp warns before it bites, and rests long enough to walk under', () =>
   }
 });
 
-test('a careful player finishes the floor with the hazards on', () => {
-  let game: Game | null = new Game();
+test('the copier warns before catching and a jump clears the papers', () => {
+  const printer = KECAMATAN.printers?.[0];
+  assert.ok(printer);
+  const launch = printer.period - (printer.to - printer.x) / PAPER.speed;
+  assert.deepEqual(printerAt(printer, launch - 1), { warning: false, paper: null });
+  assert.deepEqual(printerAt(printer, launch - 0.3), { warning: true, paper: null });
+  assert.deepEqual(printerAt(printer, launch + 0.4), { warning: false, paper: printer.x + 36 });
+
+  const game = new Game({ floor: KECAMATAN });
   game.start();
-  for (const next of ROUTE.slice(1)) {
-    const from: number = game.player.ground;
-    game = climbTo(game, next);
-    assert.ok(game, `no safe way from ledge ${from} to ${next}`);
-  }
-  // The door is at the far end of the last ledge.
-  run(game, 3, { move: 1, jump: false, dash: false });
-  assert.equal(game.phase, 'won');
+  game.worldTime = launch - 0.7;
+  game.placeOn(printer.ledge, printer.x + 30);
+  run(game, 0.5);
+  assert.ok(game.drain().some((event) => event.type === 'warn'));
+  assert.equal(game.deaths, 0, 'the warning itself is safe');
+  run(game, 0.6);
+  assert.equal(game.catches[`berkas:${printer.ledge}`], 1);
+
+  game.reset();
+  game.start();
+  game.worldTime = launch - 0.08;
+  game.placeOn(printer.ledge, printer.x + 30);
+  run(game, 0.8, { move: 0, jump: true, dash: false });
   assert.equal(game.deaths, 0);
-  assert.ok(game.time < 120, `a clean climb takes ${game.time.toFixed(0)} s`);
+  assert.equal(game.player.ground, printer.ledge);
 });
+
+for (const [floor, route] of ROUTES) {
+  test(`a careful player finishes ${floor.name} with the hazards on`, () => {
+    let game: Game | null = new Game({ floor });
+    game.start();
+    for (const next of route.slice(1)) {
+      const from: number = game.player.ground;
+      game = climbTo(game, next);
+      assert.ok(game, `no safe way from ledge ${from} to ${next}`);
+    }
+    // The door is to the right of the landing.
+    run(game, 3, { move: 1, jump: false, dash: false });
+    assert.equal(game.phase, 'won');
+    assert.equal(game.deaths, 0);
+    assert.ok(game.time < 120, `a clean climb takes ${game.time.toFixed(0)} s`);
+    if (floor === KECAMATAN) assert.equal(game.checkpoint, 2);
+  });
+}

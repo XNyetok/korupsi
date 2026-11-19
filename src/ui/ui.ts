@@ -1,6 +1,7 @@
 import type { Climb } from '../core/climb.ts';
 import { clock, type Game, rupiah } from '../core/game.ts';
 import { gelarFor } from '../core/gelar.ts';
+import type { FloorDef } from '../core/types.ts';
 import { audio } from '../platform/audio.ts';
 import { canFullscreen, isFullscreen, onFullscreenChange, toggleFullscreen } from '../platform/fullscreen.ts';
 import { shareResult } from '../platform/share.ts';
@@ -19,7 +20,9 @@ function el<T extends HTMLElement>(id: string): T {
 }
 
 export interface UiHooks {
-  start(): void;
+  start(floor: number): void;
+  promote(): void;
+  menu(): void;
   resume(): void;
   restart(): void;
   pause(): void;
@@ -42,7 +45,6 @@ export class Ui {
   private toastEl = el<HTMLDivElement>('toast');
   private toastTimer = 0;
   private cache = '';
-  private lockedUntil = 0;
 
   constructor(hooks: UiHooks) {
     this.mute.addEventListener('click', (event) => {
@@ -77,9 +79,11 @@ export class Ui {
 
     this.overlay.addEventListener('click', (event) => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button[data-do]');
-      if (!button || performance.now() < this.lockedUntil) return;
+      if (!button || button.disabled || this.overlay.querySelector('.viewer')) return;
       const action = button.dataset.do;
-      if (action === 'start') hooks.start();
+      if (action === 'start') hooks.start(Number(button.dataset.floor));
+      else if (action === 'promote') hooks.promote();
+      else if (action === 'menu') hooks.menu();
       else if (action === 'resume') hooks.resume();
       else if (action === 'restart') hooks.restart();
     });
@@ -93,7 +97,7 @@ export class Ui {
 
   /** Enter, or the jump key while a card is up: the same as its main button. */
   confirm(): void {
-    if (!this.overlay.classList.contains('is-visible')) return;
+    if (!this.overlay.classList.contains('is-visible') || this.overlay.querySelector('.viewer')) return;
     this.overlay.querySelector<HTMLButtonElement>('button.primary')?.click();
   }
 
@@ -126,10 +130,27 @@ export class Ui {
     this.overlay.innerHTML = html;
     this.overlay.classList.add('is-visible');
     document.body.classList.remove('is-playing');
-    this.lockedUntil = performance.now() + lockMs;
+    if (lockMs > 0) {
+      const actions = this.overlay.querySelectorAll<HTMLButtonElement>('button[data-do]');
+      actions.forEach((button) => {
+        button.disabled = true;
+      });
+      window.setTimeout(
+        () =>
+          actions.forEach((button) => {
+            button.disabled = false;
+          }),
+        lockMs,
+      );
+    }
   }
 
-  showTitle(): void {
+  showTitle(unlocked: readonly FloorDef[]): void {
+    const buttons = unlocked.map((floor, i) => {
+      const primary = i === unlocked.length - 1;
+      const label = i > 0 ? `Lanjut ke ${floor.name}` : primary ? 'Mulai' : `Main ${floor.name}`;
+      return `<button class="${primary ? 'primary' : 'secondary'}" type="button" data-do="start" data-floor="${i + 1}">${label}</button>`;
+    });
     this.show(`
       <div class="card title">
         <canvas class="logo" aria-label="Korupsi" role="img"></canvas>
@@ -139,7 +160,7 @@ export class Ui {
           <li><i class="dot bahaya"></i><span><b>Auditor</b> dan <b>stempel</b> berarti OTT. Kamu balik ke mesin absen terakhir.</span></li>
           <li><i class="dot ngeles"></i><span><b>Ngeles</b> menembus auditor dan menyeberangi celah yang terlalu lebar.</span></li>
         </ul>
-        <button class="primary" type="button" data-do="start">Mulai</button>
+        ${buttons.reverse().join('')}
         <p class="keys"><kbd>←</kbd><kbd>→</kbd> jalan <kbd>Spasi</kbd> lompat <kbd>Shift</kbd> ngeles <kbd>Esc</kbd> jeda</p>
         <p class="version"><span class="v">v${__VERSION__}</span> · dibuat oleh <a href="${CREDIT.url}" target="_blank" rel="noopener">${CREDIT.name}</a></p>
       </div>`);
@@ -155,11 +176,13 @@ export class Ui {
         <p class="lede">Berkasmu menunggu di meja. Auditornya juga.</p>
         <button class="primary" type="button" data-do="resume">Lanjut</button>
         <button class="secondary" type="button" data-do="restart">Ulang dari lobi</button>
+        <button class="secondary" type="button" data-do="menu">Pilih lantai</button>
       </div>`);
   }
 
   /** `lockMs` keeps the buttons dead for a moment, so the press that won the floor does not restart it. */
-  showResult(game: Game, lockMs: number): void {
+  showResult(climb: Climb, lockMs: number): void {
+    const { game, nextFloor, money } = climb;
     const total = game.floor.amplop.length;
     const { weight, deaths } = game;
 
@@ -174,7 +197,7 @@ export class Ui {
     this.show(
       `
       <div class="card result">
-        <p class="stamp lolos">lolos</p>
+        <p class="stamp lolos">lolos ${game.floor.name}</p>
         <h1 class="big">${clock(game.time)}</h1>
         <p class="gelar">${gelar.title}</p>
         <p class="lede">${gelar.line}</p>
@@ -184,9 +207,19 @@ export class Ui {
           <span class="stat"><i>Uang</i><b class="gold">${rupiah(game.money)}</b></span>
         </div>
         <p class="record">${records.join(' · ')}</p>
-        <button class="primary" type="button" data-do="restart">Main lagi</button>
-        <button class="secondary share" type="button">Bagikan hasil</button>
-        <p class="version">Lantai berikutnya, Kecamatan, masih dibangun.</p>
+        ${money > game.money ? `<p class="record">Total uang dari semua lantai: ${rupiah(money)}</p>` : ''}
+        ${
+          nextFloor
+            ? `
+          <p class="record">Naik jabatan: uang disetor, beban kembali nol.</p>
+          <button class="primary" type="button" data-do="promote">Lanjut ke ${nextFloor.name}</button>`
+            : '<p class="version">Lantai berikutnya belum dibuka.</p>'
+        }
+        <button class="${nextFloor ? 'secondary' : 'primary'}" type="button" data-do="restart">Main lagi</button>
+        <div class="result-links">
+          <button class="secondary share" type="button">Bagikan hasil</button>
+          <button class="secondary" type="button" data-do="menu">Pilih lantai</button>
+        </div>
         <p class="version">Dibuat oleh <a href="${CREDIT.url}" target="_blank" rel="noopener">${CREDIT.name}</a></p>
       </div>`,
       lockMs,
@@ -220,11 +253,12 @@ export class Ui {
         if (share.disabled) return;
         share.disabled = true;
         void shareResult({ text, file }).then((outcome) => {
+          // A press that came to nothing is counted too: the sheet closed, or nothing could share.
+          const missed = outcome === 'cancelled' || outcome === 'failed';
+          track(missed ? 'share_missed' : 'shared', { via: outcome, floor: game.floor.id });
+          if (!share.isConnected) return;
           share.disabled = false;
           if (outcome === 'show' && card) this.showPicture(card.toDataURL('image/png'));
-          // A press that came to nothing is counted too: the sheet closed, or nothing could share.
-          if (outcome === 'cancelled' || outcome === 'failed') track('share_missed', { via: outcome });
-          else track('shared', { via: outcome });
           if (outcome === 'saved') this.toast('Gambar hasil disimpan');
           if (outcome === 'copied') this.toast('Disalin ke papan klip');
           if (outcome === 'failed') this.toast('Tidak bisa membagikan');

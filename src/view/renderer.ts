@@ -6,8 +6,8 @@
 
 import type { Game } from '../core/game.ts';
 import { FILL, PARAMS, VIEW, WORLD_WIDTH as W } from '../core/params.ts';
-import { auditorAt, ledgeX, stampAt } from '../core/tower.ts';
-import type { GameEvent } from '../core/types.ts';
+import { auditorAt, ledgeX, printerAt, stampAt } from '../core/tower.ts';
+import type { FloorDef, GameEvent } from '../core/types.ts';
 import { BASE, type Backdrop, PARALLAX, paintBackdrop } from './backdrop.ts';
 import { Fx } from './fx.ts';
 import { C } from './palette.ts';
@@ -20,6 +20,7 @@ import {
   drawExit,
   drawLedge,
   drawPlayer,
+  drawPrinter,
   drawRail,
   drawStamp,
   type Pose,
@@ -32,7 +33,8 @@ const SKY_DRIFT = 0.6;
 
 export class Renderer {
   private readonly ctx: Ctx;
-  private readonly backdrop: Backdrop;
+  private floor: FloorDef;
+  private backdrop: Backdrop;
   private readonly fx = new Fx();
   private readonly reducedMotion: boolean;
   private viewW: number = W;
@@ -49,7 +51,8 @@ export class Renderer {
 
   constructor(ctx: Ctx, game: Game, reducedMotion: boolean) {
     this.ctx = ctx;
-    this.backdrop = paintBackdrop(game.floor, FILL.maxHeight);
+    this.floor = game.floor;
+    this.backdrop = paintBackdrop(this.floor, FILL.maxHeight);
     this.reducedMotion = reducedMotion;
   }
 
@@ -64,8 +67,13 @@ export class Renderer {
     for (const event of events) this.fx.handle(event);
   }
 
-  /** Jump the camera to the player: after a restart there is nothing to pan across. */
+  /** Jump the camera to the player and repaint the scenery when a floor changes. */
   snap(game: Game): void {
+    if (this.floor !== game.floor) {
+      this.floor = game.floor;
+      this.backdrop = paintBackdrop(this.floor, FILL.maxHeight);
+      this.clock = this.stride = 0;
+    }
     this.cam = this.target(game);
     this.camX = this.targetX(game);
     this.fx.clear();
@@ -175,11 +183,16 @@ export class Renderer {
     });
 
     const exitY = floor.ledges[floor.exit.ledge]?.y ?? 0;
-    if (visible(exitY)) drawExit(ctx, floor.exit.x, row(exitY), 'KECAMATAN');
+    if (visible(exitY)) drawExit(ctx, floor.exit.x, row(exitY), floor.exit.label ?? 'KELUAR');
 
     floor.amplop.forEach((a, i) => {
       if (!game.taken[i] && visible(a.y)) drawAmplop(ctx, a.x, row(a.y), this.clock);
     });
+
+    for (const def of floor.printers ?? []) {
+      const y = floor.ledges[def.ledge]?.y ?? 0;
+      if (visible(y)) drawPrinter(ctx, def.x, row(y), printerAt(def, time));
+    }
 
     for (const def of floor.stamps) {
       const y = floor.ledges[def.ledge]?.y ?? 0;

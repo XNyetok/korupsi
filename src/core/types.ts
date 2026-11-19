@@ -3,7 +3,7 @@
 export type Phase = 'ready' | 'playing' | 'paused' | 'won';
 
 /** What ended a life. `jatuh` is a fall past the audit line. */
-export type Cause = 'auditor' | 'stempel' | 'jatuh';
+export type Cause = 'auditor' | 'stempel' | 'berkas' | 'jatuh';
 
 /** `fiktif` crumbles after it is touched; `troli` rolls from side to side. */
 export type LedgeKind = 'solid' | 'fiktif' | 'troli';
@@ -44,6 +44,15 @@ export interface StampDef {
   offset: number;
 }
 
+/** A copier at `x` sends a bundle of papers along its ledge, stopping at `to`. */
+export interface PrinterDef {
+  ledge: number;
+  x: number;
+  to: number;
+  period: number;
+  offset?: number;
+}
+
 export interface Point {
   x: number;
   y: number;
@@ -63,10 +72,11 @@ export interface FloorDef {
   ledges: LedgeDef[];
   auditors: AuditorDef[];
   stamps: StampDef[];
+  printers?: PrinterDef[];
   amplop: Point[];
   /** The first checkpoint is the spawn. */
   checkpoints: Spot[];
-  exit: Spot;
+  exit: Spot & { label?: string };
 }
 
 export interface Player {

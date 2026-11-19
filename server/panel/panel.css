@@ -85,7 +85,7 @@ code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92em;
   border-bottom: 1px solid var(--grid);
 }
 
-button {
+button, #floor-filter {
   font: inherit;
   font-size: 13px;
   color: var(--ink-2);
@@ -96,7 +96,7 @@ button {
 }
 
 button:hover { background: var(--wash); color: var(--ink); }
-button:focus-visible, summary:focus-visible, a:focus-visible, .plot:focus-visible { outline: 2px solid var(--visits); outline-offset: 2px; }
+button:focus-visible, #floor-filter:focus-visible, summary:focus-visible, a:focus-visible, .plot:focus-visible { outline: 2px solid var(--visits); outline-offset: 2px; }
 
 .range { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .range button + button { border-left: 1px solid var(--border); }
@@ -240,6 +240,7 @@ body[data-loading="true"] main { opacity: 0.55; }
 .floor .travel { stroke: var(--grid); stroke-width: 3; }
 .floor .label { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
 .floor .beat { stroke: var(--starts); stroke-width: 2; stroke-dasharray: 4 3; }
+.floor .papers { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 2 1; }
 .floor .stamp { fill: var(--ink-2); }
 .floor .amplop { fill: var(--gold); }
 .floor .machine { fill: var(--finished); }
@@ -251,6 +252,7 @@ body[data-loading="true"] main { opacity: 0.55; }
 .swatch.ledge { --swatch: var(--axis); height: 4px; }
 .swatch.amplop { --swatch: var(--gold); border-radius: 50%; }
 .swatch.beat { --swatch: var(--starts); height: 3px; }
+.swatch.papers { --swatch: var(--gold); height: 3px; }
 .swatch.stamp { --swatch: var(--ink-2); }
 .swatch.machine { --swatch: var(--finished); width: 6px; }
 .swatch.door { --swatch: var(--visits); width: 8px; }

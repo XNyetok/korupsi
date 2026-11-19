@@ -16,8 +16,8 @@ the audit team already in the lobby.
 
 You are an official in a safari suit and a peci, and the only way out is up. The tower is
 built by hand: every ledge, auditor and stamp is in the same place on every run, so a
-death is something to learn from, not bad luck. The first floor, the Kelurahan, is
-playable; the Kecamatan and the floors above it are next.
+death is something to learn from, not bad luck. Kelurahan and Kecamatan are playable;
+Dinas and the floors above it are next.
 
 - **Run, jump, and *ngeles*.** Ngeles is a short dash. It crosses a gap that is too wide
   to jump, and it slips straight through an auditor.
@@ -28,12 +28,17 @@ playable; the Kecamatan and the floors above it are next.
 - **Do not fall far.** Once you have clocked in, the audit team tapes off the floors
   below. Drop past the tape and they have you.
 - **Proyek fiktif** ledges, the red-and-white ones, give way shortly after you land.
+- **Copiers** in Kecamatan warn before shooting a bundle of papers across a desk. Jump
+  over it or cross while the desk is clear.
 
-The floor ends at the door to the Kecamatan. The result card shows your time, how often
-you were caught, what you carried out, and the title the climb earned you: one of ten,
-from Raja Amplop to plain Oknum. "Bagikan hasil" turns that into a picture the size of a
-story, a decree appointing you to the title: a phone opens its share sheet with the
-picture, a computer saves the file.
+Finish Kelurahan once to unlock Kecamatan. Take the promotion at the door to keep your
+money in the climb total without carrying its weight, or start directly in Kecamatan from
+the title. An existing Kelurahan record counts in the same browser; records and shared
+results are per floor.
+
+The result card shows your time, how often you were caught, what you carried out, and one
+of ten titles, from Raja Amplop to plain Oknum. "Bagikan hasil" turns it into a story-sized
+decree: a phone opens its share sheet with the picture, a computer saves the file.
 
 | Input | Action |
 | --- | --- |
@@ -52,7 +57,7 @@ page to the home screen and open it from there.
 
 | | |
 | --- | --- |
-| Build size | about 30 KB gzipped, no runtime dependencies; CI enforces a 32 KB budget |
+| Build size | about 32 KB gzipped, no runtime dependencies; CI enforces a 33 KB budget |
 | Stack | TypeScript and Canvas 2D, bundled by Vite |
 | Art | pixel art drawn in code, a tower 384 pixels wide, scaled up without smoothing; no image files |
 | Audio | a tune and effects synthesised with WebAudio; no audio files |

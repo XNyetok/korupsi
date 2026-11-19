@@ -5,7 +5,7 @@
  * and whatever stands on it is drawn upwards from there.
  */
 
-import { STAMP, type StampState } from '../core/tower.ts';
+import { PAPER, type PrinterState, STAMP, type StampState } from '../core/tower.ts';
 import type { LedgeDef } from '../core/types.ts';
 import { C } from './palette.ts';
 import { type Ctx, layer, rect, stamp as stampRows, text, textCentred, textWidth } from './pixel.ts';
@@ -400,6 +400,23 @@ export function drawStamp(ctx: Ctx, cx: number, sy: number, state: StampState, t
   rect(ctx, x - half, bottom - STAMP.h, STAMP.w, 1, C.wood);
   rect(ctx, x - half, bottom - 3, STAMP.w, 3, state.phase === 'warn' ? C.orange : C.red);
   rect(ctx, x - half, bottom - 1, STAMP.w, 1, C.redDark);
+}
+
+/** The amber display gives a full warning before the bundle skids across the desk. */
+export function drawPrinter(ctx: Ctx, x: number, sy: number, state: PrinterState): void {
+  rect(ctx, x - 11, sy - 15, 22, 15, C.ink);
+  rect(ctx, x - 10, sy - 14, 20, 13, C.steel);
+  rect(ctx, x - 12, sy - 17, 24, 4, C.steelLight);
+  rect(ctx, x - 8, sy - 16, 12, 2, C.paper);
+  rect(ctx, x - 8, sy - 12, 10, 4, state.warning ? C.goldLight : C.steelDark);
+  if (state.warning) textCentred(ctx, '!', x, sy - 25, C.goldLight);
+  rect(ctx, x - 6, sy - 6, 15, 3, C.ink);
+  if (state.paper != null) {
+    const px = Math.round(state.paper) - PAPER.half;
+    rect(ctx, px, sy - PAPER.height, PAPER.half * 2, PAPER.height, C.redDark);
+    rect(ctx, px + 1, sy - PAPER.height, PAPER.half * 2 - 2, PAPER.height - 2, C.paper);
+    rect(ctx, px + 2, sy - 4, 7, 1, C.paperDark);
+  }
 }
 
 const AMPLOP = [

@@ -27,14 +27,16 @@ reaches the database that is not in the tables below.
 
 ## Events
 
-Every event carries `type` and `rev`, the build label (`0.7.0+abc1234`).
+Every event carries `type` and `rev`, the build label (`0.7.0+abc1234`). Runs and
+shares also carry a `floor` (`kelurahan` or `kecamatan`). A run is one attempt on one
+floor: advancing at a door ends one attempt and starts another.
 
 | `type` | Sent when | Extra fields |
 | --- | --- | --- |
 | `visit` | The page loads | `device`, `layout`, `width`, `installed`, `zone`, `finishedBefore`, `model`, `from`, `source`, `campaign`, `ready`, `net`, `saveData`, `lang` |
-| `run_started` | Mulai or Main lagi is pressed | `device`, `layout`, `attempt`, `after`, `wait`, `from`, `source`, `campaign` |
-| `run_ended` | A run reaches the door or is restarted, or its page is hidden mid-run, whichever comes first: once per run. A phone may close a hidden page without another word, so a run reports how far it got as the page goes | all of the run fields below, and `from`, `source`, `campaign` |
-| `run_resumed` | A run already reported when its page was hidden, which the player came back to, reaches the door, is restarted, or is left again: at most once per run | `cause` |
+| `run_started` | A floor starts from the title, a restart or a promotion | `device`, `layout`, `attempt`, `after`, `wait`, `from`, `source`, `campaign` |
+| `run_ended` | A run reaches the door, is restarted, returns to the title, or its page is hidden mid-run, whichever comes first: once per run. A phone may close a hidden page without another word, so a run reports how far it got as the page goes | all of the run fields below, and `from`, `source`, `campaign` |
+| `run_resumed` | A run already reported when its page was hidden, which the player came back to, reaches the door, is restarted, returns to the title, or is left again: at most once per run | `cause` |
 | `shared` | Bagikan hasil is used and something came of it | `via` |
 | `share_missed` | Bagikan hasil is used and nothing came of it | `via`: `cancelled` (the sheet was closed) or `failed` |
 | `hidden` | The page is hidden: closed, or left for another app | `screen`, `visible`, `part` |
@@ -51,11 +53,11 @@ before this rule.
 
 | Field | Meaning | Range |
 | --- | --- | --- |
-| `cause` | `finished`: reached the door. `abandoned`: the page was hidden or closed, or the run restarted, first | |
+| `cause` | `finished`: reached the door. `abandoned`: the page was hidden or closed, the run restarted, or the player returned to the title | |
 | `duration` | Seconds on the run's clock | 0 to 3600 |
-| `height` | Highest point reached, in metres above the lobby floor. 12 game pixels to the metre; the first floor's door is at about 42 m | |
+| `height` | Highest point reached, in metres above this floor's lobby. 12 game pixels to the metre | |
 | `weight` | Envelopes carried at the end | |
-| `money` | Rupiah carried at the end: 500000 per envelope | |
+| `money` | Rupiah carried out of this floor only, 500000 per envelope; money deposited from other floors is excluded | |
 | `deaths` | Times caught (OTT) | |
 | `checkpoint` | The last checkpoint reached. 0 is the lobby; 1 and 2 are the clock-in machines, in the order of `checkpoints` in [`src/core/tower.ts`](../src/core/tower.ts) | |
 | `hazards` | How often each hazard caught the player: `{"stempel:12": 3, "auditor:17": 1, "jatuh": 1}` | at most 24 keys |
@@ -81,7 +83,8 @@ before this rule.
 | `full` | Whether any of the run was played in full screen | |
 | `turns` | Times the phone was turned on its side or back during the run | |
 
-A hazard is named `kind:ledge`. The kind is `auditor` or `stempel`; the ledge is its index
+A hazard is named `kind:ledge`. The kind is `auditor`, `stempel` or `berkas` (papers
+from a copier); the ledge is its index
 in the floor's `ledges` array in `src/core/tower.ts`, so `stempel:12` is the stamp over
 ledge 12. `jatuh` is a fall below the audit tape.
 
@@ -95,12 +98,12 @@ ledge 12. `jatuh` is a fall below the audit tape.
 | `width` | 100 to 9999 | The width of the page in CSS pixels |
 | `installed` | `true`, `false` | Opened from an icon on the home screen |
 | `zone` | -720 to 840 | Minutes the player's clock is ahead of UTC: 420 is WIB, 480 WITA, 540 WIT |
-| `finishedBefore` | `true`, `false` | On a visit as on a run: the floor had been finished on this device |
+| `finishedBefore` | `true`, `false` | On a visit: Kelurahan had been finished in this browser. On a run: the reported floor had been finished |
 | `model` | text | The phone's model, which Chrome names only when the page asks (and the page asks, waiting at most 1.5 seconds) |
 | `from` | host name, or `''` | The host of the site that linked here (`l.instagram.com`), never its path; `''` when nothing did. The collector keeps only the site (below) |
 | `source`, `campaign` | short words | The marks on the link: `utm_source`, `ref` or `dari`, and `utm_campaign`. Read once, then taken off the address bar, so a link copied from it does not carry them on. A result shared as text links to `?dari=bagikan` |
-| `after` | `win`, `restart` | How the run before ended, on a run that is not the first of the visit |
-| `wait` | 0 to 86400 | Seconds the card before the run was up: the title for the first run, the result after a win |
+| `after` | `win`, `restart`, `promotion` | How play started: a replay after a win, a retry from pause, or an entry from the preceding floor. Absent when starting from the title |
+| `wait` | 0 to 86400 | Seconds the card before the run was up: the title or the result |
 | `screen` | `title`, `playing`, `paused`, `result` | What was on screen when the page was hidden |
 | `visible` | 0 to 86400 | Seconds the page had been shown since it opened or was last come back to |
 | `part` | 1 to 999 | Which time the page was hidden since it opened: 1 is the first |
@@ -138,10 +141,12 @@ Jakarta or another big city wherever the phone is, so read a town as a hint.
 
 ## Reading the statistics
 
-`GET /api/stats?days=30` answers with one JSON object for the last 30 days; the panel
-draws it, and its **Unduh data (JSON)** button saves it as a file. The object explains
-itself: its `about` key has a note on every other key, and `format` goes up when the
-shape changes. A test fails if a key is added without a note.
+`GET /api/stats?days=30&floor=kecamatan` answers with one JSON object for the last 30
+days. Without `floor`, it shows Kelurahan, including older beacons that carried no floor
+label. Runs and shares follow the floor filter; visits, page exits, errors and build counts
+cover the whole game. The panel's **Unduh data (JSON)** button saves the selected floor
+and time range as a file. The `about` key explains the numbers and `format` goes up when
+the shape changes.
 
 | Key | Answers |
 | --- | --- |
@@ -156,7 +161,7 @@ shape changes. A test fails if a key is added without a note.
 | `titles` | Which titles are earned, and so whether their thresholds are right |
 | `shares`, `sound` | How results leave the game; how many play with the sound off |
 | `errors`, `revs` | What breaks, and which builds the data comes from |
-| `floor` | The floor the numbers are about: ledges, hazards, envelopes, machines and the door, in game pixels. Read `spots`, `dwell` and ledge numbers against it |
+| `floors`, `floor` | The floors offered in the filter and the plan of the selected one, including the copiers' paths. Read `spots`, `dwell` and ledge numbers against it |
 | `route` | How many runs reach each clock-in machine and the door, and how long each stretch takes |
 | `spots` | Where people are caught, in squares of 8 game pixels: the panel draws it on the floor |
 | `carrying` | Time and catches at each number of envelopes carried: what the weight costs |
@@ -173,7 +178,7 @@ shape changes. A test fails if a key is added without a note.
 | `countries`, `regions`, `cities`, `geo` | Where visits come from, by country, province and town; whether the GeoIP file was there |
 | `sources`, `campaigns` | Which sites and which marked links bring players, and whether those players play and finish |
 | `leaving` | On which screen a visit is first left, how long it was looked at by then, and how many come back |
-| `cards` | How long the title and the result are looked at before the next run; how many restart from the pause card |
+| `cards` | Entries from the title, replay after a win, and promotion from the preceding floor, with median wait; also retries from pause |
 | `shareMisses` | Presses of Bagikan hasil that came to nothing: with `shares`, every press and its outcome |
 | `speed` | How fast the title card is up, overall and per network; how many save data |
 | `frames` | How smoothly runs are drawn, by kind of device, and whether choppy runs are given up more |
@@ -182,8 +187,8 @@ shape changes. A test fails if a key is added without a note.
 
 Things to keep in mind when drawing conclusions:
 
-- **`runs` counts presses, not people.** One visit can start several runs, and a restart
-  ends the run before it as `abandoned`.
+- **`runs` counts attempts on a floor, not people.** One visit can start several runs,
+  including a promotion. Restarting or going back to the title mid-run ends it as `abandoned`.
 - **`abandoned` is not failure alone.** It is every run that did not reach the door,
   including one closed after ten seconds of looking around. Read it with `duration`.
 - **A run is counted when its page is first hidden.** A phone may close a hidden page

@@ -32,11 +32,9 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P3 — Floor 02, Kecamatan.** Started in `feat/floor-progression` with promotion
-  rules, per-floor records and unlocks that recognise a v0.8.0 Kelurahan finish. Next:
-  build the route with its own scenery and one new hazard, following the spacing rules
-  in `src/core/tower.ts`. Wire the promotion card, title options for unlocked floors
-  and the scene change; keep play statistics for different floors separate.
+- [ ] **P7 — Play Kecamatan and tune it.** Try promotion, direct entry and the copier's
+  warning on a phone. After it ships, use the Kecamatan filter in the panel to check
+  where players are caught and where they stop.
 - [ ] **T10 — Recheck the Kelurahan after v0.8.0.** Read the 7-day JSON export from
   2026-11-23 for a full window after the tuning (`docs/telemetry.md`). Not a blocker
   for Kecamatan.
@@ -56,6 +54,10 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
+- [x] **P3 — Floor 02, Kecamatan.** On 2026-11-19 the tests climbed the new route with
+  an empty and a full bag, finished with hazards on, and checked browser promotion,
+  existing Kelurahan records (#57), floor selection and separate statistics. Includes
+  new scenery, two copiers and the door to Dinas. Not released yet.
 - [x] **P2 — Play the Kelurahan and tune it.** The maintainer reported that the tuned
   Kelurahan felt right in hands-on play on 2026-11-19. The #54 changes are live in v0.8.0;
   follow-up telemetry and Android sharing are T10 and P6.

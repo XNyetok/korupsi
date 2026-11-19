@@ -43,7 +43,7 @@ const RESULT_LOCK_MS = 700;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const climb = new Climb(FLOORS, bestStore);
-const game = climb.game;
+let game = climb.game;
 const pad = new Pad();
 const renderer = new Renderer(ctx, game, reducedMotion);
 
@@ -63,8 +63,8 @@ let cameBack = false;
 let attempt = 0;
 /** This run's pauses asked for by the player. */
 let pauses = 0;
-/** How the run before ended, if there was one: at the door, or restarted. */
-let lastEnding: 'win' | 'restart' | null = null;
+/** What led here: a win, a promotion to another floor, or a restart. */
+let lastEnding: 'win' | 'promotion' | 'restart' | null = null;
 /** When the card now up appeared: the title when the page opened, the result after a win. */
 let cardSince = performance.now();
 /** How this run is drawn and heard, and what the screen did meanwhile. */
@@ -81,6 +81,7 @@ function sendRun(cause: 'finished' | 'abandoned'): void {
   const heard = soundSeen ?? audio.state;
   track('run_ended', {
     ...runReport(game, cause),
+    floor: game.floor.id,
     muted: audio.muted,
     ...setting(),
     ...arrival(),
@@ -101,7 +102,7 @@ function endRun(cause: 'finished' | 'abandoned'): void {
   if (!runOpen) return;
   runOpen = false;
   if (!reported) sendRun(cause);
-  else if (cameBack) track('run_resumed', { cause });
+  else if (cameBack) track('run_resumed', { cause, floor: game.floor.id });
 }
 
 /** The page is hidden or closed in the middle of a run. */
@@ -111,18 +112,19 @@ function leaveRun(): void {
   else if (cameBack) {
     // Left again after coming back: as far as the numbers can know, that is how it ended.
     runOpen = false;
-    track('run_resumed', { cause: 'abandoned' });
+    track('run_resumed', { cause: 'abandoned', floor: game.floor.id });
   }
 }
 
-function start(): void {
+function begin(): void {
+  game = climb.game;
   audio.unlock();
   audio.play('start');
   audio.startMusic();
   pad.clear();
-  game.start();
   renderer.snap(game);
   ui.hideOverlay();
+  loop.resync();
   runOpen = true;
   reported = false;
   cameBack = false;
@@ -136,13 +138,40 @@ function start(): void {
   const before: Record<string, unknown> = {};
   if (lastEnding) before.after = lastEnding;
   if (lastEnding !== 'restart') before.wait = Math.round((performance.now() - cardSince) / 1000);
-  track('run_started', { ...setting(), ...arrival(), attempt, ...before });
+  track('run_started', { ...setting(), ...arrival(), floor: game.floor.id, attempt, ...before });
+}
+
+function start(number: number): void {
+  if (climb.startAt(number)) begin();
+}
+
+function promote(): void {
+  if (!climb.promote()) return;
+  lastEnding = 'promotion';
+  begin();
 }
 
 function restart(): void {
   endRun('abandoned');
   game.reset();
-  start();
+  game.start();
+  begin();
+}
+
+function showTitle(): void {
+  ui.showTitle(FLOORS.slice(0, climb.highestUnlocked));
+  cardSince = performance.now();
+}
+
+function menu(): void {
+  endRun('abandoned');
+  climb.returnToTitle();
+  game = climb.game;
+  lastEnding = null;
+  pad.clear();
+  audio.pauseMusic();
+  renderer.snap(game);
+  showTitle();
 }
 
 /** `byPlayer` is false when the page was hidden: that is time away, not a pause. */
@@ -166,7 +195,7 @@ function resume(): void {
   loop.resync();
 }
 
-const ui = new Ui({ start, resume, restart, pause });
+const ui = new Ui({ start, promote, menu, resume, restart, pause });
 
 // ---------- screen ----------
 
@@ -231,11 +260,10 @@ for (const type of ['pointerdown', 'touchend', 'click', 'keydown'] as const) {
 
 // ---------- loop ----------
 
-const debug = mountDebug(game);
+const debug = mountDebug(() => climb.game);
 
 resize();
-renderer.snap(game);
-ui.showTitle();
+showTitle();
 
 /** How loud something at x, y is to the player: full when close, silent a screen away. */
 function nearness(x: number, y: number): number {
@@ -295,7 +323,7 @@ const loop = startLoop({
       sound(event);
       if (event.type === 'win') {
         ui.update(climb);
-        ui.showResult(game, RESULT_LOCK_MS);
+        ui.showResult(climb, RESULT_LOCK_MS);
         cardSince = performance.now();
         endRun('finished');
       }
