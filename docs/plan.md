@@ -5,7 +5,7 @@ waiting. There is no other todo file, issue board or spec. Design reasons live i
 `docs/design/game-design.md`, server details in `docs/deploy.md`; this file only tracks
 work and points at them.
 
-Last updated: 2026-11-19 · Last tagged release: `v0.8.0`. What is live is the latest
+Last updated: 2026-11-19 · Last tagged release: `v0.9.0`. What is live is the latest
 published release that deployed: check `gh run list --workflow deploy.yml`, not this line.
 
 ## Rules for whoever updates this file
@@ -32,14 +32,11 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Now
 
-- [~] **P7 — Give Kecamatan its own feel.** The maintainer approved the lift opening
-  (#59) and the service hall art (#60) on 2026-11-19. `feat/kecamatan-service-route`
-  makes them the main Kecamatan route and carries them through the archive to Dinas.
-  The scripted climb and browser checks pass. Next: a hands-on pass from the main game,
-  especially the direction after the first balcony and the crossing by the copier.
-- [ ] **T10 — Recheck the Kelurahan after v0.8.0.** Read the 7-day JSON export from
-  2026-11-23 for a full window after the tuning (`docs/telemetry.md`). Not a blocker
-  for Kecamatan.
+- [ ] **T10 — Recheck the Kelurahan after v0.8.0.** Read the 7-day Kelurahan JSON export
+  from 2026-11-23 for a full window after the tuning (`docs/telemetry.md`).
+- [ ] **T11 — Read the first Kecamatan numbers.** From 2026-11-26, check the Kecamatan
+  export for progress through the two machines and catches by the copier. If the sample
+  is small, treat the numbers as hints.
 - [ ] **P6 — Try Bagikan hasil in Chrome on an Android phone.** Check the share sheet
   and the picture fallback on a real device. Not a blocker for Kecamatan.
 - [ ] **T8 — Renew the GeoIP file every month**, next in early December 2026: DB-IP
@@ -56,22 +53,18 @@ Status: `[ ]` to do · `[~]` in progress (name the branch or PR) · `[x]` done �
 
 ## Done
 
-- [x] **P3 — Floor 02, Kecamatan.** #57 and #58 added a second floor, browser promotion,
-  recognition of existing Kelurahan records, floor selection and separate statistics.
-  The first route was present and tested on 2026-11-19; P7 replaces it before release.
-- [x] **P2 — Play the Kelurahan and tune it.** The maintainer reported that the tuned
-  Kelurahan felt right in hands-on play on 2026-11-19. The #54 changes are live in v0.8.0;
-  follow-up telemetry and Android sharing are T10 and P6.
-- [x] **v0.8.0** — released and deployed 2026-11-16 (release run 43800860476, deploy run
-  43801096426): live as `0.8.0+ff72282`, `/api/health` 404, `/panel/` 401. Players get
-  the Kelurahan eased at the three spots where most of them were caught, and a notice at
-  the dash gap (P2, #54). Nothing to install on the server.
-  - [x] **T9 — A run left on a phone still says how far it got.** Done 2026-11-16 (#55).
-    44% of the runs started on v0.7.2 never reported an ending: a run reported only when
-    its page was closed, and a phone may close a hidden page without another word. A run
-    now reports when its page is first hidden mid-run; if the player comes back, a
-    `run_resumed` says only how it then ended, so nothing is counted twice. The panel
-    shows how many came back and finished. Collects from v0.8.0.
+- [x] **v0.9.0** — released and deployed 2026-11-19 (release run 44459600557, deploy run
+  44459870252): live as `0.9.0+a51179d`, `/api/health` 404, `/panel/` 401. A live browser
+  check confirmed that a saved v0.8.0 Kelurahan record opens Kecamatan. No manual server
+  changes.
+  - [x] **P3 — Floor 02, Kecamatan.** Promotion, unlocks from existing records, floor
+    selection and separate statistics (#57, #58).
+  - [x] **P7 — Give Kecamatan its own feel.** The maintainer approved the lift opening
+    and art (#59, #60), then approved the full atrium, archive and pengesahan route
+    (#61) for release on 2026-11-19.
+- [x] **v0.8.0** — 2026-11-16: Kelurahan eased at three spots and a dash hint added
+  (P2, #54, accepted in hands-on play on 2026-11-19); runs report when hidden and count
+  finishes after returning separately (T9, #55).
 - [x] **v0.7.2** — 2026-11-14: much richer telemetry, still without any identifier: how a
   run is played, the browser and device, the province and town, where visits come from
   and where they leave, speed and sound (T2–T6, #47 to #51); the GeoIP pieces installed
